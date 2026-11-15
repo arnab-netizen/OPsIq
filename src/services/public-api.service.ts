@@ -27,6 +27,7 @@ export class PublicAPIError extends Error {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped persistence row at the public DTO boundary
 export function toPublicEngagementDTO(engagement: any): PublicEngagementDTO {
   const dto: PublicEngagementDTO = {
     id: engagement.id,
@@ -47,6 +48,7 @@ export function toPublicEngagementDTO(engagement: any): PublicEngagementDTO {
   return dto;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped persistence row at the public DTO boundary
 export function toPublicActionDTO(action: any): PublicActionDTO {
   const dto: PublicActionDTO = {
     id: action.id,
@@ -69,6 +71,7 @@ export function toPublicActionDTO(action: any): PublicActionDTO {
   return dto;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped persistence row at the public DTO boundary
 export function toPublicKPIDTO(kpi: any): PublicKPIDTO {
   const dto: PublicKPIDTO = {
     id: kpi.id || kpi.slug || "",
@@ -90,6 +93,7 @@ export function toPublicKPIDTO(kpi: any): PublicKPIDTO {
   return dto;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped persistence row at the public DTO boundary
 export function toPublicExperimentDTO(experiment: any): PublicExperimentDTO {
   const dto: PublicExperimentDTO = {
     id: experiment.id,
@@ -125,6 +129,7 @@ export function toPublicExperimentDTO(experiment: any): PublicExperimentDTO {
   return dto;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped persistence row at the public DTO boundary
 export function toPublicFindingDTO(finding: any): PublicFindingDTO {
   return {
     id: finding.id,
@@ -138,13 +143,14 @@ export function toPublicFindingDTO(finding: any): PublicFindingDTO {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped persistence row at the public DTO boundary
 export function toPublicWorkspaceHealthDTO(health: any): PublicWorkspaceHealthDTO {
   const dto: PublicWorkspaceHealthDTO = {
     workspaceId: health.workspaceId,
     assessedAt: health.assessedAt || new Date().toISOString(),
     overallStatus: health.overallStatus || "healthy",
     engagementCount: health.engagementCount || 0,
-    activeEngagements: health.healthyEngagements + health.atRiskEngagements,
+    activeEngagements: health.healthyEngagements + health.atRiskEngagements + (health.needsDataEngagements || 0),
     completedEngagements: 0,
     onTrackKPICount: health.onTrackKPICount || 0,
     totalKPICount: health.activeKPICount || 0,

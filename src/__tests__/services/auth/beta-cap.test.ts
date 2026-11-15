@@ -69,13 +69,12 @@ function fakeTx(
           return opts.settingsRow ?? null;
         }),
       },
-      workspace: {
-        count: vi.fn(async () => {
-          calls.push("count");
-          if (opts.countThrows) throw new Error("count query failed");
-          return count;
-        }),
-      },
+      // Capacity usage (verified + still-pending places) is one raw aggregate; the fake reports `count` verified places.
+      $queryRaw: vi.fn(async () => {
+        calls.push("count");
+        if (opts.countThrows) throw new Error("count query failed");
+        return [{ verified: BigInt(count), pending: BigInt(0), ledger: BigInt(count) }];
+      }),
     } as unknown as Parameters<typeof reservePublicBetaCapacity>[0],
     calls,
   };

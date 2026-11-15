@@ -270,14 +270,20 @@ describe("I7 — Reassessment correctness: resolveCurrentSnapshotId walks chain"
     expect(result).toBe("snap-v3");
   });
 
-  it("returns last known ID if chain exceeds 20 hops (data-corruption guard)", async () => {
+  it("follows a chain longer than 20 amendments to its head (a hop cap returned a superseded, retracted version)", async () => {
+    mockDb.ownerFinancialSnapshot.findFirst.mockImplementation(({ where }: { where: { id: string } }) => {
+      const n = Number(where.id.replace("v", ""));
+      return Promise.resolve({ id: where.id, supersededById: n < 25 ? `v${n + 1}` : null });
+    });
+    const result = await resolveCurrentSnapshotId("v1");
+    expect(result).toBe("v25");
+  });
+
+  it("a cyclic chain (data corruption) fails closed instead of returning a superseded id", async () => {
     mockDb.ownerFinancialSnapshot.findFirst.mockImplementation(({ where }: { where: { id: string } }) =>
-      Promise.resolve({ id: where.id, supersededById: `next-${where.id}` })
+      Promise.resolve({ id: where.id, supersededById: where.id === "a" ? "b" : "a" })
     );
-    const result = await resolveCurrentSnapshotId("start");
-    // Should stop after 20 hops and return something, not loop forever
-    expect(typeof result).toBe("string");
-    expect(mockDb.ownerFinancialSnapshot.findFirst.mock.calls.length).toBe(20);
+    await expect(resolveCurrentSnapshotId("a")).rejects.toThrow(/cyclic/);
   });
 });
 

@@ -9,6 +9,8 @@
  * assignment is what grants OWNER_VIEW / OWNER_MANAGE. Membership alone does not grant capabilities,
  * so without the assignment every /api/owner/* call is correctly denied (403 owner:view).
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import {
@@ -35,7 +37,6 @@ const OWNER_ROLE = "admin_or_portfolio_manager"; // ROLES.ADMIN_OR_PORTFOLIO_MAN
 const LEAKY_SNAPSHOT = {
   periodStart: "2026-04-01",
   periodEnd: "2026-04-30",
-  currency: "INR",
   revenue: 100000,
   fixedCosts: 40000,
   variableCosts: 40000,
@@ -52,6 +53,7 @@ async function main() {
   const { Pool } = await import("pg");
   const pool = new Pool({ connectionString: databaseUrl });
   const adapter = new PrismaPg(pool);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pre-existing untyped fixture client (seed script)
   const prisma: any = new PrismaClient({ adapter });
 
   const hashedPassword = bcrypt.hashSync(PASSWORD, 10);
@@ -95,6 +97,13 @@ async function main() {
   const archetype = await seedLaundryArchetype({ workspaceId: WORKSPACE_ID, actorId: USER_ID, env: "test" });
   console.log(`[seed-e2e] archetype seeded: business ${archetype.businessId}, equipment ${archetype.equipmentCount}`);
 
+  // The seeded business owns the currency; every finance/budget row derives it from there (never a hardcoded code), so the
+  // snapshot-currency-must-match-business validation stays strict and this seed cannot drift from the archetype.
+  const { getBusiness } = await import("../src/services/founder-recovery/business.service");
+  const { normalizeBusinessCurrency } = await import("../src/domain/founder-recovery/currency");
+  const businessCurrency = normalizeBusinessCurrency((await getBusiness(archetype.businessId, WORKSPACE_ID)).currency);
+  if (!businessCurrency) throw new Error("[seed-e2e] seeded business has no supported currency");
+
   // Guarantee a capacity bottleneck (flow D + control-center "what NOT to do"): a down machine
   // deterministically produces an equipment bottleneck and the "do not pursue growth" guidance.
   const { recordEquipment } = await import("../src/services/owner-mode/equipment.service");
@@ -110,7 +119,7 @@ async function main() {
   // hasData=true → the control center panel (the asserted surface) actually renders.
   const { createFinancialSnapshot } = await import("../src/services/owner-finance/snapshot.service");
   const { runFinanceDiagnosis } = await import("../src/services/owner-finance/diagnosis.service");
-  const snap = await createFinancialSnapshot(archetype.businessId, LEAKY_SNAPSHOT, USER_ID, WORKSPACE_ID);
+  const snap = await createFinancialSnapshot(archetype.businessId, { ...LEAKY_SNAPSHOT, currency: businessCurrency }, USER_ID, WORKSPACE_ID);
   const cycle = await runFinanceDiagnosis(archetype.businessId, snap.id, USER_ID, WORKSPACE_ID);
   console.log(`[seed-e2e] finance diagnosis: cycle ${cycle.id}, findings ${cycle.findings.length}, actions ${cycle.actions.length}`);
 
@@ -121,7 +130,7 @@ async function main() {
   const { createBudgetPeriod, recordSpendEntry } = await import("../src/services/owner-budget/budget.service");
   const period = await createBudgetPeriod(
     archetype.businessId,
-    { label: "Current period", periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", approvedBudget: 100000, statutoryReserveRequired: 50000, ownerGoal: "growth" },
+    { label: "Current period", periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: businessCurrency, approvedBudget: 100000, statutoryReserveRequired: 50000, ownerGoal: "growth" },
     USER_ID, WORKSPACE_ID
   );
   const spend = await recordSpendEntry(
@@ -133,7 +142,7 @@ async function main() {
     },
     USER_ID, WORKSPACE_ID
   );
-  console.log(`[seed-e2e] budget seeded: period ${period.id}, plan mode ${spend.plan.mode}, decision ${spend.plan.decisionType}`);
+  console.log(`[seed-e2e] budget seeded: period ${period.id}, plan mode ${spend.plan?.mode}, decision ${spend.plan?.decisionType}`);
 
   // ── Proof-blocked delegated task (flow B) ────────────────────────────────────────────────
   // A proof-required task with NO accepted proof. The owner attempting to complete it is

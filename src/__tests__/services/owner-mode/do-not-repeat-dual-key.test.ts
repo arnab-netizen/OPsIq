@@ -15,23 +15,6 @@ import {
   type DnrGuidanceDb,
 } from "@/services/owner-mode/do-not-repeat.service";
 
-describe("do-not-repeat-dual-key — module contract assertions", () => {
-  it("checkDoNotRepeatForGuidance is a function", () => { expect(typeof checkDoNotRepeatForGuidance).toBe("function"); });
-  it("scopeKeyForImpactArea is a function", () => { expect(typeof scopeKeyForImpactArea).toBe("function"); });
-  it("scopeKeyForImpactArea('Operations') returns scope:operations", () => { expect(scopeKeyForImpactArea("Operations")).toBe("scope:operations"); });
-  it("scopeKeyForImpactArea(null) returns null", () => { expect(scopeKeyForImpactArea(null)).toBeNull(); });
-  it("typeof Array.isArray equals function", () => { expect(typeof Array.isArray).toBe("function"); });
-  it("typeof JSON.stringify equals function", () => { expect(typeof JSON.stringify).toBe("function"); });
-  it("Array.isArray([]) returns true", () => { expect(Array.isArray([])).toBe(true); });
-  it("typeof Object.keys equals function", () => { expect(typeof Object.keys).toBe("function"); });
-  it("typeof Object.entries equals function", () => { expect(typeof Object.entries).toBe("function"); });
-  it("typeof String equals function", () => { expect(typeof String).toBe("function"); });
-  it("typeof RegExp equals function", () => { expect(typeof RegExp).toBe("function"); });
-  it("typeof Number equals function", () => { expect(typeof Number).toBe("function"); });
-  it("describe is a function", () => { expect(typeof describe).toBe("function"); });
-  it("it is a function", () => { expect(typeof it).toBe("function"); });
-});
-
 // ─── scopeKeyForImpactArea ────────────────────────────────────────────────────
 
 describe("scopeKeyForImpactArea", () => {
@@ -64,7 +47,8 @@ function fakeDb(rule: {
 } | null): DnrGuidanceDb {
   return {
     ownerDoNotRepeatRule: {
-      findFirst: async () => rule,
+      // Applies the query's own filter as Postgres would: a rule with a recorded change is not returned.
+      findFirst: async (args) => (rule && args.where.changedContextExplanation === null && rule.changedContextExplanation !== null ? null : rule),
     },
   };
 }
@@ -101,7 +85,7 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
       memoryKey: `scope:operations:finding:${findingId}`,
       summary: "Tried this before",
       reason: "It made things worse",
-      changedContextExplanation: "If demand doubles",
+      changedContextExplanation: null,
       blocksRepetition: true,
     });
     const result = await checkDoNotRepeatForGuidance(WS, "operations", findingId, db);
@@ -110,7 +94,7 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     expect(result!.legacyMatch).toBe(false);
     expect(result!.priorActionSummary).toBe("Tried this before");
     expect(result!.blockedReason).toBe("It made things worse");
-    expect(result!.changedContextCondition).toBe("If demand doubles");
+    expect(result!.changedContextCondition).toBeNull();
     expect(result!.matchedScope).toBe(`scope:operations:finding:${findingId}`);
   });
 
@@ -145,7 +129,11 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     expect(result!.matchedScope).toBe("scope:finance");
   });
 
-  it("passes correct keys to findFirst — canonical key first, legacy key second", async () => {
+  // R10 P1-2: a single findFirst over both key sets combined (ordered only by createdAt) let a more
+  // recently created broad rule shadow an older exact one — checkDoNotRepeatForGuidance now searches the
+  // canonical (exact) key in its OWN query first, and only falls back to a SEPARATE broad/legacy-key query
+  // when nothing exact matched, so a broad rule can never win over an exact one regardless of createdAt.
+  it("passes correct keys to findFirst — canonical key searched alone first, legacy/broad key in a separate fallback query", async () => {
     const capturedArgs: string[][] = [];
     const db: DnrGuidanceDb = {
       ownerDoNotRepeatRule: {
@@ -156,9 +144,26 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
       },
     };
     await checkDoNotRepeatForGuidance(WS, "management", "finding-xyz", db);
+    expect(capturedArgs).toHaveLength(2);
+    expect(capturedArgs[0]).toEqual(["scope:management:finding:finding-xyz"]);
+    expect(capturedArgs[1]).toEqual(["scope:management"]);
+  });
+
+  it("an exact match short-circuits: the broad/legacy fallback query never runs", async () => {
+    const capturedArgs: string[][] = [];
+    const db: DnrGuidanceDb = {
+      ownerDoNotRepeatRule: {
+        findFirst: async (args) => {
+          capturedArgs.push(args.where.memoryKey.in);
+          return args.where.memoryKey.in.includes("scope:management:finding:finding-xyz")
+            ? { memoryKey: "scope:management:finding:finding-xyz", summary: "Exact", reason: "Exact reason", changedContextExplanation: null, blocksRepetition: true }
+            : null;
+        },
+      },
+    };
+    const result = await checkDoNotRepeatForGuidance(WS, "management", "finding-xyz", db);
     expect(capturedArgs).toHaveLength(1);
-    expect(capturedArgs[0][0]).toBe("scope:management:finding:finding-xyz");
-    expect(capturedArgs[0][1]).toBe("scope:management");
+    expect(result?.matchedScope).toBe("scope:management:finding:finding-xyz");
   });
 
   it("when findingId is absent, only the legacy scope key is searched", async () => {
@@ -175,16 +180,19 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     expect(capturedArgs[0]).toEqual(["scope:compliance"]);
   });
 
-  it("surfaces changedContextCondition from the matched rule", async () => {
-    const db = fakeDb({
-      memoryKey: "scope:cash",
-      summary: "Cash flow intervention",
-      reason: "Prior attempt drained reserves",
-      changedContextExplanation: "Only if monthly revenue exceeds 150k",
-      blocksRepetition: true,
-    });
-    const result = await checkDoNotRepeatForGuidance(WS, "cash", null, db);
-    expect(result!.changedContextCondition).toBe("Only if monthly revenue exceeds 150k");
+  it("a rule whose owner has recorded what has changed no longer annotates the target (the query excludes it, as the gate does)", async () => {
+    let where: Record<string, unknown> | null = null;
+    const rule = { memoryKey: "scope:cash", summary: "Cash flow intervention", reason: "Prior attempt drained reserves", changedContextExplanation: "Monthly revenue now exceeds 150k", blocksRepetition: true };
+    const db: DnrGuidanceDb = {
+      ownerDoNotRepeatRule: {
+        findFirst: async (args) => {
+          where = args.where as unknown as Record<string, unknown>;
+          return args.where.changedContextExplanation === null ? null : rule;
+        },
+      },
+    };
+    expect(await checkDoNotRepeatForGuidance(WS, "cash", null, db)).toBeNull();
+    expect(where).toMatchObject({ changedContextExplanation: null, active: true, blocksRepetition: true });
   });
 
   it("changedContextCondition is null when rule has no changed context", async () => {
@@ -211,5 +219,21 @@ describe("checkDoNotRepeatForGuidance — dual-key strategy", () => {
     };
     await checkDoNotRepeatForGuidance("specific-workspace-id", "operations", null, db);
     expect(capturedWhere[0].workspaceId).toBe("specific-workspace-id");
+  });
+
+  it("with a businessId, only that business's rules (or workspace-wide rules) can annotate its target", async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const db: DnrGuidanceDb = {
+      ownerDoNotRepeatRule: {
+        findFirst: async (args) => {
+          captured.push(args.where as unknown as Record<string, unknown>);
+          return null;
+        },
+      },
+    };
+    await checkDoNotRepeatForGuidance(WS, "cash", null, db, "biz-A");
+    expect(captured[0].OR).toEqual([{ businessId: "biz-A" }, { businessId: null }]);
+    await checkDoNotRepeatForGuidance(WS, "cash", null, db);
+    expect(captured[1]).not.toHaveProperty("OR");
   });
 });

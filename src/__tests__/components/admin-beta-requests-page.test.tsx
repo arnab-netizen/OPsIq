@@ -124,4 +124,88 @@ describe("AdminBetaRequestsPage", () => {
     // Row status is unchanged -- still shows the original REQUESTED state, not INVITED.
     expect(screen.queryByText("INVITED")).toBeNull();
   });
+
+  describe("invite email outcome", () => {
+    async function inviteWith(emailDelivery: unknown) {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string, init?: { method?: string }) => {
+          if (init?.method === "POST") {
+            return jsonResponse({
+              id: "req-1",
+              status: "INVITED",
+              invitedAt: "2026-01-02T00:00:00.000Z",
+              invitedBy: "actor",
+              ...(emailDelivery === undefined ? {} : { emailDelivery }),
+            });
+          }
+          return jsonResponse(ONE_ROW);
+        })
+      );
+      render(<AdminBetaRequestsPage />);
+      await waitFor(() => expect(screen.getByText("ada@example.com")).toBeTruthy());
+      fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
+      return await screen.findByTestId("invite-email-notice");
+    }
+
+    it("SENT: reports the email was sent", async () => {
+      const notice = await inviteWith("SENT");
+      expect(notice.textContent).toMatch(/accepted by provider/i);
+    });
+
+    it("FAILED: the invite state changes but the operator is told the email was not delivered", async () => {
+      const notice = await inviteWith("FAILED");
+      expect(notice.textContent).toMatch(/could not be sent/i);
+      expect(notice.textContent).not.toMatch(/accepted by provider/i);
+      await waitFor(() => expect(screen.getByText("INVITED")).toBeTruthy());
+    });
+
+    it("NO_PROVIDER: states that no provider is configured", async () => {
+      const notice = await inviteWith("NO_PROVIDER");
+      expect(notice.textContent).toMatch(/no email provider is configured/i);
+      await waitFor(() => expect(screen.getByText("INVITED")).toBeTruthy());
+    });
+
+    it("NOT_ATTEMPTED and a missing field never claim a send", async () => {
+      const notice = await inviteWith("NOT_ATTEMPTED");
+      expect(notice.textContent).toMatch(/no email was sent/i);
+      cleanup();
+      const unknown = await inviteWith(undefined);
+      expect(unknown.textContent).not.toMatch(/accepted by provider/i);
+    });
+  });
+
+  describe("resend invitation email", () => {
+    const invitedRow = (extra: Record<string, unknown> = {}) => ({
+      betaRequests: [{ ...ONE_ROW.betaRequests[0], status: "INVITED", invitedAt: "2026-01-02T00:00:00.000Z", invitedBy: "a", inviteExpired: false, ...extra }],
+      pagination: ONE_ROW.pagination,
+    });
+
+    it("an active INVITED request offers 'Resend invitation email' (not 'Re-invite') and posts to resend-invite without changing state", async () => {
+      const fetchMock = vi.fn(async (url: string, init?: { method?: string }) =>
+        init?.method === "POST"
+          ? jsonResponse({ id: "req-1", status: "INVITED", invitedAt: "2026-01-02T00:00:00.000Z", invitedBy: "a", emailDelivery: "FAILED", emailDeliveryReason: "the email provider rejected the request (HTTP 403)" })
+          : jsonResponse(invitedRow())
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      render(<AdminBetaRequestsPage />);
+      await waitFor(() => expect(screen.getByText("ada@example.com")).toBeTruthy());
+      expect(screen.queryByRole("button", { name: /re-invite/i })).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: /resend invitation email/i }));
+      const notice = await screen.findByTestId("invite-email-notice");
+      expect(notice.textContent).toMatch(/could not be sent: the email provider rejected the request \(HTTP 403\)/);
+      expect(notice.textContent).not.toMatch(/accepted by provider/i);
+      const post = fetchMock.mock.calls.find((c) => (c[1] as { method?: string } | undefined)?.method === "POST")!;
+      expect(String(post[0])).toMatch(/\/req-1\/resend-invite$/);
+      expect(screen.getByText("INVITED")).toBeTruthy();
+    });
+
+    it("an expired INVITED request offers the state-changing Re-invite instead", async () => {
+      vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(invitedRow({ inviteExpired: true }))));
+      render(<AdminBetaRequestsPage />);
+      await waitFor(() => expect(screen.getByText("ada@example.com")).toBeTruthy());
+      expect(screen.getByRole("button", { name: /re-invite/i })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /resend invitation email/i })).toBeNull();
+    });
+  });
 });

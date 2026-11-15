@@ -9,13 +9,30 @@
  * persisted data only — no mock, nothing invented.
  */
 import { db } from "@/lib/db";
+import { loadLatestStartedCashflowRow } from "@/services/owner-cashflow/effective-cashflow.service";
+import { projectCashflowCycleRow, type CashPositionEvidence } from "@/domain/owner-cashflow/cycle-projection";
+import { missingCriticalCashflowInputs } from "@/domain/owner-cashflow/data-confidence";
+import { rowToCashflowInput } from "@/domain/owner-cashflow/row-input";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
+import { withMeasuredBaseline } from "@/domain/founder-recovery/verification-evidence";
+import { dashboardContinuityActions, dashboardPriorWorkWhere, snapshotDiagnosisState, type SnapshotDiagnosisState } from "@/services/owner-spine/dashboard-continuity";
+import { getDomainLocalOwnerStep, presentDomainLocalStep } from "@/services/owner-home/owner-candidate-builder";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere, evidencePeriodState, type EvidencePeriodState } from "@/services/owner-spine/current-diagnosis-cycle";
 
 export interface CashflowDashboardPayload {
   businesses: Array<{ id: string; name: string; businessType: string; currency: string; isActive: boolean }>;
   selectedBusinessId: string | null;
   hasData: boolean;
   latestSnapshot: any | null;
+  /**
+   * Where `latestSnapshot`'s period sits (current-diagnosis-cycle.ts): "provisional" when it is the
+   * in-progress current period — shown as in progress, never as the completed reading this page's cycle is
+   * built on. A genuinely future snapshot is never returned.
+   */
+  latestSnapshotPeriodState: EvidencePeriodState | null;
+  /** The latest snapshot's own diagnosis, when it was already diagnosed (the page never prompts a re-run of it). */
+  latestSnapshotDiagnosis: SnapshotDiagnosisState | null;
   latestCycle: any | null;
   domainScore: {
     domain: "cashflow";
@@ -27,6 +44,8 @@ export interface CashflowDashboardPayload {
   } | null;
   recommendedNextAction: any | null;
   missingCriticalData: string[];
+  /** Whether the current cycle's cash position is established from BOTH components (cycle-projection.ts); null without a cycle. */
+  cashPosition: CashPositionEvidence | null;
   cycleHistory: Array<{
     id: string;
     sequenceNumber: number;
@@ -53,7 +72,7 @@ export async function getCashflowDashboard(
     if (owned) selectedBusinessId = owned.id;
   }
   // Unambiguous only when exactly one real business exists — see hasExactlyOneRealBusiness()
-  // and cockpit-finance-priority.service.ts for the same rule. With 0 businesses this falls
+  // and owner-home/home.service.ts for the same rule. With 0 businesses this falls
   // through to the existing empty-state return below; with 2+, it now also falls through
   // (selectedBusinessId stays null) rather than silently guessing businesses[0] — the exact
   // server-side "wrong business" mechanism the controlled-beta launch-blocker audit flagged.
@@ -61,27 +80,34 @@ export async function getCashflowDashboard(
 
   if (!selectedBusinessId) {
     return {
-      businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null,
-      latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [],
+      businesses: businessList, selectedBusinessId: null, hasData: false, latestSnapshot: null, latestSnapshotPeriodState: null, latestSnapshotDiagnosis: null,
+      latestCycle: null, domainScore: null, recommendedNextAction: null, missingCriticalData: [], cashPosition: null,
       cycleHistory: [],
     };
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
-  const [latestSnapshot, latestCycle, cycles] = await Promise.all([
-    db.ownerCashflowSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
-    }),
+  const dashboardNow = new Date();
+  const [latestSnapshot, latestCycleRow, cycles] = await Promise.all([
+    // The latest snapshot that has STARTED (the one the owner can diagnose): a genuinely future period is
+    // never shown; an in-progress one is labelled (latestSnapshotPeriodState).
+    // Through the one Cashflow selector (candidates = rows that have started; ties on periodEnd by the domain rule).
+    loadLatestStartedCashflowRow(workspaceId, selectedBusinessId, dashboardNow),
     db.ownerCashflowCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(dashboardNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
         snapshot: true,
-        findings: { orderBy: { severity: "asc" } },
+        // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+        // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+        findings: true,
         actions: {
-          include: { verifications: { orderBy: { createdAt: "desc" } } },
+          include: {
+            verifications: { orderBy: { createdAt: "desc" } },
+            // Measured baseline for outcome verification (prefill + provenance display).
+            finding: { select: { sourceMetric: true, sourceValue: true } },
+          },
           // Deterministic total order -- see owner-sales/dashboard.service.ts
           // for the full incident writeup. priorityScore ties at the [0,100]
           // clamp ceiling are real and expected; a single-key orderBy has no
@@ -108,6 +134,59 @@ export async function getCashflowDashboard(
     }),
   ]);
 
+  // Read-time projection (cycle-projection.ts): when the current cycle's snapshot cannot establish total cash, its persisted
+  // (possibly pre-fix, partial-total) state, scores, findings and actions are replaced by what the current engine supports —
+  // never shown as current truth (no known total, runway, insolvency or safety from a partial position). Complete: untouched.
+  const latestCycle = latestCycleRow ? projectCashflowCycleRow(latestCycleRow) : null;
+
+  // Whether the snapshot this page would diagnose was already diagnosed (and on what): shown instead of a
+  // prompt to re-run the same evidence (a changed snapshot needs a new diagnosis).
+  const latestSnapshotCycle = latestSnapshot
+    ? await db.ownerCashflowCycle.findFirst({
+        where: { businessId: selectedBusinessId, workspaceId, snapshotId: latestSnapshot.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true, createdAt: true, cashflowState: true },
+      })
+    : null;
+
+  // Each action carries the value the diagnosis measured for its verification
+  // metric (null when not measured) — the baseline an outcome is compared to.
+  // Engaged actions are re-attached to the new cycle when the diagnosis plans them again
+  // (action-continuity.ts). Engaged actions left on an earlier cycle are still shown (after
+  // current actions, flagged when the latest diagnosis no longer raises their finding) until
+  // finished or cancelled.
+  const carriedActions = latestCycle
+    ? await db.ownerCashflowAction.findMany({
+        where: dashboardPriorWorkWhere(
+          { businessId: selectedBusinessId, workspaceId },
+          latestCycle.id,
+          latestCycle.findings.map((f: { code: string }) => f.code),
+          dashboardNow
+        ),
+        include: {
+          verifications: { orderBy: { createdAt: "desc" } },
+          finding: { select: { sourceMetric: true, sourceValue: true } },
+          cycle: { select: { sequenceNumber: true } },
+        },
+        orderBy: [{ priorityScore: "desc" }, { id: "asc" }],
+      })
+    : [];
+  const latestCycleView = latestCycle
+    ? {
+        ...latestCycle,
+        findings: rankOwnerFindingsBySeverity(latestCycle.findings),
+        // One continuity rule with Owner Home (dashboard-continuity.ts): no duplicate proposal beside the
+        // owner's engaged or completed work for the same key.
+        actions: dashboardContinuityActions<any>(
+          latestCycle,
+          latestCycle.actions,
+          carriedActions,
+          (a) => a.findingCode,
+          (a) => a.cycle?.sequenceNumber
+        ).map(withMeasuredBaseline),
+      }
+    : null;
+
   const domainScore = latestCycle
     ? {
         domain: "cashflow" as const,
@@ -119,20 +198,31 @@ export async function getCashflowDashboard(
       }
     : null;
 
-  const recommendedNextAction =
-    latestCycle && latestCycle.actions.length > 0 ? latestCycle.actions[0] : null;
+  // DOMAIN-LOCAL next step: the canonical eligible candidates (the SAME builder and eligibility contract
+  // the owner decision uses — verification timing, stale → refresh, supersession, survival issues)
+  // filtered to this domain. Never a completed, cancelled, verified, stale-replaced or superseded item,
+  // and never a second election: the owner's overall main target is the canonical owner decision.
+  const recommendedNextAction = latestCycle
+    ? presentDomainLocalStep(await getDomainLocalOwnerStep(workspaceId, selectedBusinessId, "cashflow"), latestCycleView?.actions ?? [])
+    : null;
 
   return {
     businesses: businessList,
     selectedBusinessId,
     hasData: latestCycle !== null,
     latestSnapshot: latestSnapshot ?? null,
-    latestCycle: latestCycle ?? null,
+    latestSnapshotPeriodState: latestSnapshot ? evidencePeriodState(latestSnapshot, dashboardNow) : null,
+    latestSnapshotDiagnosis: snapshotDiagnosisState(latestSnapshot, latestSnapshotCycle, latestSnapshotCycle?.cashflowState ?? null),
+    latestCycle: latestCycleView,
     domainScore,
     recommendedNextAction,
-    missingCriticalData: latestSnapshot
-      ? (Array.isArray(latestSnapshot.missingCriticalData) ? (latestSnapshot.missingCriticalData as string[]) : [])
-      : [],
+    // Hostile-review fix (same root cause as Finance's diagnosisTargetSnapshot fix): the diagnosis
+    // TARGET's own missing-data list -- latestSnapshot is the actual snapshot the re-diagnose button
+    // points at -- never the last-diagnosed cycle's own (possibly stale) snapshot, which would show an
+    // old snapshot's gaps while the page prompts re-diagnosis on a newer, undiagnosed one.
+    // Judged by the CURRENT rule from the snapshot itself (a snapshot persisted under an older rule must not hide a gap).
+    missingCriticalData: latestSnapshot ? missingCriticalCashflowInputs(rowToCashflowInput(latestSnapshot)) : [],
+    cashPosition: latestCycle?.cashPosition ?? null,
     cycleHistory: cycles.map((c: any) => ({
       id: c.id,
       sequenceNumber: c.sequenceNumber,

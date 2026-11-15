@@ -6,7 +6,7 @@
  * S4: Audit event emission on transitions
  */
 
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { PrismaClient, BusinessConditionProfile } from "@/generated/prisma/client";
 import { randomUUID } from "crypto";
 import type { BusinessConditionProfileAssessment, ConditionTransition } from "../../domain/business-facts/business-condition-profile";
 
@@ -34,7 +34,7 @@ export async function createBusinessConditionProfile(
   prisma: PrismaClient,
   input: CreateProfileInput,
   userId?: string,
-): Promise<any> {
+): Promise<BusinessConditionProfile> {
   const { engagement_id, workspace_id, assessment, diagnosis_id, assessed_by_user_id } = input;
 
   // Verify engagement exists in workspace (workspace isolation)
@@ -126,6 +126,106 @@ export async function createBusinessConditionProfile(
 }
 
 /**
+ * Creates the placeholder BusinessConditionProfile a brand-new engagement needs before any
+ * diagnosis has run. Written the same way `createBusinessConditionProfile` already writes its 11
+ * granular pressure/risk/maturity fields when there is no supporting evidence: the literal string
+ * "unknown" — never a fabricated rating. `businessStatus` and `urgencyLevel` get the same
+ * treatment here, extending a pattern this file already applies to most of the row rather than
+ * inventing a new one; `Engagement.healthStatus` is set to the same literal "unknown" at the same
+ * creation point in `services/engagement.ts`, so this keeps the whole row internally consistent.
+ * The `business_condition_profiles.*` columns are plain Postgres `String` (no CHECK constraint, no
+ * Prisma enum) — the DB has no objection to "unknown" today, so no migration is required. Only the
+ * `BusinessConditionProfileAssessment` TS type (used by the real consultant-diagnosis write path
+ * elsewhere) restricts `condition_status`/`urgency_level` to closed rating unions; this function
+ * deliberately bypasses that type rather than widening it, since a diagnosis-backed assessment
+ * should keep requiring a real rating.
+ * Numeric fields use the schema's own neutral "no information yet" default (50, the same default
+ * `conditionScore`/the four health-score columns already declare) rather than 0, since 0 would
+ * itself assert "no severity" — a fabricated claim of health, not an absence of one.
+ */
+export async function createUnassessedBusinessConditionProfile(
+  prisma: PrismaClient,
+  input: { engagement_id: string; workspace_id: string },
+  userId?: string,
+): Promise<BusinessConditionProfile> {
+  const { engagement_id, workspace_id } = input;
+
+  const engagement = await prisma.engagement.findFirst({
+    where: { id: engagement_id, workspaceId: workspace_id },
+  });
+  if (!engagement) {
+    throw new Error(`Unauthorized: engagement not found in workspace`);
+  }
+
+  await prisma.businessConditionProfile.updateMany({
+    where: { engagementId: engagement_id, isCurrent: true },
+    data: { isCurrent: false },
+  });
+
+  const now = new Date();
+  const profile = await prisma.businessConditionProfile.create({
+    data: {
+      id: randomUUID(),
+      engagementId: engagement_id,
+      workspaceId: workspace_id,
+      businessStatus: "unknown",
+      severityScore: 50,
+      urgencyLevel: "unknown",
+      cashPressureLevel: "unknown",
+      marginPressureLevel: "unknown",
+      clientConcentrationRisk: "unknown",
+      ownerDependencyRisk: "unknown",
+      keyPersonDependencyRisk: "unknown",
+      processMaturityLevel: "unknown",
+      managementMaturityLevel: "unknown",
+      executionCapacityLevel: "unknown",
+      moralFragilityLevel: "unknown",
+      resilienceLevel: "unknown",
+      growthReadinessLevel: "unknown",
+      conditionScore: 50,
+      ownerHealthScore: 50,
+      teamHealthScore: 50,
+      customerHealthScore: 50,
+      financialHealthScore: 50,
+      riskFactors: [],
+      strengths: [],
+      diagnosisId: null,
+      assessedBy: null,
+      version: 1,
+      isCurrent: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+
+  try {
+    await prisma.auditEvent.create({
+      data: {
+        id: randomUUID(),
+        eventName: "BUSINESS_CONDITION_PROFILE_CREATED",
+        actorId: userId || undefined,
+        entityType: "BusinessConditionProfile",
+        entityId: profile.id,
+        workspaceId: workspace_id,
+        payload: {
+          engagement_id,
+          condition_status: "unknown",
+          condition_score: 50,
+          unassessed: true,
+          previous_version: 0,
+          new_version: 1,
+        },
+        occurredAt: new Date(),
+      },
+    });
+  } catch (e) {
+    console.error("Failed to emit audit event", e);
+  }
+
+  return profile;
+}
+
+/**
  * B12-S2: Update existing business condition profile.
  * Increments version, manages isCurrent flag, enforces idempotency.
  */
@@ -133,7 +233,7 @@ export async function updateBusinessConditionProfile(
   prisma: PrismaClient,
   input: UpdateProfileInput,
   userId?: string,
-): Promise<any> {
+): Promise<BusinessConditionProfile> {
   const { profile_id, workspace_id, assessment, diagnosis_id, transition } = input;
 
   // Verify profile exists in workspace (workspace isolation - S3)
@@ -242,7 +342,7 @@ export async function getEffectiveBusinessConditionProfile(
   prisma: PrismaClient,
   engagement_id: string,
   workspace_id: string,
-): Promise<any | null> {
+): Promise<BusinessConditionProfile | null> {
   // Verify engagement exists in workspace
   const engagement = await prisma.engagement.findFirst({
     where: {
@@ -287,6 +387,14 @@ const CONDITION_STATE_TO_PRESSURE: Record<string, string> = {
 export interface BusinessConditionSignalInputs {
   cashState?: string | null;
   finState?: string | null;
+  /**
+   * What the CURRENT Finance diagnosis's own findings say drives its state (financeSurvivalDriver). Only a
+   * profit/margin-driven state ("profit") is a margin reading. A cash-driven state ("cash") is a cash danger and an
+   * evidence-only state (null: e.g. liquidity unconfirmed) is a data gap — neither becomes a margin-pressure level;
+   * both stay "unknown" here (a real profit finding stays visible via Cash/Profit Protection and the Owner Decision).
+   * Omitted (undefined) = findings not available to the caller: the legacy state mapping applies.
+   */
+  financeDriver?: "cash" | "profit" | null;
   cashRunwayDays: number;
   supplierInventoryRiskScore: number;
   ownerLoadPct: number;
@@ -320,7 +428,7 @@ export function deriveBusinessConditionSignals(
   input: BusinessConditionSignalInputs,
 ): DerivedBusinessConditionSignals {
   const {
-    cashState, finState, cashRunwayDays, supplierInventoryRiskScore,
+    cashState, finState, financeDriver, cashRunwayDays, supplierInventoryRiskScore,
     ownerLoadPct, staffOverloadPct, ownerOverloaded, staffOverloaded,
     capacityUtilizationPct, complaintsCount, reworkCount, overdueProofCount,
     outcomeChecksDue, churnRiskScore, growthReadinessTier,
@@ -332,7 +440,7 @@ export function deriveBusinessConditionSignals(
     ? (CONDITION_STATE_TO_PRESSURE[cashState] ?? "unknown")
     : "unknown";
 
-  const marginPressureLevel = finState
+  const marginPressureLevel = finState && (financeDriver === "profit" || financeDriver === undefined)
     ? (CONDITION_STATE_TO_PRESSURE[finState] ?? "unknown")
     : "unknown";
 
@@ -430,7 +538,7 @@ export async function getBusinessConditionProfileHistory(
   prisma: PrismaClient,
   engagement_id: string,
   workspace_id: string,
-): Promise<any[]> {
+): Promise<BusinessConditionProfile[]> {
   // Verify engagement exists in workspace
   const engagement = await prisma.engagement.findFirst({
     where: {

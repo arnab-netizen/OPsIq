@@ -336,7 +336,7 @@ export default function CustomersPage() {
     <PageContainer data-testid="customers-page">
       <div className="mb-6">
         <PageHeader
-          title="Customers"
+          title="Customer records"
           description="Who your customers are, which ones matter most, and where the relationship needs attention."
           actions={<Button size="sm" onClick={openCreate} disabled={!selectedBizId}>+ New Customer</Button>}
         />
@@ -538,7 +538,9 @@ export default function CustomersPage() {
               />
             </div>
             <div>
-              <label htmlFor="customer-ltv" className="block text-sm font-medium mb-1">Lifetime value ($)</label>
+              <label htmlFor="customer-ltv" className="block text-sm font-medium mb-1">
+                Lifetime value{currentBusiness?.currency ? ` (${currentBusiness.currency})` : ""}
+              </label>
               <Input
                 id="customer-ltv"
                 type="number"

@@ -5,11 +5,13 @@
  * not computable from the provided inputs; nothing is invented. Composite scores
  * are bounded 0..100. The cashflow lens is liquidity (can near-term cash demands
  * be met), distinct from the profit lens of Module 2 finance. Conventions:
- *   totalCash            = sum(cashInHand, bankBalance)
+ *   totalCash            = cashInHand + bankBalance, ONLY when BOTH are known (a known 0 is known; a missing component makes the
+ *                          total UNKNOWN, never a partial sum — the one contract in owner-finance/liquidity.ts)
  *   nearTermObligations  = sum(upcomingEmi, rentDue, salaryDue, vendorDue, taxDue, ownerWithdrawal)
  *   cashRunwayDays       = totalCash / (dailyObligations - dailyCollections), only when net-burning
  */
 import { clampScore } from "@/domain/owner-spine/contracts";
+import { cashflowTotalCash } from "@/domain/owner-finance/liquidity";
 import type {
   CashflowSnapshotInput,
   CashflowDerivedMetrics,
@@ -47,8 +49,9 @@ function periodDays(input: CashflowSnapshotInput): number | null {
 
 // --- cash position + obligations ---------------------------------------------
 
+/** Total cash — the canonical strict primitive: null unless BOTH components are known (unknown is not zero, not safe, not danger). */
 export function totalCash(input: CashflowSnapshotInput): number | null {
-  return sumPresent(input.cashInHand, input.bankBalance);
+  return cashflowTotalCash(input);
 }
 
 export function nearTermObligations(input: CashflowSnapshotInput): number | null {
@@ -180,13 +183,19 @@ export function cashflowDangerScore(input: CashflowSnapshotInput, t: CashflowThr
   return clampScore(score);
 }
 
+/** The engine's neutral liquidity-health basis (used when urgent-payment risk is not computable). */
+const NEUTRAL_LIQUIDITY_HEALTH = 50;
+
 export function cashflowHealthScore(input: CashflowSnapshotInput, t: CashflowThresholds): number {
   const danger = cashflowDangerScore(input, t);
   const urgent = urgentPaymentRiskPct(input);
   // Liquidity health maps urgent-payment risk (0%..100%+ of cash) onto 100..0.
-  let liquidityHealth = 50;
+  let liquidityHealth = NEUTRAL_LIQUIDITY_HEALTH;
   if (urgent !== null) liquidityHealth = clampScore(100 - urgent);
-  return clampScore(Math.round(0.65 * (100 - danger) + 0.35 * liquidityHealth));
+  const score = clampScore(Math.round(0.65 * (100 - danger) + 0.35 * liquidityHealth));
+  // Total cash not established: absent cash danger is NOT evidence of health, so the score never exceeds the neutral
+  // basis (independently measured danger may still pull it below). Unknown is not labelled unhealthy either.
+  return totalCash(input) === null ? Math.min(score, NEUTRAL_LIQUIDITY_HEALTH) : score;
 }
 
 export function cashflowOpportunityScore(input: CashflowSnapshotInput): number {
@@ -219,8 +228,9 @@ export function cashflowState(
   ) {
     return "AT_RISK";
   }
-  // Not enough trustworthy data to assert SAFE → caution.
-  if (dataConfidenceScore < 50) return "WATCH";
+  // Not enough trustworthy data to assert SAFE → caution. An unestablished cash position (either component unknown)
+  // is never read as SAFE: only complete, current cash evidence can support it. Independently measured risks above still win.
+  if (s.noCashData || dataConfidenceScore < 50) return "WATCH";
   if (s.highPayablesPressure || s.highCollectionGap || s.highOwnerWithdrawal) return "WATCH";
   return "SAFE";
 }

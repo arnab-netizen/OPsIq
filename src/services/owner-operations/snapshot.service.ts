@@ -142,8 +142,10 @@ export async function getOperationsSnapshot(snapshotId: string, workspaceId: str
 
 export async function listOperationsSnapshots(businessId: string, workspaceId: string) {
   await getBusiness(businessId, workspaceId);
+  // Newest evidence period first, with a deterministic tie-break (the first row is the latest period;
+  // duplicate periods resolve the same way on every read).
   return db.ownerOperationsSnapshot.findMany({
     where: { businessId, workspaceId },
-    orderBy: { periodEnd: "desc" },
+    orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
   });
 }

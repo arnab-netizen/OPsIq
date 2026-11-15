@@ -1,14 +1,21 @@
 "use client";
 
+import { ownerConfidencePhrase } from "@/domain/owner-spine/confidence-vocabulary";
+import { assessScoreAvailability, presentScores } from "@/domain/owner-spine/score-availability";
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
+import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
+import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { humanizeMetricKey, humanizeEvidenceLine, ownerValueText } from "@/lib/metric-label";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -250,17 +257,30 @@ export default function OwnerMarketingPage() {
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
+      const beforeRaw = window.prompt(
+        action.measuredBaseline == null
+          ? `BEFORE value for ${humanizeMetricKey(action.verificationMetric)} (not measured by the diagnosis — required):`
+          : `BEFORE value for ${humanizeMetricKey(action.verificationMetric)} (measured: ${action.measuredBaseline}; leave blank to use it — a different value is recorded as owner-reported):`
+      );
       if (beforeRaw === null) { setBusy(false); return; }
       const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (afterRaw === null) { setBusy(false); return; }
       const dir = window.prompt("Target direction (up / down):", "up");
       if (dir === null) { setBusy(false); return; }
+      // Strict parse: blank = not given; anything else must be a plain number ("₹1200" or "1,200"
+      // must not silently become "not given" and be recorded against the measured baseline).
+      const beforeValue = beforeRaw.trim() === "" ? null : Number(beforeRaw.trim());
+      const afterValue = afterRaw.trim() === "" ? null : Number(afterRaw.trim());
+      if ((beforeValue !== null && !Number.isFinite(beforeValue)) || (afterValue !== null && !Number.isFinite(afterValue))) {
+        setError("Enter plain numbers only (no currency symbols or thousands separators).");
+        setBusy(false);
+        return;
+      }
       await api(`/api/owner/marketing/actions/${action.id}/verify`, {
         method: "POST",
         body: JSON.stringify({
-          beforeValue: beforeRaw.trim() === "" ? null : parseFloat(beforeRaw),
-          afterValue: afterRaw.trim() === "" ? null : parseFloat(afterRaw),
+          beforeValue,
+          afterValue,
           targetDirection: dir === "down" ? "down" : "up",
         }),
       });
@@ -317,7 +337,7 @@ export default function OwnerMarketingPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -340,8 +360,8 @@ export default function OwnerMarketingPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!activeBusinessId}>
               + Add marketing snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy}>
-              Run marketing diagnosis
+            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Re-run if something changed." : undefined}>
+              {dashboard?.latestSnapshotDiagnosis?.current ? "Re-run marketing diagnosis" : "Run marketing diagnosis"}
             </Button>
           </div>
 
@@ -385,9 +405,14 @@ export default function OwnerMarketingPage() {
               load must never render "No marketing snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
+          <DomainMainTargetContext domain="marketing" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
+
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard.latestSnapshot
+              {dashboard.latestSnapshotDiagnosis?.current
+                ? "These figures were already diagnosed. Their period is still in progress, so the result is provisional (see the note above) and there is no completed reading yet — it appears here once a completed period is diagnosed."
+                : dashboard.latestSnapshot
                 ? "Snapshot recorded. Click “Run marketing diagnosis” to generate findings and an action plan."
                 : "No marketing snapshot yet. Add a snapshot, then run a marketing diagnosis."}
             </div>
@@ -429,19 +454,31 @@ function MarketingCycleView({
   onVerifyAction: (a: any) => void;
 }) {
   const state = score?.marketingState ?? cycle.marketingState;
+  // UNKNOWN is never healthy / zero-risk: the one spine rule decides whether these are shown as scores.
+  const presentedScores = presentScores(
+    {
+      health: Number(score?.healthScore ?? cycle.healthScore ?? 0),
+      risk: Number(score?.riskScore ?? cycle.riskScore ?? 0),
+      opportunity: Number(score?.opportunityScore ?? cycle.opportunityScore ?? 0),
+    },
+    assessScoreAvailability({ dataConfidenceScore: score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0, missingCritical: missing }),
+  );
   return (
     <div className="space-y-6">
       <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
           <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
+            {presentedScores.scores.map((s) => `${s.label} ${s.value}`).join(" · ")}
           </div>
+          {presentedScores.note && (
+            <p className="mt-1 text-sm font-normal text-foreground" data-testid="score-availability-note">{presentedScores.note}</p>
+          )}
         </div>
         <div className="text-right">
           <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
+            data completeness {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
         </div>
       </div>
@@ -454,12 +491,14 @@ function MarketingCycleView({
 
       {recommended && (
         <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next marketing action</div>
+          <div className="text-xs uppercase text-muted-foreground">Next step within Marketing (local to this area — your overall main target is on Home)</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 
@@ -478,7 +517,7 @@ function MarketingCycleView({
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {ownerValueText(f.sourceValue)}{f.threshold !== null && f.threshold !== undefined ? <> (threshold {ownerValueText(f.threshold)})</> : null} · {ownerConfidencePhrase(Math.round((f.confidence ?? 0) * 100))} — a heuristic rating, not a probability
               </p>
               {Array.isArray(f.evidence) && f.evidence.length > 0 && (
                 <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
@@ -501,6 +540,12 @@ function MarketingCycleView({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {a.carriedFromCycleSequence != null && (
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
+                        {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
@@ -516,16 +561,14 @@ function MarketingCycleView({
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
-                  <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>
+                  {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
-                    <span className="text-muted-foreground">
-                      before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
-                    </span>
+                    <VerificationEvidenceText verification={latestVerification} />
                   </div>
                 )}
               </div>

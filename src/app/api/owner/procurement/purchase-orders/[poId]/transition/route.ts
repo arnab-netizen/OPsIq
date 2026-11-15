@@ -5,6 +5,8 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { transitionPurchaseOrder, type POStatus } from "@/services/owner-procurement/purchase-order.service";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
+import { COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";
+import { assertCommercialCapability } from "@/services/billing/commercial-policy.service";
 
 const transitionSchema = z.object({
   toStatus: z.enum(["REVIEWED", "APPROVED", "ISSUED", "DELIVERED", "CANCELLED"]),
@@ -17,6 +19,11 @@ export const POST = withCanonicalEnforcement(
     const parsed = transitionSchema.safeParse(body);
     if (!parsed.success) {
       return canonicalJson({ error: "toStatus is required" }, { status: 400 });
+    }
+    // Cancelling is a risk-reducing stop action and is never paywalled. Forward execution progression
+    // (REVIEWED, APPROVED, ISSUED, DELIVERED) is paid continuation. No-op when enforcement is OFF.
+    if (parsed.data.toStatus !== "CANCELLED") {
+      await assertCommercialCapability(ctx.verifiedWorkspaceId, COMMERCIAL_CAPABILITIES.APPROVAL_RESOLUTION);
     }
     try {
       const order = await transitionPurchaseOrder(

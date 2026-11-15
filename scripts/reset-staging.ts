@@ -13,8 +13,17 @@
  */
 
 import { PrismaClient } from "../src/generated/prisma/client";
-import * as fs from "fs";
-import * as path from "path";
+import { StagingTargetRefusal, assertLocalOrApprovedStagingTarget } from "../src/infra/staging-database-target";
+
+// This script DELETEs every table. It goes through the Prisma client, not the Prisma CLI, so the CLI datasource guard
+// never sees it: prove the target BEFORE the first statement — positively local, or an approved staging endpoint.
+// (Local compose: set OPSIQ_LOCAL_DB_EXTRA_HOSTS=postgres; staging: OPSIQ_APPROVED_STAGING_ENDPOINT_IDS.)
+try {
+  assertLocalOrApprovedStagingTarget(process.env.DATABASE_URL, process.env);
+} catch (e) {
+  console.error(`[RESET] REFUSED: ${e instanceof StagingTargetRefusal ? e.message : "the database target could not be verified"} No statement was executed.`);
+  process.exit(1);
+}
 
 const prisma = new PrismaClient({
   datasources: {
@@ -96,9 +105,10 @@ async function resetDatabase() {
       try {
         await prisma.$executeRawUnsafe(`DELETE FROM ${table};`);
         console.log(`[RESET] ✓ Cleared ${table}`);
-      } catch (error: any) {
-        if (!error.message.includes("does not exist")) {
-          console.warn(`[RESET] ⚠ Could not clear ${table}:`, error.message);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes("does not exist")) {
+          console.warn(`[RESET] ⚠ Could not clear ${table}:`, message);
         }
       }
     }
@@ -142,7 +152,7 @@ async function main() {
   if (shouldReseed) {
     console.log("[RESET] Running seed script...");
     // Import and run seed
-    const seedScript = require("./seed-staging");
+    const seedScript = await import("./seed-staging");
     await seedScript.main();
   }
 

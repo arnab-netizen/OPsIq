@@ -23,5 +23,5 @@ export const POST = withCanonicalEnforcement(
     );
     return canonicalJson(result, { status: result.alreadyHandedOff ? 200 : 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

@@ -76,6 +76,9 @@ function populatedFixture(label: string, actionOverrides: Record<string, unknown
     selectedBusinessId: BIZ_A.id,
     hasData: true,
     latestSnapshot: { id: `snap-${label}` },
+    scenarios: [
+      { id: `snap-${label}`, optionName: `Option ${label}`, periodStart: "2026-09-01T00:00:00.000Z", periodEnd: "2026-09-30T00:00:00.000Z", createdAt: "2026-09-01T00:00:00.000Z", lastEvaluationSequence: 1, isCurrentDecision: true },
+    ],
     missingCriticalData: [],
     domainScore: null,
     recommendedNextAction: null,
@@ -333,14 +336,15 @@ describe("Owner Strategy page — owner-safe error rendering (runDiagnosis / act
     dashboardFixture = populatedFixture("A");
     installFetchMock();
     const { container } = renderPage();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Evaluate scenario" })).not.toBeDisabled());
+    const evaluate = () => screen.getByRole("button", { name: /^Evaluate this scenario: Option A/ });
+    await waitFor(() => expect(evaluate()).not.toBeDisabled());
 
     diagnosisFailure = { kind: "http", status: 403, body: { error: "Insufficient permissions" } };
-    fireEvent.click(screen.getByRole("button", { name: "Evaluate scenario" }));
+    fireEvent.click(evaluate());
 
     const banner = await waitForErrorBanner(container);
     expect(banner.textContent).toBe("You don't have permission to do this.");
-    expect(screen.getByRole("button", { name: "Evaluate scenario" })).not.toBeDisabled();
+    expect(evaluate()).not.toBeDisabled();
     // Prior cycle content is unaffected by the failed mutation.
     expect(screen.getByText(/Strategy actions/)).toBeInTheDocument();
   });

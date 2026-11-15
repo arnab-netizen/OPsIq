@@ -25,7 +25,7 @@ const learningRow = {
 
 function mockDb(rows: ReturnType<typeof scenarioRows>): PrismaClient {
   return {
-    ownerCashflowSnapshot: { findFirst: async () => rows.cashflow },
+    ownerCashflowSnapshot: { findFirst: async () => rows.cashflow, findMany: async () => (rows.cashflow ? [rows.cashflow] : []) },
     ownerFinancialSnapshot: { findFirst: async () => rows.finance },
     ownerWorkingCapitalItem: { findMany: async () => rows.wcItems },
     ownerCapacitySnapshot: { findFirst: async () => rows.capacity },

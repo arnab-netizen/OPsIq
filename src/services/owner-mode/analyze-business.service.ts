@@ -24,8 +24,10 @@
  * each domain's outcome is independent and reported separately.
  */
 import { getBusiness } from "@/services/founder-recovery/business.service";
-import { listFinancialSnapshots } from "@/services/owner-finance/snapshot.service";
+import { db } from "@/lib/db";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
+import { reconcileDataGapTasksAfterDiagnosis } from "@/services/owner-mode/process-execution-bridge.service";
 import { listSalesSnapshots } from "@/services/owner-sales/snapshot.service";
 import { runSalesDiagnosis } from "@/services/owner-sales/diagnosis.service";
 import { listOperationsSnapshots } from "@/services/owner-operations/snapshot.service";
@@ -49,8 +51,10 @@ export interface AnalyzeBusinessResult {
 }
 
 async function tryRunFinance(businessId: string, workspaceId: string, actorId: string, result: AnalyzeBusinessResult): Promise<void> {
-  const snapshots = await listFinancialSnapshots(businessId, workspaceId);
-  if (snapshots.length === 0) {
+  // The CURRENT EFFECTIVE snapshot (financial-snapshot-selection.ts): business-scoped, unsuperseded,
+  // latest evidence period with a deterministic tie-break — never "first row of a history list".
+  const current = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }, { id: true }));
+  if (!current) {
     result.skipped.push("finance");
     return;
   }
@@ -65,8 +69,10 @@ async function tryRunFinance(businessId: string, workspaceId: string, actorId: s
     return;
   }
   try {
-    await runFinanceDiagnosis(businessId, snapshots[0].id, actorId, workspaceId);
+    await runFinanceDiagnosis(businessId, current.id, actorId, workspaceId);
     result.analyzed.push("finance");
+    // Evidence changed: retire generated data-gap tasks this diagnosis resolved (best-effort, own errors).
+    await reconcileDataGapTasksAfterDiagnosis(workspaceId, businessId, actorId);
   } catch (err) {
     result.failed.push({ domain: "finance", reason: err instanceof Error ? err.name : "UnknownError" });
   }

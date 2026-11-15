@@ -201,9 +201,9 @@ export interface SupervisorSummary {
 
 const CONF_ORDER: Record<Confidence, number> = { none: 0, low: 1, medium: 2, high: 3 };
 const CONSTRAINT_WHY: Record<string, string> = {
-  compliance_block: "A legal / licensing / tax exposure can shut the business down — it outranks everything else.",
+  compliance_block: "A legal / licensing / tax exposure can shut the business down.",
   proof_fraud_block: "Unverifiable or gamed numbers would corrupt every downstream decision.",
-  cash_survival: "Running out of cash ends the business before any other problem matters.",
+  cash_survival: "Running out of cash ends the business.",
   below_margin: "Work that loses money on every unit drains the business the more you sell.",
   capacity_feasibility: "Taking on more than you can reliably deliver breaks quality and SLAs.",
   customer_quality: "A quality / reputation problem destroys demand faster than marketing can replace it.",
@@ -312,7 +312,7 @@ function buildImpact(input: SupervisorInput): ImpactStatement[] {
 function buildCadence(input: SupervisorInput, status: OwnerActionStatus): OperatingCadence {
   const risky = HIGH_RISK_FINANCIAL.has(input.dominantConstraint) || input.dominantConstraint === "capacity_feasibility";
   const stopLoss = status === "blocked"
-    ? "Do not act — this is blocked until the gate clears."
+    ? "The plan's suggested action is gated until its gate clears."
     : risky
       ? (input.growthBlockedBy.length > 0
           ? `Stop and reassess if any of these worsen: ${input.growthBlockedBy.slice(0, 2).join(", ")}.`
@@ -375,7 +375,7 @@ export function buildSupervisorSummary(input: SupervisorInput): SupervisorSummar
     found: true,
     emergency,
     mainIssue: `${input.topPriorityLabel}${nonDefault(input.rootCause) ? ` — root cause: ${input.rootCause}` : ""}`,
-    whyItMatters: CONSTRAINT_WHY[input.dominantConstraint] ?? "This is the single thing most holding the business back.",
+    whyItMatters: CONSTRAINT_WHY[input.dominantConstraint] ?? "The plan analysis sees this as its dominant constraint.",
     doNow: actionStatus === "need_more_data" ? "Enter the missing critical data before acting." : input.nextBestAction,
     doNotDo: input.doNotDo,
     ownerDecisionRequired: input.ownerApprovalRequired || actionStatus === "owner_decision_required"

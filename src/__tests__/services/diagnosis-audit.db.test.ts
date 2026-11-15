@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { seedPlanEntitlement, cleanupPlanEntitlement, type PlanEntitlementFixture } from "@/__tests__/test-helpers/plan-entitlement";
 
 /**
  * Phase 6G — F-G1 regression guard.
@@ -21,6 +22,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     const userId = uuidv4();
     const stamp = uuidv4();
     const createdEngagementIds: string[] = [];
+    let plan: PlanEntitlementFixture | undefined;
 
     const authContext = {
       verifiedActorId: userId,
@@ -36,7 +38,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         workspaceId,
         capabilities: ["DIAGNOSIS_CREATE"],
       },
-      // assessCondition reads authContext.session?.user?.id for actorId
       session: {
         user: {
           id: userId,
@@ -47,7 +48,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         sessionId: uuidv4(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
-      policy: null,
+      // The authorized policy (the route wrapper supplies it): workspace admin.
+      policy: {
+        userId,
+        roles: [{ role: "admin_or_portfolio_manager", scope: "workspace", scopeId: workspaceId }],
+        engagementMemberships: [],
+        workspaceRole: "admin",
+      },
     } as unknown as CanonicalAuthContext;
 
     beforeAll(async () => {
@@ -65,6 +72,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           slug: `6g-fg1-audit-${stamp}`,
         },
       });
+      await db.workspaceMembership.create({ data: { userId, workspaceId, role: "admin", isActive: true } });
+      await db.userRoleAssignment.create({
+        data: { id: uuidv4(), userId, role: "admin_or_portfolio_manager", scope: "workspace", scopeId: workspaceId, isActive: true },
+      });
+      plan = await seedPlanEntitlement([workspaceId], ["create_engagement"]);
     });
 
     afterAll(async () => {
@@ -76,14 +88,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
           await db.finding.deleteMany({
             where: { engagementId: { in: createdEngagementIds } },
           });
-          await db.businessConditionProfile.deleteMany({
-            where: { engagementId: { in: createdEngagementIds } },
-          });
+          await db.action.deleteMany({ where: { engagementId: { in: createdEngagementIds } } });
+          await db.evidence.deleteMany({ where: { engagementId: { in: createdEngagementIds } } });
+          await db.engagementMembership.deleteMany({ where: { engagementId: { in: createdEngagementIds } } });
+          await db.interventionState.deleteMany({ where: { engagementId: { in: createdEngagementIds } } });
         }
         await db.recommendation.deleteMany({ where: { workspaceId } });
-        await db.businessConditionProfile.deleteMany({ where: { workspaceId } });
+        await db.auditEvent.deleteMany({ where: { workspaceId } });
+        await db.usageEvent.deleteMany({ where: { workspaceId } });
         await db.engagement.deleteMany({ where: { workspaceId } });
         await db.clientAccount.deleteMany({ where: { workspaceId } });
+        await cleanupPlanEntitlement(plan);
+        await db.userRoleAssignment.deleteMany({ where: { userId } });
+        await db.workspaceMembership.deleteMany({ where: { userId } });
         await db.workspace.deleteMany({ where: { id: workspaceId } });
         await db.auditEvent.deleteMany({ where: { actorId: userId } });
         await db.user.deleteMany({ where: { id: userId } });

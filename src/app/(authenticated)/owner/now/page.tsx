@@ -6,6 +6,8 @@ import { Badge, Button, CardDashboardSkeleton, PageHeader, PageContainer } from 
 import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- guidance payload is the service contract (untyped here); load() on mount is intentional */
 
@@ -38,12 +40,14 @@ const STATUS_LABEL: Record<string, string> = {
   DANGER: "Danger",
   CRITICAL: "Critical",
 };
-// Verified against GuidanceClassification (src/domain/owner-guidance/guidance-classification.ts).
+// Verified against GuidanceClassification (src/domain/owner-guidance/guidance-classification.ts). These describe THIS PAGE'S
+// guidance workflow (readiness to review), never the owner's permission to commit money, capacity or a plan: that comes only
+// from the canonical advice policy beside the main-target card. Wording is scoped to "guidance" so it cannot read as approval.
 const CLASSIFICATION_LABEL: Record<string, string> = {
-  GUIDANCE_READY: "Ready",
-  GUIDANCE_READY_WITH_LOW_CONFIDENCE: "Ready — low confidence",
-  GUIDANCE_BLOCKED_MISSING_DATA: "Blocked — missing data",
-  GUIDANCE_BLOCKED_UNSAFE: "Blocked — unsafe",
+  GUIDANCE_READY: "Guidance ready to review",
+  GUIDANCE_READY_WITH_LOW_CONFIDENCE: "Guidance ready to review — limited evidence",
+  GUIDANCE_BLOCKED_MISSING_DATA: "Guidance needs more information",
+  GUIDANCE_BLOCKED_UNSAFE: "Guidance held by a safety check",
   GUIDANCE_REQUIRES_OWNER_DECISION: "Requires owner decision",
   GUIDANCE_REQUIRES_PROFESSIONAL_REVIEW: "Requires professional review",
   GUIDANCE_REQUIRES_OUTCOME_CHECK: "Requires outcome check",
@@ -172,6 +176,10 @@ export default function OwnerNowViewPage() {
       />
 
       <BusinessContextSelector businesses={businesses} selectedId={activeBusinessId} onChange={onSwitchBusiness} />
+
+      {/* The ONE canonical owner decision (same object Home/Cockpit/Priorities render). The operating
+          signals below are Now View's context around it — they never name a different main target. */}
+      {data.ownerDecision && <OwnerDecisionCard decision={data.ownerDecision as CurrentOwnerDecision} detail="compact" />}
       <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
         Business selection scopes cash, finance, quality and retention signals below. Staff workload,
         supply/capacity, process-breakdown, and proof-risk signals are workspace-wide and do not change
@@ -190,19 +198,24 @@ export default function OwnerNowViewPage() {
         <Badge variant={STATUS_VARIANT(view.supplierInventoryStatus)}>Supply: {STATUS_LABEL[view.supplierInventoryStatus] ?? view.supplierInventoryStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.growthReadinessStatus)}>Growth: {STATUS_LABEL[view.growthReadinessStatus] ?? view.growthReadinessStatus}</Badge>
         <Badge variant="default-accessible">{CLASSIFICATION_LABEL[view.classification] ?? view.classification}</Badge>
-        {view.confidenceCapped && <Badge variant="warning-accessible">Low confidence ({CONFIDENCE_LEVEL_LABEL[view.confidence] ?? view.confidence})</Badge>}
+        {view.confidenceCapped && <Badge variant="warning-accessible">Limited evidence ({CONFIDENCE_LEVEL_LABEL[view.confidence] ?? view.confidence})</Badge>}
       </section>
+      <p data-testid="now-guidance-scope" style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+        The guidance label above describes this page&apos;s guidance only. Whether OpsIQ supports committing money, capacity or a plan is
+        decided by your main target&apos;s advice status{data.ownerDecision?.advicePolicy && !data.ownerDecision.advicePolicy.canMakeMaterialCommitment ? " — which does not support a commitment on the current evidence" : ""}.
+      </p>
 
       {Array.isArray(view.missingDataRequests) && view.missingDataRequests.length > 0 && (
         <section style={{ background: "#fffbeb", padding: 16, borderRadius: 8 }}>
-          <h2 style={{ marginTop: 0 }}>Data needed first</h2>
+          <h2 style={{ marginTop: 0 }}>Data OpsIQ still needs</h2>
           <ul>{view.missingDataRequests.map((m: string, i: number) => <li key={i}>{m}</li>)}</ul>
         </section>
       )}
 
       <section>
-        <h2>Top {Math.min(steps.length, 3) || ""} actions now</h2>
-        {steps.length === 0 && <p>No urgent owner actions right now.</p>}
+        <h2>Operating signals to act on</h2>
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: "#6b7280" }}>Day-to-day signals from your operating data. Your main target is shown above; these support it and never replace it.</p>
+        {steps.length === 0 && <p>No urgent operating signals right now.</p>}
         {steps.map((s, i) => (
           <div key={i} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginBottom: 12 }}>
             <p style={{ margin: "0 0 6px", fontWeight: 600 }}>{s.exactStep}</p>
@@ -215,10 +228,17 @@ export default function OwnerNowViewPage() {
         ))}
       </section>
 
-      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.length > 0 && (
+      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.some((a: any) => a.conditionOn) && (
+        <section style={{ padding: 16, borderRadius: 8, border: "1px solid var(--border)" }} data-testid="now-step-conditions">
+          <h2 style={{ marginTop: 0 }}>How to carry out your next steps</h2>
+          <ul>{view.actionsToAvoid.filter((a: any) => a.conditionOn).map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
+        </section>
+      )}
+
+      {Array.isArray(view.actionsToAvoid) && view.actionsToAvoid.some((a: any) => !a.conditionOn) && (
         <section style={{ background: "#fef2f2", padding: 16, borderRadius: 8 }}>
           <h2 style={{ marginTop: 0 }}>Do NOT do now</h2>
-          <ul>{view.actionsToAvoid.map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
+          <ul>{view.actionsToAvoid.filter((a: any) => !a.conditionOn).map((a: any, i: number) => <li key={i}>{a.avoid} — <em>{a.reason}</em></li>)}</ul>
         </section>
       )}
 
@@ -236,7 +256,7 @@ export default function OwnerNowViewPage() {
           <p>{beginner.whyItMatters}</p>
           <p>If ignored: {beginner.whatHappensIfIgnored}</p>
           {Array.isArray(beginner.whatToDoFirst) && (
-            <><p style={{ marginBottom: 4, fontWeight: 600 }}>Do first:</p>
+            <><p style={{ marginBottom: 4, fontWeight: 600 }}>{data.ownerDecision ? "Do first:" : "Operating signals to act on:"}</p>
             <ul>{beginner.whatToDoFirst.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul></>
           )}
           {Array.isArray(beginner.whatNotToDo) && (

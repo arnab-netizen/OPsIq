@@ -27,5 +27,5 @@ export const POST = withCanonicalEnforcement(
     const id = await recordDoNotRepeat({ ...input, workspaceId: ctx.verifiedWorkspaceId });
     return canonicalJson({ id }, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "continuation_action", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

@@ -8,6 +8,7 @@ import {
   mapBusinessTypeToProfile,
   mapOperatingModelToRole,
   rowsToSuppliedCategories,
+  loadFirstReadSufficiency,
 } from "@/services/owner-mode/owner-onboarding.service";
 import { buildInputGuidance, type InputGuidance } from "@/domain/owner-mode/input-guidance";
 
@@ -36,6 +37,7 @@ export async function getOwnerInputGuidance(deps: OwnerInputGuidanceDeps): Promi
   const ownerRole = mapOperatingModelToRole(business?.operatingModel, false);
   const suppliedCategories = rowsToSuppliedCategories(rows);
 
-  const guidance = buildInputGuidance({ profileType, ownerRole, suppliedCategories });
+  const firstRead = await loadFirstReadSufficiency(deps, rows);
+  const guidance = buildInputGuidance({ profileType, ownerRole, suppliedCategories, firstRead });
   return { ...guidance, workspaceId, businessId, found: Boolean(business), generatedFromRuntime: true };
 }

@@ -157,6 +157,14 @@ export const CAPABILITIES = {
   // provisioned explicitly and separately; none is provisioned by this change.
   BETA_PROGRAM_MANAGE: "beta_program:manage",
   CUSTOMER_ACCESS_MANAGE: "customer_access:manage",
+
+  // Acceptance fixture authority — the ONLY authority needed to create isolated acceptance
+  // fixtures (business / Startup session / blueprint) in the caller's OWN workspace through
+  // /api/admin/acceptance-fixtures/*. Carried by exactly ROLES.ACCEPTANCE_FIXTURE_OPERATOR (and,
+  // like every capability, by SYSTEM_ADMIN's all-capabilities bundle). Deliberately not part of any
+  // owner, consultant or other operator bundle. See
+  // docs/opsiq-governance/ACCEPTANCE_FIXTURE_AUTHORITY.md.
+  ACCEPTANCE_FIXTURE_WRITE: "acceptance_fixture:write",
 } as const;
 
 export type CapabilityName =

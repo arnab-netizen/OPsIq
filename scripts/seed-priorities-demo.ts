@@ -4,6 +4,8 @@
  * Not a fixture -- isFixtureRecord: false throughout. Safe to delete/re-seed at any time; this
  * script only touches the local dev DB's trust-journey-repro workspace.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import { randomUUID } from "crypto";
 
 const WORKSPACE_ID = "61000000-0000-0000-0000-0000000000a1";

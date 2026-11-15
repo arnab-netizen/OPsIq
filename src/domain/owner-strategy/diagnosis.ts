@@ -7,29 +7,19 @@
  * (domain "strategy"). Does NOT create recommendations/actions (Slice 3) and
  * persists nothing.
  */
-import type { OwnerFinding, OwnerSeverity, DomainScore } from "@/domain/owner-spine/contracts";
+import { rankOwnerFindingsBySeverity, type OwnerFinding, type DomainScore } from "@/domain/owner-spine/contracts";
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import { computeStrategyMetrics } from "./metrics";
 import { resolveStrategyThresholds } from "./thresholds";
 import { buildStrategyRiskFindings } from "./risk-rules";
 import { buildStrategyOpportunityFindings } from "./opportunity-rules";
 
-const SEVERITY_RANK: Record<OwnerSeverity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
-
 /**
  * Deterministic finding order: severity desc → impact desc → urgency desc →
- * confidence desc → code asc. Pure; returns a new array.
+ * confidence desc → code asc (the canonical spine ranking). Pure; returns a new array.
  */
 export function rankStrategyFindings(findings: OwnerFinding[]): OwnerFinding[] {
-  return [...findings].sort((a, b) => {
-    if (SEVERITY_RANK[b.severity] !== SEVERITY_RANK[a.severity]) {
-      return SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity];
-    }
-    if (b.impactScore !== a.impactScore) return b.impactScore - a.impactScore;
-    if (b.urgencyScore !== a.urgencyScore) return b.urgencyScore - a.urgencyScore;
-    if (b.confidence !== a.confidence) return b.confidence - a.confidence;
-    return a.code < b.code ? -1 : a.code > b.code ? 1 : 0;
-  });
+  return rankOwnerFindingsBySeverity(findings);
 }
 
 export interface StrategyDiagnosisResult {

@@ -419,14 +419,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Operator Route Integration", ()
        * STEP 7: Assertions verify validation executed
        */
       expect(response.status).toBe(500); // ← Route error caught by wrapper
-      const responseBody = await response.json() as any;
-      expect(responseBody.errorName || responseBody.error).toBeDefined();
-      // Canonical wrapper returns error in response body, not thrown
-      expect(
-        responseBody.errorName?.toLowerCase().includes("error") ||
-        responseBody.error?.toLowerCase().includes("outcome") ||
-        JSON.stringify(responseBody).toLowerCase().includes("outcome notes")
-      ).toBe(true); // ← Validation error message in response
+      const responseBody = await response.json() as Record<string, unknown>;
+      // The wrapper answers an unclassified failure with a calm, non-technical body and a correlation id: the raw
+      // exception (class, message, stack) is never returned to a client — it stays in the server log. That the
+      // validation really executed is proven by the unchanged database record below.
+      expect(typeof responseBody.error).toBe("string");
+      expect(typeof responseBody.correlationId).toBe("string");
+      expect(responseBody).not.toHaveProperty("errorName");
+      expect(JSON.stringify(responseBody)).not.toMatch(/actualOutcome|stack/i);
 
       // Database should NOT be updated (validation prevents write)
       const dbRecord = await db.operatorItem.findUnique({
@@ -500,7 +500,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Operator Route Integration", ()
       expect(dbRecord?.actualOutcome).toBe("success"); // ← Classification
       expect(dbRecord?.verificationStatus).toBe("disputed"); // ← Auto-flagged by fraud detection
       expect(dbRecord?.verificationEvidence).toBeDefined(); // ← Contains fraud risk assessment
-      const evidence = dbRecord?.verificationEvidence as any;
+      const evidence = dbRecord?.verificationEvidence as Record<string, unknown> | null | undefined;
       expect(evidence?.fraudRiskAssessment?.riskLevel).toBe("high"); // ← Fraud risk found
       expect(evidence?.fraudRiskAssessment?.indicators).toContain("Retroactive modification of outcome value");
     });
@@ -704,7 +704,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Decision Lifecycle Integration"
       expect(dbRecord?.actualOutcome).toBe("uncertain"); // ← Classifier
       expect(dbRecord?.verificationStatus).toBe("disputed"); // ← Auto-flagged (mapped from "flagged")
       expect(dbRecord?.verificationEvidence).toBeDefined(); // ← Contains fraud assessment
-      const evidence = dbRecord?.verificationEvidence as any;
+      const evidence = dbRecord?.verificationEvidence as Record<string, unknown> | null | undefined;
       expect(evidence?.fraudRiskAssessment?.riskLevel).toBe("high"); // ← High fraud risk
     });
   });

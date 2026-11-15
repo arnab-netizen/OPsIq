@@ -111,7 +111,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] I12 â€” Representative Integration â
     const connector = await db.ownerConnector.create({
       data: {
         workspaceId,
-        provider: "QUICKBOOKS",
+        provider: "XERO",
         status: "ACTIVE",
         registeredBy: ACTOR,
       },
@@ -157,7 +157,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] I12 â€” Representative Integration â
       id: randomUUID(),
       workspaceId: otherWorkspaceId,
       connectorId,
-      provider: "QUICKBOOKS" as const,
+      provider: "XERO" as const,
       kind: "ACCOUNTING_REVENUE_UPDATED" as const,
       businessId,
       payload: { source: "i1-isolation-test" },
@@ -188,7 +188,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] I12 â€” Representative Integration â
       id: eventId,
       workspaceId,
       connectorId,
-      provider: "QUICKBOOKS" as const,
+      provider: "XERO" as const,
       kind: "ACCOUNTING_REVENUE_UPDATED" as const,
       businessId,
       payload: { source: "i12-chain-test", note: "no-secrets-here" },
@@ -201,7 +201,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] I12 â€” Representative Integration â
     expect(result.eventId).toBe(eventId);
     expect(result.workspaceId).toBe(workspaceId);
     expect(result.connectorId).toBe(connectorId);
-    expect(result.provider).toBe("QUICKBOOKS");
+    expect(result.provider).toBe("XERO");
     expect(result.kind).toBe("ACCOUNTING_REVENUE_UPDATED");
     expect(result.bcpTriggered).toBe(true);
     expect(result.bcpTriggerType).toBe("KPI_CHANGE");
@@ -315,7 +315,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] I12 â€” Representative Integration â
       id: duplicateEventId,
       workspaceId,
       connectorId,
-      provider: "QUICKBOOKS" as const,
+      provider: "XERO" as const,
       kind: "ACCOUNTING_EXPENSE_UPDATED" as const,
       businessId,
       payload: { source: "i4-idempotency-test" },
@@ -409,7 +409,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] I12 â€” Representative Integration â
       id: randomUUID(),
       workspaceId: verifiedWorkspaceId, // post-override (as the route would set it)
       connectorId,
-      provider: "QUICKBOOKS" as const,
+      provider: "XERO" as const,
       kind: "ACCOUNTING_PL_SYNCED" as const,
       businessId: null,
       payload: { attackerAttempted: attackerWorkspaceId },

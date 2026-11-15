@@ -43,7 +43,7 @@ const SECTIONS: HelpSection[] = [
       {
         question: "I only have a few numbers, not a full set of books. Can I still use this?",
         answer:
-          "Yes. Enter what you have first — even just cash on hand and revenue gives you a first read. You can add more detail later (sales breakdown, costs, money owed to and by you) to make the picture more accurate; nothing is required all at once.",
+          "Yes. Enter what you have first — rough estimates are fine. Revenue, any one cost figure and the cash you have available give you a first read. You can add more detail later (sales breakdown, other costs, money owed to and by you) to make the picture more accurate; nothing is required all at once.",
       },
     ],
   },
@@ -53,7 +53,14 @@ const SECTIONS: HelpSection[] = [
       {
         question: "Where do I enter or review my numbers?",
         answer:
-          "Money is where you record financial snapshots (revenue, costs, cash on hand, and more) and see how your cash and survival position have changed over time.",
+          "For your first numbers, start in My Business — give OpsIQ a rough picture (revenue, a cost figure and cash) and it shows you a first read straight away. Money is for the full financial detail and for reviewing how your numbers and position have changed over time.",
+        linkHref: "/owner/data",
+        linkLabel: "Go to My Business",
+      },
+      {
+        question: "What is the Money page for?",
+        answer:
+          "Money holds every financial field (receivables, payables, loans, stock and more), your saved snapshots and your cash and survival history. If you have not given OpsIQ any numbers yet, Money offers the same quick start as My Business first.",
         linkHref: "/owner/finance",
         linkLabel: "Go to Money",
       },

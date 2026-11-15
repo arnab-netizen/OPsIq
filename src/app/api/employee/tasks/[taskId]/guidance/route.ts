@@ -56,5 +56,5 @@ export const POST = withCanonicalEnforcement(
       untrusted: body.untrusted,
     });
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
+  { requireCommercial: "governed_execution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_VIEW] }
 );

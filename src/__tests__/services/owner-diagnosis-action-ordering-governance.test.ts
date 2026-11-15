@@ -13,8 +13,8 @@
  *     query, independent of dashboard.service.ts's).
  *   - `business-condition.service.ts` (feeds `topActions` on
  *     `/api/owner/command-center`, the owner's primary landing-page API).
- *   - `home.service.ts` (feeds "Today's required actions" on the flagship
- *     `/owner/home` screen).
+ *   - `owner-candidate-builder.ts` (spineCycleInclude — the shared candidate builder behind the
+ *     flagship `/owner/home` screen and every domain page's local next step).
  *
  * Recovery is excluded from all of the above for the same reason it's
  * excluded from the dashboard.service.ts test: `founder-recovery` orders by
@@ -86,14 +86,14 @@ describe("owner-domain diagnosis.service.ts action ordering -- deterministic tot
   });
 });
 
-describe("owner-home/home.service.ts action ordering -- deterministic total order (spineCycleInclude, feeds /owner/home)", () => {
+describe("owner-home/owner-candidate-builder.ts action ordering -- deterministic total order (spineCycleInclude, feeds /owner/home and every domain page's local step)", () => {
   it("no vulnerable single-key priorityScore-only orderBy remains in spineCycleInclude", () => {
-    const src = readSrc("services", "owner-home", "home.service.ts");
+    const src = readSrc("services", "owner-home", "owner-candidate-builder.ts");
     expect(src).not.toMatch(/orderBy:\s*\{\s*priorityScore:\s*"desc"\s*\}/);
   });
 
   it("spineCycleInclude.actions.orderBy uses the exact 6-key deterministic order", () => {
-    const src = readSrc("services", "owner-home", "home.service.ts");
+    const src = readSrc("services", "owner-home", "owner-candidate-builder.ts");
     const match = src.match(/actions:\s*\{[\s\S]*?orderBy:\s*(\[[\s\S]*?\])\s*,[\s\S]*?include:\s*\{\s*verifications/);
     expect(match, "could not locate spineCycleInclude's actions{...orderBy: [...]} block").toBeTruthy();
     expect(extractOrderByKeyPairs(match![1])).toEqual(EXPECTED_ORDERBY_KEYS);

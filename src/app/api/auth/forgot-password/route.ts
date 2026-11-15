@@ -9,6 +9,8 @@ import { requirePgRateLimit, RateLimitError, PASSWORD_RESET_RATE_LIMIT } from "@
 import { getEmailProvider } from "@/lib/integrations/email-provider";
 import { getConfig } from "@/lib/config";
 import { ValidationError } from "@/infra/errors";
+import { recordPasswordEmailNotSent, verificationBaseUrlProblem } from "@/services/auth/verification-email-signal";
+import { isAwaitingEmailOwnership } from "@/services/auth/email-ownership.service";
 import { z } from "zod/v4";
 
 export const dynamic = "force-dynamic";
@@ -41,12 +43,19 @@ export const POST = async (request: NextRequest) => {
 
     const user = await db.user.findUnique({ where: { email } });
 
-    // Only a real, active, password-based account gets a token + email. Every other
-    // case (no account, deactivated, or a passwordless/SSO-only account) silently
-    // no-ops below and falls through to the same generic response — this is the
-    // enumeration-resistance guarantee, mirrored from login's identical-message
-    // pattern for "user not found" vs "wrong password".
-    if (user && user.isActive && user.hashedPassword) {
+    // Only a real, active account whose MAILBOX IS PROVEN gets a token + email:
+    //  - a password-holding account -> an ordinary reset link;
+    //  - a verified account that has no password yet (the owner proved the mailbox but lost the one-time setup link)
+    //    -> a first-time password-setup link (the page is told with &setup=1; the server still decides from the
+    //    account's real state and demands the policy consents).
+    // An account still awaiting email verification never gets one (verification, not recovery, is its path), and
+    // every other case (no account, deactivated, passwordless/unverified) silently no-ops and falls through to the
+    // same generic response — this is the enumeration-resistance guarantee, mirrored from login's
+    // identical-message pattern for "user not found" vs "wrong password".
+    // Scoped to the open-beta signup population (requiresEmailVerification): other passwordless accounts
+    // (e.g. admin-provisioned users) have no setup journey here and keep the silent no-op.
+    const needsFirstSetup = !!user && !user.hashedPassword && user.requiresEmailVerification && !!user.emailVerifiedAt;
+    if (user && user.isActive && !isAwaitingEmailOwnership(user) && (user.hashedPassword || needsFirstSetup)) {
       const rawToken = randomBytes(32).toString("hex");
       const tokenHash = createHash("sha256").update(rawToken).digest("hex");
 
@@ -82,20 +91,26 @@ export const POST = async (request: NextRequest) => {
       // transient Resend failure (or no provider configured at all) must never
       // turn into a client-visible error — that would itself be an enumeration
       // signal (a real account's request failing differently from a fake one's).
+      const kind = needsFirstSetup ? "SETUP" : "RESET";
       try {
         const provider = getEmailProvider();
         if (provider) {
-          const resetUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/reset-password?token=${rawToken}`;
+          if (verificationBaseUrlProblem(getConfig().NEXT_PUBLIC_APP_URL)) {
+            await recordPasswordEmailNotSent({ reason: `${kind}_BASE_URL_NOT_PUBLIC`, userId: user.id, workspaceId: membership?.workspaceId });
+          }
+          const resetUrl = `${getConfig().NEXT_PUBLIC_APP_URL}/reset-password?token=${rawToken}${needsFirstSetup ? "&setup=1" : ""}`;
           await provider.send({
             to: user.email,
-            subject: "Reset your OpsIQ password",
-            html: `<p>Someone requested a password reset for this OpsIQ account.</p><p><a href="${resetUrl}">Reset your password</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
-            text: `Reset your OpsIQ password: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
+            subject: needsFirstSetup ? "Choose your OpsIQ password" : "Reset your OpsIQ password",
+            html: `<p>${needsFirstSetup ? "Someone asked for a link to choose the password for this OpsIQ account." : "Someone requested a password reset for this OpsIQ account."}</p><p><a href="${resetUrl}">${needsFirstSetup ? "Choose your password" : "Reset your password"}</a></p><p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
+            text: `${needsFirstSetup ? "Choose your OpsIQ password" : "Reset your OpsIQ password"}: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
           });
         } else {
           console.warn("[FORGOT_PASSWORD] No email provider configured — reset token created but not emailed", { userId: user.id });
+          await recordPasswordEmailNotSent({ reason: `${kind}_NO_PROVIDER`, userId: user.id, workspaceId: membership?.workspaceId });
         }
       } catch (emailError) {
+        await recordPasswordEmailNotSent({ reason: `${kind}_SEND_FAILED`, userId: user.id, workspaceId: membership?.workspaceId });
         console.error("[FORGOT_PASSWORD] Email dispatch failed", { userId: user.id, errorType: emailError instanceof Error ? emailError.constructor.name : "UnknownError" });
       }
     }

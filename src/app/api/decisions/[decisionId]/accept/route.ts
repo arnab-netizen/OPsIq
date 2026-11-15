@@ -81,5 +81,5 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireCapabilities: [CAPABILITIES.DECISION_ACCEPT], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.DECISION_ACCEPT], requireWorkspace: true }
 );

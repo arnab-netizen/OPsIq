@@ -147,14 +147,19 @@ const KNOWN_MESSAGE_TEMPLATES: ReadonlyArray<{ status: number; pattern: RegExp; 
   // Recovery's own wording for the same rule -- "...completionNotes and actualOutcome."
   // (action.service.ts, founder-recovery), always 400.
   { status: 400, pattern: /^Completing a recovery action requires completionNotes and actualOutcome\.$/, message: "Add the required completion details before marking this complete." },
-  // "Cannot verify a <domain> action without a before (baseline) value for the metric."
-  // (Strategy/Marketing/Cashflow ONLY -- Recovery's wording is entirely different, see below) --
-  // verification.service.ts, always 400. Exact, anchored string -- not a `.*` partial match, so
-  // unrelated text merely mentioning a "baseline value" can never match this template.
-  { status: 400, pattern: new RegExp(`^Cannot verify a (?:${THREE_DOMAIN_WORD}) action without a before \\(baseline\\) value for the metric\\.$`), message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },
+  // Outcome-evidence policy (src/domain/founder-recovery/verification-evidence.ts), thrown by all
+  // 7 owner-domain verification services + recovery, always 400. Both are fixed, owner-authored
+  // sentences with no internal names, so they are shown as written. (They replace the former
+  // "Cannot verify a <domain> action without a before (baseline) value" template, which no
+  // service throws any more.)
+  { status: 400, pattern: /^Start this action before recording its outcome\.$/, message: "Start this action before recording its outcome." },
+  { status: 400, pattern: /^Enter the before \(baseline\) value — the diagnosis did not measure this metric\.$/, message: "Enter the before (baseline) value — the diagnosis did not measure this metric." },
   // Recovery's own, differently-worded baseline-verification message
   // (verification.service.ts, founder-recovery), always 400. Exact, anchored string.
   { status: 400, pattern: /^Cannot verify an action without a baseline metric value\. Re-run diagnosis to capture a baseline\.$/, message: "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one." },
+  // Strategy decision-fit gate (owner-strategy action.service.ts, STRATEGY_STEP_NOT_IN_DECISION_MESSAGE),
+  // always 400: a proposed step that no longer fits the current decision cannot be taken on.
+  { status: 400, pattern: /^This step isn't part of the current Strategy decision\. Refresh to see your current next step\.$/, message: "This step isn't part of the current Strategy decision. Refresh to see your current next step." },
   // NotFoundError("<ModelName>", "<uuid>") -> "<ModelName> not found: <uuid>" --
   // action.service.ts / verification.service.ts / snapshot.service.ts, all 4 domains,
   // always 404 (NotFoundError's fixed status). The entity-name portion is intentionally
@@ -163,6 +168,10 @@ const KNOWN_MESSAGE_TEMPLATES: ReadonlyArray<{ status: number; pattern: RegExp; 
   // against is never repeating whichever name arrives, not enumerating every model.
   // Never shown verbatim: the model name and UUID are internal implementation detail.
   { status: 404, pattern: /^\S+ not found: /, message: "That item couldn't be found. It may have been removed or updated elsewhere. Please refresh and try again." },
+  // Duplicate assessment/reporting period (ConflictError in each domain's snapshot.service.ts
+  // createXSnapshot). Retrying cannot succeed, so the generic "please try again" would mislead.
+  { status: 409, pattern: /^A strategy scenario for this business and assessment period already exists\. Edit it instead of creating a duplicate\.$/, message: "You already have a scenario for these dates. Choose different dates, or evaluate the saved one under “Saved scenarios”." },
+  { status: 409, pattern: /^A (?:metric|marketing|cashflow) snapshot for this business and reporting period already exists\. Edit it instead of creating a duplicate\.$/, message: "You already have an entry for these dates. Choose different dates, or use the one you already saved." },
 ];
 
 function safe(message: string, context: PresentationContext): string {

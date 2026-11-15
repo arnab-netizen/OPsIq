@@ -5,6 +5,9 @@
  * POST /api/owner/operating-memory — upsert or expire a memory entry
  *
  * Workspace isolation enforced via canonical auth. OWNER_MANAGE required.
+ *
+ * Reserved memory types (RESERVED_OPERATING_MEMORY_TYPES — e.g. the Owner do-not-repeat override) are
+ * written only by their own governed service; this generic route refuses to write or expire them.
  */
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
@@ -12,6 +15,7 @@ import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
 import { upsertMemoryEntry, getMemoryEntries, expireMemoryEntry } from "@/services/owner-mode/operating-memory.service";
+import { RESERVED_OPERATING_MEMORY_TYPES } from "@/domain/owner-mode/dnr-owner-override";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -48,6 +52,10 @@ export const POST = withCanonicalEnforcement(
     const input = await parseRequestBody(ctx.request!, schema);
     const workspaceId = ctx.verifiedWorkspaceId;
     const actorId = ctx.verifiedActorId;
+
+    if (RESERVED_OPERATING_MEMORY_TYPES.has(input.memoryType.toUpperCase())) {
+      return canonicalJson({ error: "This memory type is recorded through its own workflow and cannot be changed here." }, { status: 422 });
+    }
 
     if (input.action === "EXPIRE") {
       await expireMemoryEntry(workspaceId, input.memoryType, input.sourceId);

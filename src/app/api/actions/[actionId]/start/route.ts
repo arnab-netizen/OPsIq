@@ -70,7 +70,7 @@ export const PATCH = withCanonicalEnforcement(
     const result = await getActionById(actionId, workspaceId);
     return result;
   },
-  {
+  { requireCommercial: "governed_execution",
     requireWorkspace: true,
     requireCapabilities: [CAPABILITIES.ACTION_UPDATE],
   }

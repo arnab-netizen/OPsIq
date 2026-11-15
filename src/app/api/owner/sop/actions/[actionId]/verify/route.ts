@@ -19,5 +19,5 @@ export const POST = withCanonicalEnforcement(
     const result = await recordSopVerification(params.actionId, input, ctx.verifiedActorId, ctx.verifiedWorkspaceId);
     return canonicalJson(result, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

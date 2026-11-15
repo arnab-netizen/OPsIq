@@ -297,7 +297,7 @@ export class CanonicalTelemetryLifecycle {
    * Handler failed
    * Called when handler threw or failed
    */
-  public emitHandlerFailed(error: Error): void {
+  public emitHandlerFailed(error: Error, opts: { expected?: boolean } = {}): void {
     if (this.emittedEvents.has("handler_failed")) {
       logger.warn("Duplicate handler_failed emission", { correlationId: this.ctx.correlationId });
       return;
@@ -305,11 +305,22 @@ export class CanonicalTelemetryLifecycle {
 
     const duration = Date.now() - this.ctx.startTime;
 
-    logger.error("Handler failed", error, {
-      correlationId: this.ctx.correlationId,
-      requestId: this.ctx.requestId,
-      duration,
-    });
+    if (opts.expected) {
+      // An expected domain rejection (see isExpectedClientRejection): not a server failure.
+      logger.warn("Handler rejected request", {
+        correlationId: this.ctx.correlationId,
+        requestId: this.ctx.requestId,
+        duration,
+        errorName: error?.name,
+        errorMessage: error?.message,
+      });
+    } else {
+      logger.error("Handler failed", error, {
+        correlationId: this.ctx.correlationId,
+        requestId: this.ctx.requestId,
+        duration,
+      });
+    }
 
     this.ctx.errorMessage = error.message;
     this.ctx.errorType = error.constructor.name;

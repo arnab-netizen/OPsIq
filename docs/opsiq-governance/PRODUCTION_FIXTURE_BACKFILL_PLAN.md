@@ -1,5 +1,7 @@
 # Production Fixture Backfill Plan (P0-A)
 
+> Recurrence prevention (route now fails closed on an unauthorized fixture request; acceptance preflight and post-create verification) ships separately from this plan. **The historical Production backfill described below is NOT done**; the QA-looking rows created after the fixture migration with `isFixtureBusiness=false` remain a separate data-remediation task, and the classifier here only matches `OPSIQ (Production )?Acceptance` names.
+
 Status: **PROPOSED — NOT EXECUTED.** No production database was accessed, queried, or
 mutated in producing this plan or the beta-usability-hardening PR it belongs to.
 `PRODUCTION_MUTATIONS = 0`.

@@ -377,7 +377,22 @@ function parseInterfaceFieldNames(file, interfaceName) {
 // ───────────────────────── owner API routes ─────────────────────────
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
-const CAP_RE = /CAPABILITIES\.([A-Z0-9_]+)/g;
+// (?<![A-Za-z0-9_$]) = identifier boundary: `CAPABILITIES` must not be the tail of a longer identifier
+// such as COMMERCIAL_CAPABILITIES. A preceding `.` (namespace access) or any punctuation still matches.
+const CAP_RE = /(?<![A-Za-z0-9_$])CAPABILITIES\.([A-Z0-9_]+)/g;
+
+/**
+ * Whole-file (non-method-scoped) authorization-capability scan. Pre-fix this was the bare
+ * `/CAPABILITIES\.X/g`, which matched the SUFFIX of any identifier ending in `CAPABILITIES`, so
+ * `COMMERCIAL_CAPABILITIES.GOVERNED_EXECUTION` (the commercial-entitlement namespace, which is NOT
+ * owner RBAC) was reported as an authorization capability of the route. Exported for the
+ * regression test; the extraction semantics for real `CAPABILITIES.*` references are unchanged.
+ */
+export function scanWholeFileCapabilities(src) {
+  const caps = new Set();
+  for (const m of src.matchAll(CAP_RE)) caps.add(m[1]);
+  return [...caps].sort();
+}
 
 function buildApiRoutesFrom(apiRootDir) {
   const apiFiles = walkFiles(apiRootDir, "route.ts");
@@ -388,9 +403,7 @@ function buildApiRoutesFrom(apiRootDir) {
       const constRe = new RegExp(`export\\s+const\\s+${m}\\s*[=:]`);
       return fnRe.test(src) || constRe.test(src);
     });
-    const caps = new Set();
-    let m;
-    while ((m = CAP_RE.exec(src))) caps.add(m[1]);
+    const caps = new Set(scanWholeFileCapabilities(src));
     const hasBusinessId = /\bbusinessId\b/.test(src);
     const hasWorkspaceId = /\bworkspaceId\b/.test(src);
     let scope = "NOT_VERIFIED";
@@ -454,7 +467,7 @@ function normalizeRoutePath(routePath) {
  * file, which previously conflated a GET-only capability with a PATCH-only one, or a dynamic
  * route's real requirement with an unrelated sibling method's.
  */
-function extractMethodCapabilities(src, method) {
+export function extractMethodCapabilities(src, method) {
   const siteRe = new RegExp(`export\\s+const\\s+${method}\\s*=\\s*withCanonicalEnforcement\\s*\\(`);
   const siteMatch = siteRe.exec(src);
   if (!siteMatch) return null; // this route doesn't use the withCanonicalEnforcement pattern for this method
@@ -484,9 +497,8 @@ function buildAllApiCapabilityIndex(allApiRoutesFlat) {
         // routes without it) — fall back to a file-wide CAPABILITIES.* scan rather than silently
         // reporting NOT_APPLICABLE/[] for a route this generator simply doesn't recognize the shape
         // of. Still per-route (not global), just not per-method within that one file.
-        const caps = new Set();
-        for (const m of src.matchAll(CAP_RE)) caps.add(m[1]);
-        index.set(`${method} ${normalizedPath}`, caps.size ? [...caps].sort() : []);
+        const caps = scanWholeFileCapabilities(src);
+        index.set(`${method} ${normalizedPath}`, caps);
       }
     }
   }
@@ -576,9 +588,7 @@ function crossValidateCapabilities(allApiRoutesFlat, ownerPageRoutes) {
         if (direct !== null) {
           expectedCaps = direct;
         } else {
-          const caps = new Set();
-          for (const m of src.matchAll(CAP_RE)) caps.add(m[1]);
-          expectedCaps = caps.size ? [...caps].sort() : [];
+          expectedCaps = scanWholeFileCapabilities(src);
         }
         validated++;
         if (JSON.stringify(req.capabilities) !== JSON.stringify(expectedCaps)) {
@@ -739,6 +749,12 @@ const NON_WORKFLOW_MUTATION_FAMILIES = [
   // Budget mutations proven NOT part of the shared FSM (see budget_actions above) -- override and
   // working-capital submission have no status/transition evidence of their own in source.
   { family: "budget_non_workflow", apiPrefixes: ["/api/owner/budget/override", "/api/owner/budget/working-capital"], uiPages: ["/owner/budget"] },
+  // Do-not-repeat rules: recording a rule and recording what has changed on one (the changed-context
+  // override, Cockpit → "Do-not-repeat rules") — a governed field write, not a status workflow.
+  { family: "do_not_repeat_rules", apiPrefixes: ["/api/owner/do-not-repeat"], uiPages: ["/owner/cockpit"] },
+  // QuickBooks Online (read-only): connect / refresh / disconnect on My Business. Connection-lifecycle writes only; no status
+  // workflow, and nothing is ever written to QuickBooks.
+  { family: "quickbooks_connection", apiPrefixes: ["/api/owner/integrations/quickbooks/connect", "/api/owner/integrations/quickbooks/disconnect", "/api/owner/integrations/quickbooks/sync"], uiPages: ["/owner/data"] },
 ];
 
 function findFilesByKeywords(keywords, excludeKeywords = []) {
@@ -1443,7 +1459,7 @@ function main() {
   }
 
   const baseline = {
-    baselineSha: "e5d6fd8b73d6a1619b89377b764b6ec0046335fd",
+    baselineSha: "0aa90a971163a3988d441296fe1bcdf48924ee87",
     // No `generatedAt` timestamp: it carries no preservation value and made the artifact non-
     // idempotent run-to-run (every run produced a git diff on that field alone). Content is fully
     // determined by repository source at BASELINE_SHA; `git log` on this file is the generation

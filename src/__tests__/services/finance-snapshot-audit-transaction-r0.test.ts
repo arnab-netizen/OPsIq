@@ -11,7 +11,7 @@ import type { FinancialSnapshotCreateInput } from "@/domain/owner-finance/valida
 // ── mocks ──────────────────────────────────────────────────────────────────
 
 vi.mock("@/services/founder-recovery/business.service", () => ({
-  getBusiness: vi.fn().mockResolvedValue({ id: "biz-001" }),
+  getBusiness: vi.fn().mockResolvedValue({ id: "biz-001", currency: "USD" }),
 }));
 
 const mockEmitAuditEvent = vi.fn();
@@ -28,8 +28,11 @@ vi.mock("@/domain/owner-finance/data-confidence", () => ({
 
 // Fake transaction client passed to the $transaction callback
 const fakeTx = {
+  // The per-period advisory lock and the in-transaction duplicate re-check run before the create.
+  $executeRaw: vi.fn(),
   ownerFinancialSnapshot: {
     create: vi.fn(),
+    findFirst: vi.fn(),
   },
   auditEvent: {
     create: vi.fn(),
@@ -80,6 +83,8 @@ beforeEach(() => {
     return cb(fakeTx);
   });
   fakeTx.ownerFinancialSnapshot.create.mockResolvedValue(createdRow);
+  fakeTx.ownerFinancialSnapshot.findFirst.mockResolvedValue(null);
+  fakeTx.$executeRaw.mockResolvedValue(0);
   mockEmitAuditEvent.mockResolvedValue("audit-event-id");
 });
 

@@ -16,4 +16,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
     actorId,
     command: { ...body.command, workspaceId, createdByUserId: actorId },
   });
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });
+}, { requireCommercial: "continuation_action", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

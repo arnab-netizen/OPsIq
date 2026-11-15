@@ -28,6 +28,11 @@ export interface ActionToAvoid {
   businessFunction: BusinessFunction[];
   /** Which active issue categories triggered this avoidance. */
   triggeredBy: IssueCategory[];
+  /**
+   * Set when the shared reconciler turned this rule into a CONDITION on canonical steps (`avoid` then
+   * holds the permitted scope for those steps, never a "do not"): the titles it qualifies.
+   */
+  conditionOn?: string[];
 }
 
 interface AvoidRule {
@@ -48,28 +53,28 @@ const AVOID_RULES: readonly AvoidRule[] = [
   {
     id: "avoid_growth_on_cash_danger",
     requires: [IssueCategory.CASH_DANGER],
-    avoid: "Do not start a new marketing/ad campaign or expand this week",
-    reason: "cash is at risk; new spend before collection worsens survival",
+    avoid: "Do not start a new paid campaign or expand this week",
+    reason: "cash or financial survival is at risk; new spend before collection worsens survival",
     businessFunction: [BusinessFunction.CASH_FLOW, BusinessFunction.GROWTH_READINESS],
   },
   {
     id: "avoid_discount_on_cash_danger",
     requires: [IssueCategory.CASH_DANGER],
     avoid: "Do not offer discounts or take on low-margin work to chase volume",
-    reason: "cash is at risk; discounting erodes the margin you need to survive",
+    reason: "cash or financial survival is at risk; discounting erodes the margin you need to survive",
     businessFunction: [BusinessFunction.CASH_FLOW, BusinessFunction.PRICING],
   },
   {
     id: "avoid_hire_on_cash_danger",
     requires: [IssueCategory.CASH_DANGER],
     avoid: "Do not hire until payroll affordability is proven",
-    reason: "cash is at risk; new fixed payroll is unaffordable now",
+    reason: "cash or financial survival is at risk; new fixed payroll is unaffordable now",
     businessFunction: [BusinessFunction.CASH_FLOW, BusinessFunction.PAYROLL],
   },
   {
     id: "avoid_marketing_on_service_failure",
     requires: [IssueCategory.CUSTOMER_SERVICE_FAILURE],
-    avoid: "Do not scale marketing or acquisition before fixing service quality",
+    avoid: "Do not scale acquisition or campaign volume before fixing service quality",
     reason: "complaints/rework are rising; more demand will multiply failures",
     businessFunction: [BusinessFunction.MARKETING, BusinessFunction.QUALITY],
   },
@@ -90,8 +95,8 @@ const AVOID_RULES: readonly AvoidRule[] = [
   {
     id: "avoid_growth_on_supplier_risk",
     requires: [IssueCategory.CAPACITY_BOTTLENECK, IssueCategory.GROWTH_OPPORTUNITY],
-    avoid: "Do not commit to growth that depends on at-risk supply",
-    reason: "supply/inventory is at risk; growth could stock you out",
+    avoid: "Do not commit to extra volume that depends on at-risk supply",
+    reason: "supply/inventory is at risk; extra volume could stock you out",
     businessFunction: [BusinessFunction.SUPPLIER, BusinessFunction.INVENTORY],
   },
 ];

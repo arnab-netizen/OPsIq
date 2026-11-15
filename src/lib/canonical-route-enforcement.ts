@@ -67,7 +67,7 @@ export interface CanonicalAuthContext {
   // PHASE D: ROOT CONTAINER - Single execution lineage authority
   // Optional: not required for service layer, only for logging/tracing
   traceId?: string;
-  executionTrace?: Readonly<any>;  // Read-only reference to unified trace
+  executionTrace?: Readonly<unknown>;  // Read-only reference to unified trace
 
   // PHASE E: IMMUTABLE SESSION SNAPSHOT - Single request reality
   verifiedSessionSnapshot: {
@@ -171,7 +171,21 @@ export interface ServiceAuthEnvelope {
  * Handler receives verified context, never auth data.
  * Handler is impossible to execute if auth failed.
  */
-export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<any>;
+export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<unknown>;
+
+/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood. */
+const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
+
+/**
+ * True when a handler rejected the request on purpose with an owner-safe domain AppError
+ * (validation 400, not-found 404, conflict 409, invalid transition 422) that is not flagged
+ * security-relevant. Such rejections are expected outcomes and are logged below ERROR.
+ */
+export function isExpectedClientRejection(error: unknown, isKnownSafeClientError: boolean, statusCode: number): boolean {
+  if (!isKnownSafeClientError || !EXPECTED_CLIENT_REJECTION_STATUSES.has(statusCode)) return false;
+  const telemetry = (error as { telemetry?: { securityRelevant?: unknown } } | null)?.telemetry;
+  return telemetry?.securityRelevant !== true;
+}
 
 /**
  * CANONICAL ROUTE WRAPPER
@@ -199,7 +213,7 @@ export function withCanonicalEnforcement(
     requireWorkspace?: boolean;
     requireCapabilities?: string[];
     requireActorType?: "user" | "service" | ("user" | "service")[];
-    skipReadinessCheck?: boolean;
+    skipReadinessCheck?: boolean; requireCommercial?: import("@/domain/commercial/commercial-capability").CommercialCapability; // see enforceCommercialRequirement
     errorNamespace?: string;
     operationName?: string;
     routeVersion?: string;
@@ -522,7 +536,7 @@ export function withCanonicalEnforcement(
           const policyRoles = decision.context?.policy?.roles?.map((r) => r.role) || [];
           const policyCapabilities: string[] = [];
           if (decision.context?.policy?.roles) {
-            const { getCapabilitiesForRole } = require("@/policies/capability-check");
+            const { getCapabilitiesForRole } = require("@/policies/capability-check"); // eslint-disable-line @typescript-eslint/no-require-imports -- pre-existing synchronous load
             for (const role of decision.context.policy.roles) {
               const caps = getCapabilitiesForRole(role.role);
               policyCapabilities.push(...caps);
@@ -536,7 +550,7 @@ export function withCanonicalEnforcement(
               : `${workspaceId.substring(0, 4)}...${workspaceId.substring(workspaceId.length - 4)}`
             : undefined;
 
-          (errorResponse.body as any) = {
+          (errorResponse.body as Record<string, unknown>) = {
             ...errorResponse.body,
             classification: "canonical_permission_denied",
             stage: "authorization",
@@ -661,7 +675,7 @@ export function withCanonicalEnforcement(
       shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.HANDLER_EXECUTING);
       traceManager.recordStage("HANDLER_EXECUTING", "success");
       telemetry.emitHandlerExecuting(verifiedContext.verifiedActorId);
-      const result = await handler(verifiedContext, params);
+      await enforceCommercialRequirement(options?.requireCommercial, verifiedContext.verifiedWorkspaceId); const result = await handler(verifiedContext, params);
 
       // ========================================
       // STEP 9: RETURN HANDLER RESULT
@@ -735,7 +749,7 @@ export function withCanonicalEnforcement(
       } else if (error && typeof error === "object" && "statusCode" in error && "code" in error) {
         // AppError subclass (NotFoundError, ForbiddenError, etc.)
         // Has statusCode and code properties - convert to ClassifiedApiError
-        const appError = error as any;
+        const appError = error as { statusCode?: unknown; code?: unknown };
         const statusCode = typeof appError.statusCode === "number" ? appError.statusCode : 500;
         const errorCode = typeof appError.code === "string" ? appError.code : "INTERNAL_ERROR";
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -810,23 +824,40 @@ export function withCanonicalEnforcement(
         logger.error("Trace finalization error", traceError as Error, { correlationId });
       }
 
+      // An expected domain rejection (e.g. a duplicate-period 409 ConflictError, a 400 validation
+      // error, a 404) is the request being answered correctly, not a server failure: it is logged
+      // at WARN. Security-relevant rejections, auth/permission/rate-limit 4xx and every 5xx or
+      // unclassified error keep ERROR.
+      const expectedClientRejection = isExpectedClientRejection(error, isKnownSafeClientError, classifiedError.statusCode);
+
       const telemetryCtx = telemetry?.getContext();
-      telemetry?.emitHandlerFailed(error as Error);
+      telemetry?.emitHandlerFailed(error as Error, { expected: expectedClientRejection });
       telemetry?.emitRequestCompleted();
 
       const finalCorrelationId = telemetryCtx?.correlationId || correlationId || "unknown";
       const safErrorName = error instanceof Error ? error.name : typeof error === "object" ? error?.constructor?.name : "unknown";
 
-      logger.error("[WRAPPER_FAILED]", {
+      const wrapperLogContext = {
         correlationId: finalCorrelationId,
         stage: classifiedError.stage,
         classification: classifiedError.classification,
+        statusCode: classifiedError.statusCode,
         errorName: safErrorName,
         errorMessage: error instanceof Error ? error.message : String(error),
         operation: operationName,
-      });
+      };
+      if (expectedClientRejection) {
+        logger.warn("[WRAPPER_CLIENT_REJECTION]", wrapperLogContext);
+        // WARN lines are buffered; write them now so a serverless instance frozen after the
+        // response cannot drop them (ERROR lines are already written immediately).
+        logger.flush();
+      } else {
+        // The error goes in the error slot (the context was previously passed there and logged
+        // as "[object Object]").
+        logger.error("[WRAPPER_FAILED]", error, wrapperLogContext);
+      }
 
-      const responseBody: any = {
+      const responseBody: Record<string, unknown> = {
         // A known, owner-safe 4xx AppError (e.g. ValidationError) exposes
         // its real message so the client can act on it; any 5xx or
         // unclassified/raw exception keeps a generic message -- never
@@ -853,18 +884,33 @@ export function withCanonicalEnforcement(
         stage: classifiedError.stage,
       };
 
-      // Include safe error name for diagnostics
-      if (safErrorName && safErrorName !== "unknown") {
+      // Field-level validation issues (owner-safe 4xx only): lets a form mark
+      // the exact field instead of showing a generic banner. Only the
+      // {path, message} pairs produced by the validation layer are exposed.
+      if (isKnownSafeClientError) {
+        const fieldErrors = extractSafeFieldErrors(error);
+        if (fieldErrors.length > 0) {
+          responseBody.fieldErrors = fieldErrors;
+        }
+      }
+
+      // Technical diagnostics (exception class, Prisma/driver codes and first-line messages, handler paths) are
+      // operator-only: a client without the timing-safe diagnostic key never receives them. Everything an operator
+      // needs remains in the server log ([WRAPPER_FAILED]) and is joined to the response by correlationId.
+      const hasDiagnosticAccess = verifyDiagnosticKey(req.headers.get("x-opsiq-diagnostic-key"));
+
+      if (hasDiagnosticAccess && safErrorName && safErrorName !== "unknown") {
         responseBody.errorName = safErrorName;
       }
 
-      // Include operation if provided
-      if (operationName) {
+      if (hasDiagnosticAccess && operationName) {
         responseBody.operation = operationName;
       }
 
-      // Include safe Prisma details if available (allowlisted keys only)
-      const safeDetails = (classifiedError as any).safeDetails;
+      // Include safe Prisma details if available (allowlisted keys only) — diagnostic-key holders only
+      const safeDetails = hasDiagnosticAccess
+        ? (classifiedError as { safeDetails?: Record<string, unknown> }).safeDetails
+        : undefined;
       if (safeDetails && typeof safeDetails === "object") {
         const allowlistedKeys = [
           "prismaCode",
@@ -975,3 +1021,36 @@ export function withCanonicalPolicyEnforcement(
   };
 }
 
+/**
+ * Extract `{path, message}` field issues from a 4xx AppError's details.
+ * Anything that is not a short string pair is dropped, so no internal detail
+ * can leak through this channel.
+ */
+export function extractSafeFieldErrors(error: unknown): Array<{ path: string; message: string }> {
+  const details = (error as { details?: { fieldErrors?: unknown } } | null)?.details;
+  const raw = details?.fieldErrors;
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ path: string; message: string }> = [];
+  for (const item of raw.slice(0, 50)) {
+    if (!item || typeof item !== "object") continue;
+    const { path, message } = item as { path?: unknown; message?: unknown };
+    if (typeof path !== "string" || typeof message !== "string") continue;
+    out.push({ path: path.slice(0, 200), message: message.slice(0, 300) });
+  }
+  return out;
+}
+
+/**
+ * Commercial gate for PAID_CONTINUATION routes: evaluated after authentication and workspace derivation,
+ * before the handler. A denial is a PlanLimitError (HTTP 402). No-op when the route declares no
+ * requirement or BILLING_PAYWALL_ENFORCEMENT is not "on". See docs/opsiq/commercial/PAYWALL_BOUNDARY.md.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+async function enforceCommercialRequirement(
+  capability: import("@/domain/commercial/commercial-capability").CommercialCapability | undefined,
+  workspaceId: string
+): Promise<void> {
+  if (!capability) return;
+  const { assertCommercialCapability } = await import("@/services/billing/commercial-policy.service");
+  await assertCommercialCapability(workspaceId, capability);
+}

@@ -1,14 +1,26 @@
 "use client";
 
+import { ownerConfidencePhrase } from "@/domain/owner-spine/confidence-vocabulary";
+import { assessScoreAvailability, presentScores } from "@/domain/owner-spine/score-availability";
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
+import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
+import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { humanizeMetricKey, humanizeEvidenceLine, ownerValueText } from "@/lib/metric-label";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
+import { CashflowSnapshotFields } from "@/components/owner/cashflow/CashflowSnapshotFields";
+import { OVERDRAFT_BANK_BALANCE_SENTENCE } from "@/domain/owner-cashflow/overdraft-copy";
+import { CashflowEntryEditor } from "@/components/owner/cashflow/CashflowEntryEditor";
+import { classifyCashflowWriteFailure, cashflowEditHrefFor, parseEditParam } from "@/domain/owner-cashflow/edit-flow";
+import { CASHFLOW_PERIOD_EXISTS_MESSAGE } from "@/domain/owner-cashflow/amend";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -120,11 +132,32 @@ export default function OwnerCashflowPage() {
   const [busy, setBusy] = useState(false);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [showSnapshotForm, setShowSnapshotForm] = useState(false);
+  // Arriving from the first read: the period the read covers, so a balance added here counts toward that read.
+  const [prefillPeriod, setPrefillPeriod] = useState<{ start: string; end: string } | null>(null);
+  // `?edit=<id>`: edit the figures of an existing entry (the entry's current values are shown first).
+  const [editId, setEditId] = useState<string | null>(null);
+  const [fromFirstRun, setFromFirstRun] = useState(false);
+  // A create was refused because the period already has an entry: offer that entry for editing instead.
+  const [existingEntry, setExistingEntry] = useState<{ id: string; message: string } | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    setFromFirstRun(q.get("returnTo") === "first-run");
+    const edit = parseEditParam(q.get("edit"));
+    if (edit) { setEditId(edit); return; }
+    const start = q.get("periodStart") ?? "";
+    const end = q.get("periodEnd") ?? "";
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    if (iso.test(start) && iso.test(end) && start <= end) {
+      setPrefillPeriod({ start, end });
+      setShowSnapshotForm(true);
+    }
+  }, []);
   const requestSeq = useRef(0);
 
-  const load = useCallback(async (businessId: string) => {
+  const load = useCallback(async (businessId: string, opts: { silent?: boolean } = {}) => {
     const seq = ++requestSeq.current;
-    setLoading(true);
+    // A silent refresh keeps the page (and an open editor with its "saved" message) on screen instead of the skeleton.
+    if (!opts.silent) setLoading(true);
     setError(null);
     try {
       const data = await api(`/api/owner/cashflow/dashboard?businessId=${businessId}`);
@@ -196,10 +229,22 @@ export default function OwnerCashflowPage() {
       if (v && typeof v === "string" && v.trim()) body[f.name] = parseFloat(v);
     }
     try {
-      await api(`/api/owner/cashflow/businesses/${activeBusinessId}/snapshots`, {
+      const res = await fetch(`/api/owner/cashflow/businesses/${activeBusinessId}/snapshots`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // The server's machine code decides: an existing entry for this period is OPENED for editing, never retried as an add.
+        const failure = classifyCashflowWriteFailure(res.status, data);
+        if (failure.kind === "PERIOD_EXISTS" && failure.snapshotId) {
+          setExistingEntry({ id: failure.snapshotId, message: failure.message || CASHFLOW_PERIOD_EXISTS_MESSAGE });
+          return;
+        }
+        throw httpResponseErrorFromBody(res.status, data);
+      }
+      setExistingEntry(null);
       setShowSnapshotForm(false);
       await load(activeBusinessId);
     } catch (e) {
@@ -207,6 +252,18 @@ export default function OwnerCashflowPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function openEntryForEdit(id: string) {
+    setExistingEntry(null);
+    setShowSnapshotForm(false);
+    setEditId(id);
+    window.history.replaceState(null, "", cashflowEditHrefFor(id, fromFirstRun));
+  }
+
+  function closeEditor() {
+    setEditId(null);
+    window.history.replaceState(null, "", fromFirstRun ? "/owner/cashflow?returnTo=first-run" : "/owner/cashflow");
   }
 
   async function runDiagnosis() {
@@ -254,17 +311,30 @@ export default function OwnerCashflowPage() {
     setBusy(true);
     setError(null);
     try {
-      const beforeRaw = window.prompt(`BEFORE value for ${humanizeMetricKey(action.verificationMetric)}:`);
+      const beforeRaw = window.prompt(
+        action.measuredBaseline == null
+          ? `BEFORE value for ${humanizeMetricKey(action.verificationMetric)} (not measured by the diagnosis — required):`
+          : `BEFORE value for ${humanizeMetricKey(action.verificationMetric)} (measured: ${action.measuredBaseline}; leave blank to use it — a different value is recorded as owner-reported):`
+      );
       if (beforeRaw === null) { setBusy(false); return; }
       const afterRaw = window.prompt(`AFTER value for ${humanizeMetricKey(action.verificationMetric)}:`);
       if (afterRaw === null) { setBusy(false); return; }
       const dir = window.prompt("Target direction (up / down):", "down");
       if (dir === null) { setBusy(false); return; }
+      // Strict parse: blank = not given; anything else must be a plain number ("₹1200" or "1,200"
+      // must not silently become "not given" and be recorded against the measured baseline).
+      const beforeValue = beforeRaw.trim() === "" ? null : Number(beforeRaw.trim());
+      const afterValue = afterRaw.trim() === "" ? null : Number(afterRaw.trim());
+      if ((beforeValue !== null && !Number.isFinite(beforeValue)) || (afterValue !== null && !Number.isFinite(afterValue))) {
+        setError("Enter plain numbers only (no currency symbols or thousands separators).");
+        setBusy(false);
+        return;
+      }
       await api(`/api/owner/cashflow/actions/${action.id}/verify`, {
         method: "POST",
         body: JSON.stringify({
-          beforeValue: beforeRaw.trim() === "" ? null : parseFloat(beforeRaw),
-          afterValue: afterRaw.trim() === "" ? null : parseFloat(afterRaw),
+          beforeValue,
+          afterValue,
           targetDirection: dir === "up" ? "up" : "down",
         }),
       });
@@ -288,6 +358,7 @@ export default function OwnerCashflowPage() {
   const cycle = dashboard?.latestCycle ?? null;
   const score = dashboard?.domainScore ?? null;
   const missing: string[] = dashboard?.missingCriticalData ?? [];
+  const cashPosition: { judged: boolean; complete: boolean; missing: string[] } | null = dashboard?.cashPosition ?? null;
 
   return (
     <PageContainer>
@@ -321,7 +392,7 @@ export default function OwnerCashflowPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -344,19 +415,37 @@ export default function OwnerCashflowPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!activeBusinessId}>
               + Add cashflow snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy}>
-              Run cashflow diagnosis
+            <Button onClick={runDiagnosis} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Re-run if something changed." : undefined}>
+              {dashboard?.latestSnapshotDiagnosis?.current ? "Re-run cashflow diagnosis" : "Run cashflow diagnosis"}
             </Button>
           </div>
 
-          {showSnapshotForm && (
+          {editId && (
+            <CashflowEntryEditor
+              key={editId}
+              snapshotId={editId}
+              onClose={closeEditor}
+              onSaved={() => { if (activeBusinessId) void load(activeBusinessId, { silent: true }); }}
+            />
+          )}
+
+          {existingEntry && (
+            <div role="alert" className="mb-6 rounded-md border border-border bg-card p-4 text-sm" data-testid="cashflow-period-exists">
+              <p className="font-medium text-foreground">{existingEntry.message}</p>
+              <Button type="button" className="mt-3 min-h-11" onClick={() => openEntryForEdit(existingEntry.id)} data-testid="cashflow-open-existing">
+                Edit the existing entry
+              </Button>
+            </div>
+          )}
+
+          {showSnapshotForm && !editId && (
             <form onSubmit={addSnapshot} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
               <h2 className="font-semibold">
                 Cashflow snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Input name="periodStart" label="Period start" type="date" required />
-                <Input name="periodEnd" label="Period end" type="date" required />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Input key={`ps-${prefillPeriod?.start ?? ""}`} name="periodStart" label="Period start" type="date" defaultValue={prefillPeriod?.start} required />
+                <Input key={`pe-${prefillPeriod?.end ?? ""}`} name="periodEnd" label="Period end" type="date" defaultValue={prefillPeriod?.end} required />
                 <Select
                   name="businessModel"
                   label="Business model"
@@ -368,11 +457,12 @@ export default function OwnerCashflowPage() {
                   ]}
                 />
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                {CASHFLOW_FIELDS.map((f) => (
-                  <Input key={f.name} name={f.name} label={f.label} type="number" placeholder="—" />
-                ))}
-              </div>
+              <CashflowSnapshotFields fields={CASHFLOW_FIELDS} essentialFirst={prefillPeriod !== null} />
+              {prefillPeriod && (
+                <p className="text-xs text-muted-foreground" data-testid="cashflow-prefilled-period">
+                  These dates are the period your first read covers, so what you add here counts toward it.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Leave fields blank if unknown — missing data is reported, never invented.
               </p>
@@ -389,9 +479,14 @@ export default function OwnerCashflowPage() {
               load must never render "No cashflow snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} provisionalSafetyImplemented />
+          <DomainMainTargetContext domain="cashflow" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
+
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard.latestSnapshot
+              {dashboard.latestSnapshotDiagnosis?.current
+                ? "These figures were already diagnosed. Their period is still in progress, so the result is provisional (see the note above) and there is no completed reading yet — it appears here once a completed period is diagnosed."
+                : dashboard.latestSnapshot
                 ? "Snapshot recorded. Click “Run cashflow diagnosis” to generate findings and an action plan."
                 : "No cashflow snapshot yet. Add a snapshot, then run a cashflow diagnosis."}
             </div>
@@ -400,6 +495,7 @@ export default function OwnerCashflowPage() {
               cycle={cycle}
               score={score}
               missing={missing}
+              cashPosition={cashPosition}
               recommended={dashboard.recommendedNextAction}
               history={dashboard.cycleHistory}
               busy={busy}
@@ -417,6 +513,7 @@ function CashflowCycleView({
   cycle,
   score,
   missing,
+  cashPosition,
   recommended,
   history,
   busy,
@@ -426,6 +523,7 @@ function CashflowCycleView({
   cycle: any;
   score: any;
   missing: string[];
+  cashPosition: { judged: boolean; complete: boolean; missing: string[] } | null;
   recommended: any;
   history: any[];
   busy: boolean;
@@ -433,22 +531,50 @@ function CashflowCycleView({
   onVerifyAction: (a: any) => void;
 }) {
   const state = score?.cashflowState ?? cycle.cashflowState;
+  // UNKNOWN cash or bank balance is never "healthy / zero danger": the same spine rule as Money decides whether these
+  // are shown as scores. An unconfirmed cash position (the engine already declines to judge cash safety) is a withheld conclusion.
+  const scoreAvailability = assessScoreAvailability({
+    dataConfidenceScore: score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0,
+    missingCritical: missing,
+    withheldConclusions: cashPosition && !cashPosition.complete ? Math.max(1, cashPosition.missing.length) : 0,
+  });
+  const presentedScores = presentScores(
+    {
+      health: Number(score?.healthScore ?? cycle.healthScore ?? 0),
+      risk: Number(score?.riskScore ?? cycle.dangerScore ?? 0),
+      opportunity: Number(score?.opportunityScore ?? cycle.opportunityScore ?? 0),
+    },
+    scoreAvailability,
+    { health: "Health", risk: "Danger", opportunity: "Opportunity" },
+  );
   return (
     <div className="space-y-6">
       <div className="border rounded-lg p-4 bg-card flex items-center justify-between">
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
           <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Danger {Math.round(score?.riskScore ?? cycle.dangerScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
+            {presentedScores.scores.map((s) => `${s.label} ${s.value}`).join(" · ")}
           </div>
+          {presentedScores.note && (
+            <p className="mt-1 text-sm font-normal text-foreground" data-testid="cashflow-score-availability-note">{presentedScores.note}</p>
+          )}
         </div>
         <div className="text-right">
           <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
+            data completeness {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
         </div>
       </div>
+
+      {cashPosition && cashPosition.judged && !cashPosition.complete && (
+        <div role="status" className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm" data-testid="cash-position-incomplete">
+          <strong>Total cash isn&apos;t confirmed yet.</strong>{" "}
+          Your {cashPosition.missing.map((m) => (m === "bankBalance" ? "bank balance" : "cash in hand")).join(" and ")} {cashPosition.missing.length > 1 ? "are" : "is"} not recorded in this check, so
+          OpsIQ does not show a cash runway or cash-pressure figures and does not treat this reading as a measure of cash safety or cash danger.
+          Record a Cash flow check with both cash in hand and the bank balance (enter 0 if there is none), then re-run the diagnosis. {OVERDRAFT_BANK_BALANCE_SENTENCE}
+        </div>
+      )}
 
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
@@ -458,12 +584,14 @@ function CashflowCycleView({
 
       {recommended && (
         <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next cash action</div>
+          <div className="text-xs uppercase text-muted-foreground">Next step within Cash flow (local to this area — your overall main target is on Home)</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 
@@ -482,7 +610,7 @@ function CashflowCycleView({
               </div>
               <p className="text-xs text-muted-foreground">{f.summary}</p>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.sourceValue)} (threshold {String(f.threshold)}) · confidence {Math.round((f.confidence ?? 0) * 100)}%
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {ownerValueText(f.sourceValue)}{f.threshold !== null && f.threshold !== undefined ? <> (threshold {ownerValueText(f.threshold)})</> : null} · {ownerConfidencePhrase(Math.round((f.confidence ?? 0) * 100))} — a heuristic rating, not a probability
               </p>
               {Array.isArray(f.evidence) && f.evidence.length > 0 && (
                 <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence.map(humanizeEvidenceLine).join("; ")}</p>
@@ -505,6 +633,12 @@ function CashflowCycleView({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {a.carriedFromCycleSequence != null && (
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
+                        {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
@@ -520,16 +654,14 @@ function CashflowCycleView({
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
-                  <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>
+                  {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
-                    <span className="text-muted-foreground">
-                      before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
-                    </span>
+                    <VerificationEvidenceText verification={latestVerification} />
                   </div>
                 )}
               </div>

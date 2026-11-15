@@ -60,6 +60,6 @@ describe("[db] owner archetype seed → live gate + control center", () => {
     const otherWs = randomUUID();
     await expect(
       enforceOwnerActionGates({ workspaceId: otherWs, businessId: randomUUID(), actionId: randomUUID(), domain: "marketing", toStatus: "completed" })
-    ).resolves.toBeUndefined(); // no equipment/compliance/cycles in this workspace → no block
+    ).resolves.toMatchObject({ workspaceId: otherWs, domain: "marketing" }); // no equipment/compliance/cycles in this workspace → no block
   });
 });

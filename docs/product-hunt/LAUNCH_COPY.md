@@ -1,3 +1,5 @@
+> **LEGACY — DO NOT USE FOR CURRENT OPSIQ LAUNCH.** This Rebilix-era material is stale. See `docs/opsiq/marketing/PRODUCT_DEMO_CAPTURE.md` for the current plan.
+
 # Rebilix — Product Hunt Launch Copy
 
 > Rebilix is currently live in beta at https://o-ps-iq.vercel.app. Contact support@opsiq.solutions during

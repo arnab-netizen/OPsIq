@@ -316,11 +316,11 @@ describe("Owner Marketing page — owner-safe error rendering (verifyAction / ac
     actionVerifyFailure = {
       kind: "http",
       status: 400,
-      body: { error: "Cannot verify a marketing action without a before (baseline) value for the metric." },
+      body: { error: "Enter the before (baseline) value — the diagnosis did not measure this metric." },
     };
     fireEvent.click(screen.getByRole("button", { name: "Verify outcome" }));
 
-    const banner = await screen.findByText(/doesn.t have a baseline value/i);
+    const banner = await screen.findByText(/Enter the before \(baseline\) value/i);
     assertNoLeak(banner.textContent ?? "");
     expect(screen.getByRole("button", { name: "Verify outcome" })).not.toBeDisabled();
     expect(screen.queryByText(/Verified/i)).not.toBeInTheDocument();

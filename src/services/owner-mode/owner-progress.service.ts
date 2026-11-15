@@ -20,6 +20,7 @@
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 
 // ── Minimal Prisma-compatible interfaces (injectable for tests) ──────────────
 
@@ -32,19 +33,19 @@ export interface OwnerProgressDb {
   ownerSopAction: { count(args: { where: Record<string, unknown> }): CountResult };
   ownerStrategyAction: { count(args: { where: Record<string, unknown> }): CountResult };
   ownerFinanceCycle: {
-    findFirst(args: { where: Record<string, unknown>; orderBy: Record<string, string>; select: Record<string, boolean> }): Promise<{ status: string } | null>;
+    findFirst(args: { where: Record<string, unknown>; orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER; select: Record<string, boolean> }): Promise<{ status: string } | null>;
   };
   ownerSalesCycle: {
-    findFirst(args: { where: Record<string, unknown>; orderBy: Record<string, string>; select: Record<string, boolean> }): Promise<{ status: string } | null>;
+    findFirst(args: { where: Record<string, unknown>; orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER; select: Record<string, boolean> }): Promise<{ status: string } | null>;
   };
   ownerOperationsCycle: {
-    findFirst(args: { where: Record<string, unknown>; orderBy: Record<string, string>; select: Record<string, boolean> }): Promise<{ status: string } | null>;
+    findFirst(args: { where: Record<string, unknown>; orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER; select: Record<string, boolean> }): Promise<{ status: string } | null>;
   };
   ownerSopCycle: {
-    findFirst(args: { where: Record<string, unknown>; orderBy: Record<string, string>; select: Record<string, boolean> }): Promise<{ status: string } | null>;
+    findFirst(args: { where: Record<string, unknown>; orderBy: typeof CURRENT_DIAGNOSIS_CYCLE_ORDER; select: Record<string, boolean> }): Promise<{ status: string } | null>;
   };
   ownerStrategyCycle: {
-    findFirst(args: { where: Record<string, unknown>; orderBy: Record<string, string>; select: Record<string, boolean> }): Promise<{ status: string } | null>;
+    findFirst(args: { where: Record<string, unknown>; orderBy: typeof CURRENT_STRATEGY_CYCLE_ORDER; select: Record<string, boolean> }): Promise<{ status: string } | null>;
   };
 }
 
@@ -188,15 +189,19 @@ export async function generateOwnerBusinessReview(
   db: OwnerProgressDb,
 ): Promise<OwnerBusinessReview> {
   const where = { businessId, workspaceId };
-  const order = { createdAt: "desc" as const };
+  // Evidence-period domains: the current cycle is one whose period has ended (a future-dated period is not
+  // current evidence). Strategy evaluates a scenario, not a period.
+  const reviewedAtDate = new Date(reviewedAt);
+  const evidenceWhere = { ...where, ...currentEvidenceWhere(Number.isNaN(reviewedAtDate.getTime()) ? new Date() : reviewedAtDate) };
+  const order = CURRENT_DIAGNOSIS_CYCLE_ORDER;
   const select = { status: true };
 
   const [financeCycle, salesCycle, operationsCycle, sopCycle, strategyCycle, progress] = await Promise.all([
-    db.ownerFinanceCycle.findFirst({ where, orderBy: order, select }),
-    db.ownerSalesCycle.findFirst({ where, orderBy: order, select }),
-    db.ownerOperationsCycle.findFirst({ where, orderBy: order, select }),
-    db.ownerSopCycle.findFirst({ where, orderBy: order, select }),
-    db.ownerStrategyCycle.findFirst({ where, orderBy: order, select }),
+    db.ownerFinanceCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
+    db.ownerSalesCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
+    db.ownerOperationsCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
+    db.ownerSopCycle.findFirst({ where: evidenceWhere, orderBy: order, select }),
+    db.ownerStrategyCycle.findFirst({ where, orderBy: CURRENT_STRATEGY_CYCLE_ORDER, select }),
     getOwnerBusinessProgress(businessId, workspaceId, db),
   ]);
 

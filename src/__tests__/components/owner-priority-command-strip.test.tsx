@@ -31,7 +31,10 @@ describe("PriorityCommandStrip", () => {
     expect(container.textContent ?? "").toMatch(/Cut the loss-making delivery route/);
     // The seven owner questions are present.
     expect(container.textContent ?? "").toMatch(/Why:/);
-    expect(container.textContent ?? "").toMatch(/Do next:/);
+    expect(container.textContent ?? "").toMatch(/Plan step:/);
+    // Plan checkpoints are supporting analysis: never labelled as the owner's priorities.
+    expect(container.textContent ?? "").toMatch(/Checkpoint 1/);
+    expect(container.textContent ?? "").not.toMatch(/Priority 1|Do next:/);
     expect(container.textContent ?? "").toMatch(/Who:/);
     expect(container.textContent ?? "").toMatch(/Proof:/);
     expect(container.textContent ?? "").toMatch(/Reassess:/);

@@ -24,6 +24,8 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { ValidationError, NotFoundError } from "@/infra/errors";
 import {
   IntegrationEventSchema,
+  RETIRED_CONNECTOR_MESSAGE,
+  isRetiredConnectorProvider,
   mapIntegrationEventToBcpTrigger,
   type IntegrationEvent,
 } from "@/domain/integration-fabric/integration-contracts";
@@ -54,6 +56,11 @@ export async function ingestIntegrationEvent(
     );
   }
   const event: IntegrationEvent = parsed.data;
+  // QuickBooks evidence enters OpsIQ only through governed report synchronisation (src/services/quickbooks), never as a
+  // generic "integration event" that could trigger re-evaluation without any canonical evidence behind it.
+  if (isRetiredConnectorProvider(event.provider)) {
+    throw new ValidationError(RETIRED_CONNECTOR_MESSAGE);
+  }
 
   // Step 2: Verify connector belongs to workspace (workspace isolation)
   const connector = await db.ownerConnector.findFirst({
@@ -62,6 +69,10 @@ export async function ingestIntegrationEvent(
   });
   if (!connector) {
     throw new NotFoundError("OwnerConnector", event.connectorId);
+  }
+  // The stored connector decides, not the caller's claim: a retired (QuickBooks) connector never ingests events.
+  if (isRetiredConnectorProvider(connector.provider)) {
+    throw new ValidationError(RETIRED_CONNECTOR_MESSAGE);
   }
 
   // Step 3: Emit ingestion audit event

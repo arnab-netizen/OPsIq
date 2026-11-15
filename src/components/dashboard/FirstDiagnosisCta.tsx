@@ -18,9 +18,8 @@ export default function FirstDiagnosisCta({ href = "/diagnosis" }: { href?: stri
     <div className="mt-4 rounded-lg border border-border bg-muted/40 p-6">
       <h3 className="text-base font-semibold text-foreground">Run your first diagnosis</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Describe your business and OpsIQ will return risks, findings, and a prioritized action plan.
-        This first pass uses only what you type here — add your real records in My Business
-        to make it specific to your business.
+        Enter what you know. OpsIQ names the main problem the facts support, says how sure it is,
+        and gives one thing to do first — or says plainly what it still needs before it can tell.
       </p>
       <Link
         href={href}

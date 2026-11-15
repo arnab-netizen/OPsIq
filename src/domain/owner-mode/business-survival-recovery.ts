@@ -199,7 +199,15 @@ export function planBusinessSurvivalRecovery(input: CrisisInput): SurvivalRecove
   blocked.add("auto customer/tenant/buyer contact or auto-send of any draft");
   blocked.add("auto spend / discount / pricing change without owner approval");
   if (temptation === "TENDER") { blocked.add("tender auto-submit"); blocked.add("auto EMD payment / spend"); }
-  if (temptation === "MARKETING" || temptation === "GROWTH" || temptation === "LAUNCH") blocked.add(`${temptation.toLowerCase()} before stabilization + validation`);
+  // Named by intent/lever (what would scale), never by business domain: a repair step in Marketing or
+  // Sales is not "marketing before stabilization". The shared reconciler turns these into conditions on a
+  // canonical growth step (owner-imperatives.ts RECOVERY_GROWTH_BLOCKS).
+  const TEMPTATION_BLOCK: Record<string, string> = {
+    MARKETING: "scaling acquisition spend before stabilization + validation",
+    GROWTH: "growth expansion before stabilization + validation",
+    LAUNCH: "new launches before stabilization + validation",
+  };
+  if (temptation && TEMPTATION_BLOCK[temptation]) blocked.add(TEMPTATION_BLOCK[temptation]);
   if (temptation === "DISCOUNT") blocked.add("discount before margin/cash impact is known");
 
   // ── Honest unrecoverable check FIRST ──────────────────────────────────────
@@ -262,7 +270,7 @@ export function planBusinessSurvivalRecovery(input: CrisisInput): SurvivalRecove
   let top: SurvivalGovernedAction;
   if (input.cashPressure === "CRITICAL") {
     status = "SURVIVAL_TRIAGE_REQUIRED";
-    top = action("survival:triage-cash", "Survival triage: stop-loss and protect the cash runway before anything else", "REVIEW_PROCESS_STEP", false, ["proof the loss-making activity is paused and essential-only spend is in force"], missingDataTasks.filter((m) => /cash|runway/i.test(m)));
+    top = action("survival:triage-cash", "Survival triage: stop-loss and protect the cash runway", "REVIEW_PROCESS_STEP", false, ["proof the loss-making activity is paused and essential-only spend is in force"], missingDataTasks.filter((m) => /cash|runway/i.test(m)));
   } else if (atLeast(input.cashPressure, "HIGH")) {
     status = "CASH_PROTECTION_REQUIRED";
     top = action("survival:cash", "Protect cash / runway: hold discretionary spend and measure the real cash position", "COLLECT_MISSING_DATA", false, ["the captured cash/runway figure"], missingDataTasks.filter((m) => /cash|runway/i.test(m)).length ? ["verified cash position and runway (measure the real figure — none is assumed)"] : []);

@@ -19,5 +19,5 @@ export const POST = withCanonicalEnforcement(
     const override = await recordOwnerOverride(businessId, input, ctx.verifiedActorId, ctx.verifiedWorkspaceId);
     return canonicalJson(override, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }
 );

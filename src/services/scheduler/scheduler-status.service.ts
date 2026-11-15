@@ -13,6 +13,9 @@ export interface SchedulerStatusSummary {
   pending: number;
   running: number;
   deadLetter: number;
+  /** Tasks a handler explicitly finalized as terminally failed (never retried) — distinct from
+   *  dead_letter, which means retries were exhausted. */
+  terminalFailure: number;
   /** F-SCHED-FALSE-SUCCESS: count of tasks whose handler resolved but
    *  reported its own domain-level work as partially failed — distinct from
    *  a full "completed" so the owner can tell the two apart. */
@@ -24,6 +27,12 @@ export interface SchedulerStatusSummary {
     lastError: string | null;
     attempts: number;
     maxAttempts: number;
+    updatedAt: string;
+  }>;
+  recentTerminalFailures: Array<{
+    id: string;
+    taskName: string;
+    lastError: string | null;
     updatedAt: string;
   }>;
   /** Most recent tasks that completed with a truthfully-reported partial
@@ -61,15 +70,17 @@ interface PartialFailureRow {
 
 const RECENT_DEAD_LETTER_LIMIT = 10;
 const RECENT_PARTIAL_FAILURE_LIMIT = 10;
+const RECENT_TERMINAL_FAILURE_LIMIT = 10;
 
 export async function getSchedulerStatusForWorkspace(
   workspaceId: string
 ): Promise<SchedulerStatusSummary> {
-  const [pending, running, deadLetter, partialFailure, lastSuccess, recentDeadLetters, recentPartialFailures, nextScheduled] =
+  const [pending, running, deadLetter, terminalFailure, partialFailure, lastSuccess, recentDeadLetters, recentTerminalFailures, recentPartialFailures, nextScheduled] =
     await Promise.all([
       db.scheduledTask.count({ where: { workspaceId, status: "pending" } }),
       db.scheduledTask.count({ where: { workspaceId, status: "running" } }),
       db.scheduledTask.count({ where: { workspaceId, status: "dead_letter" } }),
+      db.scheduledTask.count({ where: { workspaceId, status: "failed" } }),
       db.scheduledTask.count({ where: { workspaceId, status: "completed_partial_failure" } }),
       db.scheduledTask.findFirst({
         where: { workspaceId, status: "completed" },
@@ -81,6 +92,12 @@ export async function getSchedulerStatusForWorkspace(
         orderBy: { updatedAt: "desc" },
         take: RECENT_DEAD_LETTER_LIMIT,
         select: { id: true, taskName: true, lastError: true, attempts: true, maxAttempts: true, updatedAt: true },
+      }),
+      db.scheduledTask.findMany({
+        where: { workspaceId, status: "failed" },
+        orderBy: { updatedAt: "desc" },
+        take: RECENT_TERMINAL_FAILURE_LIMIT,
+        select: { id: true, taskName: true, lastError: true, updatedAt: true },
       }),
       db.scheduledTask.findMany({
         where: { workspaceId, status: "completed_partial_failure" },
@@ -99,6 +116,7 @@ export async function getSchedulerStatusForWorkspace(
     pending,
     running,
     deadLetter,
+    terminalFailure,
     partialFailure,
     lastSuccess: lastSuccess && lastSuccess.completedAt
       ? { taskName: lastSuccess.taskName, completedAt: lastSuccess.completedAt.toISOString() }
@@ -109,6 +127,12 @@ export async function getSchedulerStatusForWorkspace(
       lastError: t.lastError,
       attempts: t.attempts,
       maxAttempts: t.maxAttempts,
+      updatedAt: t.updatedAt.toISOString(),
+    })),
+    recentTerminalFailures: recentTerminalFailures.map((t: PartialFailureRow) => ({
+      id: t.id,
+      taskName: t.taskName,
+      lastError: t.lastError,
       updatedAt: t.updatedAt.toISOString(),
     })),
     recentPartialFailures: recentPartialFailures.map((t: PartialFailureRow) => ({

@@ -1,4 +1,7 @@
 # OpsIQ Stage 2 — Forensic Current-Main Truth Audit
+
+> **Superseded for QuickBooks.** The QuickBooks rows below record the state at the time of this audit (CSV templates only, no live connector). A read-only QuickBooks Online integration now exists — see `docs/opsiq/product/QBO_V1_ARCHITECTURE.md`. The rest of this audit is unchanged.
+
 ## Authoritative Remaining-Work Plan
 
 **Audit date:** 2026-07-22  

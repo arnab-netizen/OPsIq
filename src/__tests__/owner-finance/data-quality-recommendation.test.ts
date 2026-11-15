@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { diagnoseFinanceSnapshot } from "@/domain/owner-finance";
-import { buildFinanceRecommendations } from "@/domain/owner-finance";
+import { buildFinanceRecommendations, buildFinanceRecommendation } from "@/domain/owner-finance";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance";
 import { calculateDataConfidence, fixedCostsCoveredByComponents } from "@/domain/owner-finance/data-confidence";
 
@@ -25,16 +25,19 @@ const PERIOD_END = "2026-05-31";
 // --------------------------------------------------------------------------
 
 describe("data-confidence: fixedCosts covered by components", () => {
-  it("fixedCostsCoveredByComponents returns true when rent is present", () => {
-    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", rent: 10000 })).toBe(true);
+  it("fixedCostsCoveredByComponents is true only when EVERY component is known (a subset is not the fixed-cost total)", () => {
+    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", rent: 10000, salaryPayroll: 50000, utilities: 5000 })).toBe(true);
+    // An explicit 0 is a known value and counts as covered.
+    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", rent: 10000, salaryPayroll: 50000, utilities: 0 })).toBe(true);
   });
 
-  it("fixedCostsCoveredByComponents returns true when salaryPayroll is present", () => {
-    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", salaryPayroll: 50000 })).toBe(true);
-  });
-
-  it("fixedCostsCoveredByComponents returns true when utilities is present", () => {
-    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", utilities: 5000 })).toBe(true);
+  it.each([
+    ["rent only", { rent: 10000 }],
+    ["salaryPayroll only", { salaryPayroll: 50000 }],
+    ["utilities only", { utilities: 5000 }],
+    ["rent + payroll (utilities unknown)", { rent: 10000, salaryPayroll: 50000 }],
+  ])("fixedCostsCoveredByComponents is false for a partial set: %s", (_label, parts) => {
+    expect(fixedCostsCoveredByComponents({ periodStart: PERIOD_START, periodEnd: PERIOD_END, currency: "INR", ...parts })).toBe(false);
   });
 
   it("fixedCostsCoveredByComponents returns false when no component is present", () => {
@@ -196,6 +199,14 @@ describe("Section 7A — Trinity-like partial data", () => {
     const action = dqRec?.requiredOwnerAction ?? "";
     // Should mention a specific confidence number (e.g., "from 60 to 70")
     expect(action).toMatch(/\d+/);
+  });
+
+  it("action text uses plain wording (no internal jargon)", () => {
+    const diag = diagnoseFinanceSnapshot(trinity, { now: new Date("2026-08-12T00:00:00.000Z") });
+    const recs = buildFinanceRecommendations(diag.opportunityFindings);
+    const dqRec = recs.find((r) => r.recommendationCode === "FINREC_IMPROVE_DATA_QUALITY");
+    const action = dqRec?.requiredOwnerAction ?? "";
+    expect(action).not.toMatch(/receivables-pressure|net working capital|vendor-obligation|margin-leakage|debt-service|payroll burden|fully-graded|-confidence threshold/);
   });
 });
 
@@ -572,5 +583,50 @@ describe("FIN_OPP_DATA_QUALITY priority order contract", () => {
         expect(di).toBeLessThan(li);
       }
     }
+  });
+});
+
+describe("FIN_MISSING_CRITICAL_DATA — names exactly the missing critical inputs", () => {
+  const base = { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR" } as const;
+  const critical = (input: FinancialSnapshotInput) => {
+    const diag = diagnoseFinanceSnapshot(input, { now: NOW });
+    const finding = diag.findings.find((f) => f.code === "FIN_MISSING_CRITICAL_DATA")!;
+    expect(finding).toBeDefined();
+    return { finding, rec: buildFinanceRecommendation(finding)! };
+  };
+
+  it("costs missing → names exactly costs (cash is not critical: it may be UNKNOWN), with owner labels and no raw keys", () => {
+    const { finding, rec } = critical({ ...base, revenue: 100000 });
+    expect(finding.missingData).toEqual(["costs"]);
+    expect(rec.requiredOwnerAction).toMatch(/^Enter Costs \(any cost component\) so OpsIQ/);
+    expect(rec.requiredOwnerAction).not.toMatch(/Revenue|Cash in hand/);
+    expect(`${rec.requiredOwnerAction} ${rec.verificationMethod}`).not.toMatch(/cashOnHand|dataConfidenceScore/);
+    expect(rec.verificationMethod).toContain("Costs (any cost component) has been entered");
+  });
+
+  it("only revenue missing → names only Revenue", () => {
+    const { rec } = critical({ ...base, costOfGoodsOrServices: 1000, cashOnHand: 5000 });
+    expect(rec.requiredOwnerAction).toMatch(/^Enter Revenue so OpsIQ/);
+    expect(rec.requiredOwnerAction).not.toMatch(/Costs|Cash in hand/);
+    expect(rec.verificationMethod).toContain("Revenue has been entered");
+  });
+
+  it("empty or unknown missingData falls back to safe generic wording (no raw keys)", () => {
+    const { finding } = critical({ ...base, revenue: 100000 });
+    for (const missingData of [[], ["somethingUnknown"]]) {
+      const rec = buildFinanceRecommendation({ ...finding, missingData })!;
+      expect(rec.requiredOwnerAction).toContain("Enter the missing financial inputs");
+      expect(`${rec.requiredOwnerAction} ${rec.verificationMethod}`).not.toMatch(/somethingUnknown|undefined|null/);
+    }
+  });
+
+  it("FIN_OPP_DATA_QUALITY verification is plain and does not target 100", () => {
+    const diag = diagnoseFinanceSnapshot({ ...base, revenue: 100000, costOfGoodsOrServices: 1000, cashOnHand: 5000 }, { now: NOW });
+    const finding = diag.findings.find((f) => f.code === "FIN_OPP_DATA_QUALITY")!;
+    const rec = buildFinanceRecommendation(finding)!;
+    expect(rec.verificationMethod).toBe(
+      "On your next finance snapshot, check that diagnosis confidence is higher after adding the missing information."
+    );
+    expect(rec.verificationMethod).not.toMatch(/dataConfidenceScore|100/);
   });
 });

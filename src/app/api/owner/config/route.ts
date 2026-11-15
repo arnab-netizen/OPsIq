@@ -117,6 +117,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       at_risk: HealthStatus.AT_RISK,
       healthy: HealthStatus.HEALTHY,
       improving: HealthStatus.IMPROVING,
+      needs_data: HealthStatus.NEEDS_DATA,
     };
 
     const updated: OwnerDashboardConfig = {

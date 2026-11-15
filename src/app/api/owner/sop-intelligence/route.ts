@@ -138,5 +138,5 @@ export const PATCH = withCanonicalEnforcement(
     });
     return canonicalJson(result, { status: 200 });
   },
-  { requireCapabilities: [CAPABILITIES.SOP_MANAGE], requireWorkspace: true },
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.SOP_MANAGE], requireWorkspace: true },
 );

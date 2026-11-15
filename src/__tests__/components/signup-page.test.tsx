@@ -25,14 +25,7 @@ const FIXED_FALLBACK = "We couldn't create your account right now. Please try ag
 async function fillAndSubmit() {
   await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
   fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@example.com" } });
-  // Exact match, not /password/i: PasswordInput's Show/Hide toggle carries an
-  // aria-label of "Show password" / "Hide password", which would also match a
-  // loose /password/i regex against getByLabelText.
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
   fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: "Acme" } });
-  fireEvent.click(screen.getByLabelText(/Terms/i));
-  fireEvent.click(screen.getByLabelText(/Privacy notice/i));
-  fireEvent.click(screen.getByLabelText(/Beta notice/i));
   fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 }
 
@@ -198,31 +191,32 @@ describe("SignupPage — Business name label (UX-06 Wave A1)", () => {
     await fillAndSubmit();
 
     await waitFor(() => expect(capturedBody).not.toBeNull());
-    expect(capturedBody).toMatchObject({ workspaceName: "Acme" });
+    // Exactly email + business name: no password and no consent ever leaves the signup page.
+    expect(capturedBody).toEqual({ email: "a@example.com", workspaceName: "Acme" });
   });
 });
 
 /**
- * UX-06 Wave A1 (Section P): the password field must render the Show/Hide toggle,
- * and toggling it must never submit the form.
+ * Email ownership before credential trust: signup collects NO secret and NO consent. The password and the three
+ * policy acceptances are chosen after the mailbox is proven (see reset-password setup mode).
  */
-describe("SignupPage — password visibility control (UX-06 Wave A1)", () => {
-  it("renders a Show password control for the Password field", async () => {
+describe("SignupPage — no credential or consent before email ownership", () => {
+  it("renders only the email and business name inputs: no password field, no consent checkboxes", async () => {
     mockBetaStatus({ enabled: true, admissionMode: "OPEN_BETA" });
     render(<SignupPage />);
     await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
 
-    expect(screen.getByRole("button", { name: "Show password" })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/password/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /show password/i })).toBeNull();
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(document.querySelector('input[type="password"]')).toBeNull();
+    expect(screen.getByText(/after confirming your email/i)).toBeTruthy();
   });
 
-  it("clicking the password toggle never submits the form", async () => {
+  it("the submit button is enabled without any consent step", async () => {
     mockBetaStatus({ enabled: true, admissionMode: "OPEN_BETA" });
     render(<SignupPage />);
     await waitFor(() => expect(screen.getByLabelText(/email/i)).not.toBeDisabled());
-
-    fireEvent.click(screen.getByRole("button", { name: "Show password" }));
-    expect(screen.getByLabelText("Password")).toHaveProperty("type", "text");
-    // No fetch to the signup endpoint occurred as a side effect of the toggle.
-    expect(screen.queryByText(/we couldn.t create your account/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create account/i })).not.toBeDisabled();
   });
 });

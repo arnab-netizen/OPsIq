@@ -15,6 +15,9 @@ export const AUDIT_EVENTS = {
   ROLE_ASSIGNED: "role.assigned",
   ROLE_REVOKED: "role.revoked",
 
+  // Acceptance fixtures (authority-bearing creates through /api/admin/acceptance-fixtures/*)
+  ACCEPTANCE_FIXTURE_CREATED: "acceptance_fixture.created",
+
   // Session
   SESSION_CREATED: "session.created",
   SESSION_EXPIRED: "session.expired",
@@ -235,6 +238,15 @@ export const AUDIT_EVENTS = {
 
   // Billing/Subscription
   SUBSCRIPTION_ACTIVATED: "subscription.activated",
+  BILLING_CHECKOUT_CREATED: "billing.checkout_created",
+  BILLING_SUBSCRIPTION_SYNCED: "billing.subscription_synced",
+  BILLING_SUBSCRIPTION_STALE_EVENT_IGNORED: "billing.subscription_stale_event_ignored",
+  BILLING_PAYMENT_SUCCEEDED: "billing.payment_succeeded",
+  BILLING_PAYMENT_FAILED: "billing.payment_failed",
+  BILLING_CANCELLATION_REQUESTED: "billing.cancellation_requested",
+  BILLING_PAYMENT_METHOD_UPDATE_REQUESTED: "billing.payment_method_update_requested",
+  BILLING_EVENT_REJECTED: "billing.event_rejected",
+  BILLING_DUPLICATE_SUBSCRIPTION_CANCELED: "billing.duplicate_subscription_canceled",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
 
   // Owner Mode
@@ -245,6 +257,8 @@ export const AUDIT_EVENTS = {
   OWNER_GATE_OPT_OUT_RECORDED: "owner.gate_opt_out_recorded",
   OWNER_GATE_OPT_OUT_CLEARED: "owner.gate_opt_out_cleared",
   OWNER_GATE_PROMOTION_BLOCKED: "owner.gate_promotion_blocked",
+  /** A gate could not assess an owner action (e.g. unknown margin) and did not block it: recorded, never silent. */
+  OWNER_GATE_ASSESSMENT_ABSTAINED: "owner.gate_assessment_abstained",
   // Jarvis 360 Slice 4 — owner load reduction / approval memory
   OWNER_APPROVAL_MEMORY_RECORDED: "owner.approval_memory_recorded",
   OWNER_APPROVAL_MEMORY_REUSED: "owner.approval_memory_reused",
@@ -262,6 +276,7 @@ export const AUDIT_EVENTS = {
   // Jarvis 360 Slice 12–14 — memory / self-eval / compliance
   OWNER_DO_NOT_REPEAT_BLOCKED: "owner.do_not_repeat_blocked",
   OWNER_DO_NOT_REPEAT_RECORDED: "owner.do_not_repeat_recorded",
+  OWNER_DO_NOT_REPEAT_CONTEXT_CHANGED: "owner.do_not_repeat_context_changed",
   OWNER_SELF_EVALUATION_RECORDED: "owner.self_evaluation_recorded",
   OWNER_COMPLIANCE_REVIEW_REQUIRED: "owner.compliance_review_required",
   // Jarvis 360 gap-closure — live owner-loop wiring
@@ -288,6 +303,11 @@ export const AUDIT_EVENTS = {
   RECOVERY_REASSESSMENT_TRIGGERED: "owner.recovery_reassessment_triggered",
   RECOVERY_OUTCOME_VERIFIED: "owner.recovery_outcome_verified",
   RECOVERY_VERIFICATION_REASSESSMENT_TRIGGERED: "owner.recovery_verification_reassessment_triggered",
+
+  // Canonical owner decision (Owner Intelligence Spine) — recorded when the owner's main target,
+  // critical-issue set, confidence or funding gap materially changes; also the decision memory the
+  // resolver compares against for "what changed" (independent of which owner page was visited).
+  OWNER_DECISION_CHANGED: "owner.decision_changed",
 
   // Owner Finance (Module 2)
   OWNER_FINANCE_SNAPSHOT_RECORDED: "owner.finance_snapshot_recorded",
@@ -328,6 +348,8 @@ export const AUDIT_EVENTS = {
 
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",
+  /** A recorded Cashflow figure (bank balance / cash in hand) was added to, changed or cleared; payload keeps before/after. */
+  CASHFLOW_SNAPSHOT_AMENDED: "owner.cashflow_snapshot_amended",
   OWNER_CASHFLOW_DIAGNOSIS_RUN: "owner.cashflow_diagnosis_run",
   OWNER_CASHFLOW_ACTION_UPDATED: "owner.cashflow_action_updated",
   OWNER_CASHFLOW_ACTION_COMPLETED: "owner.cashflow_action_completed",
@@ -461,6 +483,8 @@ export const AUDIT_EVENTS = {
   // Phase 5: Owner Goal + Trajectory Engine
   OWNER_GOAL_CREATED: "owner.goal_created",
   OWNER_GOAL_ACHIEVED: "owner.goal_achieved",
+  /** A goal was REVISED because a successor replaced it (payload names old/new goal, scopes and reason). */
+  OWNER_GOAL_REVISED: "owner.goal_revised",
 
   // Phase 6: Google Sheets Spreadsheet Allowlist
   SPREADSHEET_ALLOWLIST_ADDED: "external.spreadsheet_allowlist_added",
@@ -556,6 +580,8 @@ export const AUDIT_EVENTS = {
   OWNER_RESOURCE_RELEASED: "owner.resource_released",
   OWNER_BUSINESS_RISK_IDENTIFIED: "owner.business_risk_identified",
   OWNER_BUSINESS_RISK_STATUS_CHANGED: "owner.business_risk_status_changed",
+  /** A risk's recorded fields were edited without a status change (old → new values in the payload). */
+  OWNER_BUSINESS_RISK_UPDATED: "owner.business_risk_updated",
   OWNER_BUSINESS_RISK_RESOLVED: "owner.business_risk_resolved",
   OWNER_BUSINESS_RISK_REVIEW_COMPLETED: "owner.business_risk_review_completed",
   OWNER_BUSINESS_RISK_ACCEPTED: "owner.business_risk_accepted",
@@ -565,6 +591,7 @@ export const AUDIT_EVENTS = {
   OWNER_COMPLIANCE_REVIEW_COMPLETED: "owner.compliance_review_completed",
   OWNER_COMPLIANCE_BREACH_RECORDED: "owner.compliance_breach_recorded",
   OWNER_COMPLIANCE_TASK_LINKED: "owner.compliance_task_linked",
+  OWNER_COMPLIANCE_BUSINESS_ASSIGNED: "owner.compliance_business_assigned",
   OWNER_KPI_OWNERSHIP_ASSIGNED: "owner.kpi_ownership_assigned",
   OWNER_KPI_REVIEWED: "owner.kpi_reviewed",
   OWNER_DECISION_CONFIDENCE_RECORDED: "owner.decision_confidence_recorded",
@@ -637,6 +664,27 @@ export const AUDIT_EVENTS = {
   OWNER_ACTION_STALL_DETECTED: "owner.action_stall_detected",
   OWNER_ACTION_APPROVAL_GRANTED: "owner.action_approval_granted",
 
+  // Owner Outcome Persistence v1 — decision/commitment record and canonical outcome spine
+  OWNER_DECISION_RECORDED: "owner.decision_recorded",
+  OWNER_OUTCOME_CONTRACT_RECORDED: "owner.outcome_contract_recorded",
+  OWNER_OUTCOME_SOURCE_LINKED: "owner.outcome_source_linked",
+  OWNER_OUTCOME_ASSESSMENT_RECORDED: "owner.outcome_assessment_recorded",
+
+  // QuickBooks Online — business-scoped connection persistence (identifiers/metadata only; never tokens, codes or state)
+  QBO_AUTHORIZATION_STARTED: "qbo.authorization_started",
+  QBO_AUTHORIZATION_COMPLETED: "qbo.authorization_completed",
+  QBO_TOKENS_ROTATED: "qbo.tokens_rotated",
+  QBO_REAUTHORIZATION_REQUIRED: "qbo.reauthorization_required",
+  QBO_CONNECTION_DISCONNECTED: "qbo.connection_disconnected",
+  QBO_REALM_BINDING_CONFLICT: "qbo.realm_binding_conflict",
+  QBO_AUTHORIZATION_DENIED: "qbo.authorization_denied",
+  QBO_AUTHORIZATION_FAILED: "qbo.authorization_failed",
+  QBO_BASELINE_COMPLETED: "qbo.baseline_completed",
+  QBO_SYNC_FAILED: "qbo.sync_failed",
+  QBO_SYNC_RECOVERED: "qbo.sync_recovered",
+  QBO_CANONICAL_MATERIALIZED: "qbo.canonical_materialized",
+  QBO_REVOCATION_FAILED: "qbo.revocation_failed",
+
   // Bundle 3.5 — Customer Complaint and Service Recovery
   COMPLAINT_CREATED: "complaint.created",
   COMPLAINT_TRIAGED: "complaint.triaged",
@@ -700,9 +748,35 @@ export const AUDIT_EVENTS = {
   EMAIL_VERIFICATION_REQUESTED: "user.email_verification_requested",
   EMAIL_VERIFICATION_RESENT: "user.email_verification_resent",
   EMAIL_VERIFIED: "user.email_verified",
+  // A verification email that could not be delivered (no provider, send failure, or a non-public link base). Payload: reason enum only.
+  EMAIL_VERIFICATION_NOT_SENT: "user.email_verification_not_sent",
+  /** A forgot-password setup/reset email that could not be sent (enum reason only, no address). */
+  PASSWORD_EMAIL_NOT_SENT: "user.password_email_not_sent",
   POLICY_ACCEPTED: "user.policy_accepted",
   PLATFORM_FEEDBACK_SUBMITTED: "platform_feedback.submitted",
   PRIVACY_REQUEST_CREATED: "privacy_request.created",
+
+  // Public-beta product funnel (src/domain/analytics/product-events.ts). Payloads carry enums/durations only.
+  PRODUCT_PUBLIC_START_FREE_CLICKED: "product.public_start_free_clicked",
+  PRODUCT_SIGNUP_STARTED: "product.signup_started",
+  PRODUCT_SIGNUP_COMPLETED: "product.signup_completed",
+  PRODUCT_EMAIL_VERIFIED: "product.email_verified",
+  PRODUCT_PASSWORD_SET: "product.password_set",
+  PRODUCT_FIRST_RUN_STARTED: "product.first_run_started",
+  PRODUCT_BUSINESS_PROFILE_COMPLETED: "product.business_profile_completed",
+  PRODUCT_FIRST_EVIDENCE_SAVED: "product.first_evidence_saved",
+  PRODUCT_FIRST_DIAGNOSIS_COMPLETED: "product.first_diagnosis_completed",
+  PRODUCT_FIRST_RESULT_VIEWED: "product.first_result_viewed",
+  PRODUCT_FIRST_RESULT_ACTION_ACCEPTED: "product.first_result_action_accepted",
+  PRODUCT_FIRST_RESULT_CORRECTED: "product.first_result_corrected",
+  PRODUCT_FIRST_RESULT_IMPROVEMENT_REQUESTED: "product.first_result_improvement_requested",
+  PRODUCT_FIRST_RESULT_QUESTION_SKIPPED: "product.first_result_question_skipped",
+  PRODUCT_FIRST_TRUSTED_DECISION_INTERACTION: "product.first_trusted_decision_interaction",
+  PRODUCT_FIRST_VALUE_FEEDBACK: "product.first_value_feedback",
+  PRODUCT_COCKPIT_REACHED: "product.cockpit_reached",
+  PRODUCT_RETURNING_OWNER: "product.returning_owner",
+  PRODUCT_OUTCOME_VERIFICATION_STARTED: "product.outcome_verification_started",
+  PRODUCT_OUTCOME_VERIFIED: "product.outcome_verified",
 
   // Controlled-beta homepage capture
   BETA_REQUEST_CREATED: "beta_request.created",
@@ -711,6 +785,17 @@ export const AUDIT_EVENTS = {
   BETA_REQUEST_REVOKED: "beta_request.revoked",
   BETA_REQUEST_REJECTED: "beta_request.rejected",
   BETA_REQUEST_REOPENED: "beta_request.reopened",
+  // Invitation EMAIL side effect (separate from the invite state). "accepted_by_provider" means the provider took the
+  // submission; it never claims delivery.
+  BETA_INVITE_EMAIL_ATTEMPTED: "beta_request.invite_email_attempted",
+  BETA_INVITE_EMAIL_ACCEPTED_BY_PROVIDER: "beta_request.invite_email_accepted_by_provider",
+  BETA_INVITE_EMAIL_FAILED: "beta_request.invite_email_failed",
+  BETA_INVITE_EMAIL_NO_PROVIDER: "beta_request.invite_email_no_provider",
+  BETA_INVITE_EMAIL_RESENT: "beta_request.invite_email_resent",
+
+  // Controlled Beta Cohort evidence ledger (operator-entered, append-only, platform-level / unchained; never tenant-visible)
+  BETA_COHORT_OWNER_ASSIGNED: "beta_cohort.owner_assigned",
+  BETA_COHORT_EVIDENCE_RECORDED: "beta_cohort.evidence_recorded",
 
   // Administration V1 — beta operating control plane
   PLATFORM_SETTINGS_INITIALIZED: "platform_settings.initialized",

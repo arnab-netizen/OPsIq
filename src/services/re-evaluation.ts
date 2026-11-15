@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -173,7 +174,14 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
     where: { engagementId, engagement: { workspaceId }, isCurrent: true },
   });
 
-  if (!current) {
+  // A profile whose businessStatus is the honest placeholder "unknown" (written when an engagement
+  // is created before any diagnosis has run — see createUnassessedBusinessConditionProfile) carries
+  // no real evidence, exactly like having no profile row at all. Without this check, its neutral
+  // placeholder severityScore would be read against these real-assessment thresholds below and
+  // fabricate a concrete rating (e.g. "distressed") from a value that was never meant to be compared
+  // on this scale — the opposite of the "unknown is valid, fabricated certainty is not" principle
+  // this placeholder exists to uphold.
+  if (!current || current.businessStatus === "unknown") {
     return {
       recommendedRating: "challenged" as BusinessConditionRating,
       reasoningFactors: ["no_assessment_available"],
@@ -193,16 +201,17 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
   ].filter(Boolean);
 
   // Evaluate KPI trends (improved or deteriorated)
-  const kpis = await db.kPI.findMany({
-    where: {
-      engagementId,
-      engagement: { workspaceId },
-    },
-    select: { target: true, currentValue: true, direction: true },
-  });
+  const kpis: Array<{ target: number | null; currentValue: number | null; direction: string }> =
+    await db.kPI.findMany({
+      where: {
+        engagementId,
+        engagement: { workspaceId },
+      },
+      select: { target: true, currentValue: true, direction: true },
+    });
 
   if (kpis.length > 0) {
-    const deterior = kpis.filter((k: any) => {
+    const deterior = kpis.filter((k) => {
       if (k.direction === "up" && k.currentValue !== null && k.target !== null) {
         return k.currentValue < k.target;
       } else if (k.direction === "down" && k.currentValue !== null && k.target !== null) {
@@ -313,7 +322,7 @@ async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId
     select: { id: true },
   });
 
-  const actions = await db.action.findMany({
+  const actions: Array<{ id: string; status: string }> = await db.action.findMany({
     where: {
       engagementId,
       engagement: { workspaceId },
@@ -330,8 +339,8 @@ async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId
   } else if (actions.length === 0) {
     recommendedPhase = "stabilization";
   } else {
-    const completedCount = actions.filter((a: any) => a.status === "completed").length;
-    const activeCount = actions.filter((a: any) => a.status !== "completed" && a.status !== "cancelled")
+    const completedCount = actions.filter((a) => a.status === "completed").length;
+    const activeCount = actions.filter((a) => a.status !== "completed" && a.status !== "cancelled")
       .length;
 
     if (activeCount > 0) {
@@ -405,7 +414,9 @@ async function evaluateHealthStatusImpact(
     where: { engagementId, engagement: { workspaceId }, isCurrent: true },
   });
 
-  if (!condition) {
+  // Same "unknown" placeholder short-circuit as evaluateBusinessConditionImpact above: an
+  // unassessed profile is not evidence of any health status, healthy included.
+  if (!condition || condition.businessStatus === "unknown") {
     return { healthScore: 50, recommendedStatus: "unknown" as const };
   }
 
@@ -612,7 +623,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
 
   // Persist results in a transaction. The re-ranking block was moved above; the remaining
   // in-tx work is bounded (tx.* updates + one emitAuditEvent), so 30s is sufficient.
-  const auditEventId = await db.$transaction(async (tx: any) => {
+  const auditEventId = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const auditPayload: Record<string, unknown> = {
       changeType: event.changeType,
       severity: event.severity,
@@ -652,7 +663,16 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     }
 
     // 2. Update business condition profile if changed
-    if (targets.businessConditionProfile && condition && condition.businessStatus !== businessConditionImpact.recommendedRating) {
+    // Never write back the "challenged" fallback rating: `evaluateBusinessConditionImpact` returns
+    // it only when there is genuinely no assessment to base a real rating on (no profile row, or
+    // the honest "unknown" placeholder row) — persisting it would silently replace an honest
+    // "unknown" with a fabricated concrete rating the moment a profile row happens to exist.
+    if (
+      targets.businessConditionProfile &&
+      condition &&
+      condition.businessStatus !== businessConditionImpact.recommendedRating &&
+      !businessConditionImpact.reasoningFactors.includes("no_assessment_available")
+    ) {
       auditPayload.businessConditionChange = {
         oldValue: condition.businessStatus,
         newValue: businessConditionImpact.recommendedRating,
@@ -709,7 +729,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         priorityImpact.recommendationPriorityShift === "escalate" ? priorityMap : deprioritizeMap;
 
       const updated = await Promise.all(
-        recs.map((r: any) =>
+        recs.map((r) =>
           tx.recommendation.update({
             where: { id: r.id },
             data: { priority: shiftMap[r.priority] || r.priority },

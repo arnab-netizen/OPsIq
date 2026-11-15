@@ -64,7 +64,8 @@ export function isStaleSnapshot(periodEnd: string, now: Date, staleDays: number)
 
 /**
  * Confidence starts at 100 and is reduced by: 30 per missing critical input,
- * 5 per missing important numeric field, 5 if the qualitative risk level is
+ * 5 per missing important numeric field (30 in total for cash when a positive investment
+ * needs it), 5 if the qualitative risk level is
  * missing, 10 if currency is invalid, and 15 if the snapshot is stale. Clamped to
  * [0, 100].
  */
@@ -79,6 +80,11 @@ export function calculateDataConfidence(
   for (const f of IMPORTANT_NUMERIC_FIELDS) {
     if (!present(input[f] as number | undefined)) score -= 5;
   }
+  // Cash is critical once a positive investment is required: without it affordability and any
+  // funding gap are unknown (the decision is "can't say yet"), so it weighs like a critical input
+  // (5 above + 25 here = 30). It is not added to `missingCritical` — STR_MISSING_CASH reports it.
+  const investment = input.investmentRequired;
+  if (present(investment) && (investment as number) > 0 && !present(input.cashAvailable)) score -= 25;
   if (!riskLevelPresent(input.riskLevel)) score -= 5;
 
   if (!isValidCurrency(input.currency)) score -= 10;

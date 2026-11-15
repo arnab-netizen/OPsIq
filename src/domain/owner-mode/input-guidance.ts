@@ -18,6 +18,7 @@
  *
  * Pure module. No DB, no Date.now, no AI.
  */
+import { firstReadSufficiencyFromCategories, type FirstReadSufficiency } from "@/domain/owner-finance/first-read-sufficiency";
 import {
   type OwnerInputCategory,
   type EffortLevel,
@@ -64,6 +65,7 @@ export interface InputGuidance {
   ownerRole: OwnerRole;
   overallConfidence: Confidence;
   canRunFirstDiagnosis: boolean;
+  firstRead: FirstReadSufficiency;
   canProceedWithStrongRecommendation: boolean;
   minimumRequired: OwnerInputCategory[];
   recommended: OwnerInputCategory[];
@@ -76,7 +78,11 @@ export interface InputGuidance {
   nextBestInput: OwnerInputCategory | null;
 }
 
-/** Categories that unlock a limited first diagnosis (survival-grade financial read). */
+/**
+ * One REPRESENTATIVE category per critical first-read fact (revenue, a cost, cash) — for display and
+ * examples only. Readiness is NEVER decided from this list: it comes from the canonical
+ * `FirstReadSufficiency` (first-read-sufficiency.ts), where any one cost category satisfies the cost fact.
+ */
 export const FIRST_DIAGNOSIS_CATEGORIES: OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
 
 const GAIN_RANK: Record<GainLevel, number> = { high: 0, medium: 1, low: 2 };
@@ -122,6 +128,8 @@ export interface BuildInputGuidanceArgs {
   ownerRole: OwnerRole;
   /** Categories the owner has supplied (real records). */
   suppliedCategories: OwnerInputCategory[];
+  /** Canonical first-read sufficiency from the real Finance snapshot; derived from categories when omitted. */
+  firstRead?: FirstReadSufficiency;
 }
 
 export function buildInputGuidance(args: BuildInputGuidanceArgs): InputGuidance {
@@ -139,7 +147,8 @@ export function buildInputGuidance(args: BuildInputGuidanceArgs): InputGuidance 
 
   const overallConfidence = projectConfidence(supplied, criticalMinCategories, recommendedCategories);
   const criticalAllReal = [...criticalMinCategories].every((c) => supplied.has(c));
-  const canRunFirstDiagnosis = FIRST_DIAGNOSIS_CATEGORIES.every((c) => supplied.has(c));
+  const firstRead = args.firstRead ?? firstReadSufficiencyFromCategories(supplied);
+  const canRunFirstDiagnosis = firstRead.sufficient;
 
   const guidance: CategoryGuidance[] = OWNER_INPUT_CATEGORIES.map((category) => {
     const meta = INPUT_CATALOG[category];
@@ -204,6 +213,7 @@ export function buildInputGuidance(args: BuildInputGuidanceArgs): InputGuidance 
     ownerRole,
     overallConfidence,
     canRunFirstDiagnosis,
+    firstRead,
     canProceedWithStrongRecommendation: criticalAllReal,
     minimumRequired: req.minimumRequired,
     recommended: req.recommended,

@@ -216,17 +216,74 @@ export async function resolvePrimaryWorkspaceId(userId: string): Promise<string 
  */
 export interface GrantAdministrationOperatorResult {
   assignmentId: string;
-  auditEventId: string;
+  /** null only for outcome "already_active": nothing changed, so nothing was audited. */
+  auditEventId: string | null;
+  outcome: "created" | "reactivated" | "already_active";
 }
 
+/**
+ * UserRoleAssignment is UNIQUE on (userId, role, scope, scopeId) and a revoke deliberately keeps the row
+ * (history), so a re-grant after a revoke must REACTIVATE that same row, never insert a second one. The row
+ * is therefore looked up by the full unique tuple regardless of its active state:
+ *   - active            -> idempotent no-op (no mutation, no audit);
+ *   - revoked/inactive  -> the same row is reactivated (isActive=true, revokedAt=null, grantedBy/grantedAt
+ *                          refreshed like src/services/role-assignment.ts does) and a NEW role.assigned
+ *                          audit event records the previous grant/revoke facts;
+ *   - absent            -> created.
+ * The mutation and its audit event share one transaction in every branch.
+ */
 export async function grantAdministrationOperator(params: {
   userId: string;
   email: string;
   workspaceId: string;
   grantedBy?: string;
 }): Promise<GrantAdministrationOperatorResult> {
-  const assignmentId = randomUUID();
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const prior = await tx.userRoleAssignment.findUnique({
+      where: {
+        userId_role_scope_scopeId: { userId: params.userId, role: ROLE, scope: SCOPE, scopeId: params.workspaceId },
+      },
+    });
+    if (prior && prior.isActive && prior.revokedAt === null) {
+      return { assignmentId: prior.id, auditEventId: null, outcome: "already_active" as const };
+    }
+
+    const basePayload = {
+      targetUserId: params.userId,
+      targetEmail: params.email,
+      role: ROLE,
+      scope: SCOPE,
+      scopeId: params.workspaceId,
+      provisionedVia: "scripts/provision-administration-operator.ts",
+    };
+
+    if (prior) {
+      await tx.userRoleAssignment.update({
+        where: { id: prior.id },
+        data: { isActive: true, revokedAt: null, grantedBy: params.grantedBy ?? null, grantedAt: new Date() },
+      });
+      const auditEventId = await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.ROLE_ASSIGNED,
+          actorId: params.grantedBy,
+          workspaceId: params.workspaceId,
+          entityType: "user_role_assignment",
+          entityId: prior.id,
+          payload: {
+            ...basePayload,
+            reactivated: true,
+            previousGrantedAt: prior.grantedAt.toISOString(),
+            previousGrantedBy: prior.grantedBy,
+            previousRevokedAt: prior.revokedAt ? prior.revokedAt.toISOString() : null,
+          },
+          visibility: "internal",
+        },
+        tx
+      );
+      return { assignmentId: prior.id, auditEventId, outcome: "reactivated" as const };
+    }
+
+    const assignmentId = randomUUID();
     await tx.userRoleAssignment.create({
       data: {
         id: assignmentId,
@@ -245,24 +302,19 @@ export async function grantAdministrationOperator(params: {
         workspaceId: params.workspaceId,
         entityType: "user_role_assignment",
         entityId: assignmentId,
-        payload: {
-          targetUserId: params.userId,
-          targetEmail: params.email,
-          role: ROLE,
-          scope: SCOPE,
-          scopeId: params.workspaceId,
-          provisionedVia: "scripts/provision-administration-operator.ts",
-        },
+        payload: basePayload,
         visibility: "internal",
       },
       tx
     );
-    return { assignmentId, auditEventId };
+    return { assignmentId, auditEventId, outcome: "created" as const };
   });
 }
 
 export interface RevokeAdministrationOperatorResult {
-  auditEventId: string;
+  /** null only for outcome "already_revoked": nothing changed, so nothing was audited. */
+  auditEventId: string | null;
+  outcome: "revoked" | "already_revoked";
 }
 
 export async function revokeAdministrationOperator(params: {
@@ -273,6 +325,11 @@ export async function revokeAdministrationOperator(params: {
   grantedBy?: string;
 }): Promise<RevokeAdministrationOperatorResult> {
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const row = await tx.userRoleAssignment.findUnique({ where: { id: params.assignmentId } });
+    if (!row) throw new Error(`UserRoleAssignment ${params.assignmentId} not found`);
+    if (!row.isActive && row.revokedAt !== null) {
+      return { auditEventId: null, outcome: "already_revoked" as const };
+    }
     await tx.userRoleAssignment.update({
       where: { id: params.assignmentId },
       data: { isActive: false, revokedAt: new Date() },
@@ -296,7 +353,7 @@ export async function revokeAdministrationOperator(params: {
       },
       tx
     );
-    return { auditEventId };
+    return { auditEventId, outcome: "revoked" as const };
   });
 }
 
@@ -375,6 +432,12 @@ async function main() {
     return;
   }
 
+  const revokedRow = await db.userRoleAssignment.findUnique({
+    where: { userId_role_scope_scopeId: { userId: user.id, role: ROLE, scope: SCOPE, scopeId: resolvedWorkspaceId } },
+  });
+  if (revokedRow) {
+    console.log(`A previously revoked ${ROLE} assignment ${revokedRow.id} exists (revoked ${revokedRow.revokedAt?.toISOString() ?? "unknown"}); this grant will REACTIVATE that same row — no second row is created.`);
+  }
   console.log(`Will grant role="${ROLE}" scope="${SCOPE}" scopeId="${resolvedWorkspaceId}" to ${args.email} (${user.id}).`);
   console.log("This grants EXACTLY BETA_PROGRAM_MANAGE and CUSTOMER_ACCESS_MANAGE — no SYSTEM_ADMIN and no beta-request-review/invite capabilities from this role.");
 
@@ -387,13 +450,17 @@ async function main() {
     process.exit(1);
   }
 
-  const { assignmentId } = await grantAdministrationOperator({
+  const { assignmentId, outcome } = await grantAdministrationOperator({
     userId: user.id,
     email: args.email,
     workspaceId: resolvedWorkspaceId,
     grantedBy: args.grantedBy,
   });
-  console.log(`✓ Granted ${ROLE} to ${args.email} (assignment ${assignmentId}). Rollback: re-run with --revoke --confirm "${REVOKE_CONFIRM_PHRASE}" --apply.`);
+  if (outcome === "already_active") {
+    console.log(`✓ ${args.email} already holds an active ${ROLE} assignment (${assignmentId}) in workspace ${resolvedWorkspaceId} — nothing to do.`);
+    return;
+  }
+  console.log(`✓ Granted ${ROLE} to ${args.email} (assignment ${assignmentId}${outcome === "reactivated" ? ", reactivated existing revoked assignment" : ""}). Rollback: re-run with --revoke --confirm "${REVOKE_CONFIRM_PHRASE}" --apply.`);
 }
 
 // Only run main() when this file is the process's actual entry point (the

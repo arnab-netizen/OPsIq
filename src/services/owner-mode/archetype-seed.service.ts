@@ -10,6 +10,7 @@
  * Injectable persistence fns for DI tests; the [db] test exercises the real path in CI.
  */
 
+import { normalizeBusinessCurrency } from "@/domain/founder-recovery/currency";
 import { buildLaundryArchetypeSeed, type ArchetypeSeed } from "@/infra/owner-archetype-seed";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { recordEquipment } from "@/services/owner-mode/equipment.service";
@@ -68,7 +69,7 @@ export async function seedLaundryArchetype(
   const createSop = d.createSopDraft ?? createSopDraft;
 
   const business = await createBiz(
-    { name: seed.business.name, businessType: "laundry_local_service", currency: seed.business.currency, b2cSupported: true, b2bSupported: true },
+    { name: seed.business.name, businessType: "laundry_local_service", currency: normalizeBusinessCurrency(seed.business.currency) ?? "INR", b2cSupported: true, b2bSupported: true },
     ctx.actorId,
     ctx.workspaceId
   );

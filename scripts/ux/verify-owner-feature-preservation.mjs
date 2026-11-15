@@ -25,7 +25,7 @@ import { execFileSync } from "node:child_process";
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..");
 const BASELINE_PATH = path.join(ROOT, "docs/opsiq/ux/OWNER_FEATURE_PRESERVATION_BASELINE.json");
 const GENERATOR_PATH = path.join(ROOT, "scripts/ux/generate-owner-feature-baseline.mjs");
-const ACCEPTED_BASELINE_SHA = "e5d6fd8b73d6a1619b89377b764b6ec0046335fd";
+const ACCEPTED_BASELINE_SHA = "0aa90a971163a3988d441296fe1bcdf48924ee87";
 
 function loadBaseline() {
   if (!fs.existsSync(BASELINE_PATH)) {

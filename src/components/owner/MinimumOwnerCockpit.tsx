@@ -6,7 +6,8 @@
  * bridged action the server already computed (from the process-execution bridge), in the 10-section
  * safety layout defined by docs/audits/2026-07-07-owner-ui-capability-exposure/MINIMUM_OWNER_COCKPIT_SPEC.md:
  *
- *   1. Top Priority Action   2. Why This Is First   3. Required Owner Decision   4. Evidence Required
+ *   0. The canonical owner decision (OwnerDecisionCard) — always first, the ONE main target
+ *   1. Governed work you can start (subordinate)   2. Why this matters   3. Required Owner Decision   4. Evidence Required
  *   5. Safe Actions          6. Blocked / Not Allowed 7. Next Reassessment
  *   8. Secondary Actions (collapsed) 9. Monitor-only (collapsed) 10. Proof / Audit (collapsed drawer)
  *
@@ -18,23 +19,20 @@
 import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge, Disclosure } from "@/ui/primitives";
+import { allowedProcessTaskActions, approveActionLabel } from "@/domain/owner-mode/process-execution-bridge";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
+import { conditionHeadline, conditionRiskLevel, highestConditionRisk } from "@/domain/business-condition/condition-risk";
 import type { GoalAttentionSignal, PolicyAttentionSignal, EscalationAttentionItem, DoNotRepeatAnnotation, OwnerExecutionLifecycleView, ExecutionLifecycleItem, BusinessOperatingSystemView } from "@/services/owner-guidance/owner-now-view.service";
 import type { ProfitLeakFinding } from "@/domain/owner-mode/profit-leak-radar";
 import type { TrendAlert } from "@/domain/owner-mode/business-state-timeline";
-import type { CockpitFinancePriority } from "@/services/owner-guidance/cockpit-finance-priority.service";
-
-/** Same survival-state palette as /owner/finance (owner/finance/page.tsx's SURVIVAL_VARIANT) — kept local since that page is a separate client bundle. */
-const SURVIVAL_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted"> = {
-  SAFE: "success-accessible",
-  WATCH: "default-accessible",
-  AT_RISK: "warning-accessible",
-  CRITICAL: "destructive-accessible",
-  INSOLVENT_RISK: "destructive-accessible",
-};
+import type { CurrentOwnerDecision } from "@/domain/owner-spine/owner-decision";
+import { OwnerDecisionCard } from "@/components/owner/OwnerDecisionCard";
+import { ownerImperativeContext, reconcileRecoveryBlocks, reconcileRecoveryGrowthGate } from "@/domain/owner-spine/owner-imperatives";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
+import { presentProfitLeakCard } from "@/domain/owner-mode/profit-leak-presentation";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -128,14 +126,6 @@ export function groupRequiresDecisionItems(items: readonly ExecutionLifecycleIte
   return order.map((key) => ({ key, items: byKey.get(key)! }));
 }
 
-const SURVIVAL_LABEL: Record<string, string> = {
-  SAFE: "Safe",
-  WATCH: "Watch",
-  AT_RISK: "At risk",
-  CRITICAL: "Critical",
-  INSOLVENT_RISK: "Insolvency risk",
-};
-
 const POLICY_DECISION_LABEL: Record<string, string> = {
   BLOCK: "Blocked",
   WARN: "Warning",
@@ -169,19 +159,7 @@ const PRIMARY_ACTIONS = ["APPROVE", "COMPLETE", "START"] as const;
 /** Interactive actions valid for a route, mirroring the server guardrails so the UI never OFFERS an
  *  impossible/unsafe transition. The server still re-checks every one. */
 export function allowedCockpitActions(r: BridgedRouteView): string[] {
-  const terminal = r.status === "COMPLETED" || r.status === "REJECTED" || r.status === "OUTCOME_RECORDED" || r.status === "OUTCOME_DISPUTED" || r.status === "OUTCOME_VERIFIED";
-  const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
-  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
-  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
-  if (terminal) return ["REQUEST_REASSESSMENT"];
-  const out: string[] = [];
-  if (["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
-  if (ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("APPROVE");
-  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
-  out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
-  if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");
-  out.push("REQUEST_REASSESSMENT");
-  return out;
+  return allowedProcessTaskActions(r);
 }
 
 export interface CockpitActionInput {
@@ -198,6 +176,8 @@ export interface MinimumOwnerCockpitProps {
   bridge: ProcessExecutionBridgeView | null;
   /** The governed "do NOT do now" list from the now-view (each {avoid}), for the Blocked / Not Allowed section. */
   actionsToAvoid?: string[];
+  /** Avoid rules reconciled into the permitted scope of canonical steps (how to carry them out). */
+  stepConditions?: string[];
   /** Read-only recovery status projection (PASS 37). Rendered as a collapsed low-load section. */
   recovery?: OwnerRecoveryStatusResponse | null;
   /** Read-only public-signal ("Outside signals") projection (PASS 39). Rendered as a collapsed low-load section. */
@@ -232,16 +212,15 @@ export interface MinimumOwnerCockpitProps {
   /** Phase 4 — BOS action: run-arbitration | override | resolve-constraint | accept-constraint. */
   onBosAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
   /**
-   * F3 — the latest fresh Finance-diagnosis top action for the currently resolvable business (see
-   * `cockpit-finance-priority.service.ts` for scoping + freshness rules). Precedence: the governed
-   * process-execution bridge's `topRoute` (an actionable CRITICAL/HIGH/MEDIUM/LOW governed route)
-   * always wins the primary "Your top priority now" slot when one exists — this never overwrites an
-   * urgent existing governed issue. When there is no actionable bridge route (the clean state, or a
-   * MONITOR_ONLY-only route), the Finance diagnosis's own top action is what fills the primary slot
-   * instead of a bare "nothing to do" message. When a governed route IS primary, the Finance action
-   * still surfaces as a secondary signal card (same tier as `topProfitLeak`), so it is never hidden.
+   * The ONE canonical owner decision (owner-home service → Spine arbiter), delivered by the now-view
+   * route as `ownerDecision`. It is ALWAYS the primary "Your main business target" slot. The governed
+   * process-execution bridge's `topRoute` is execution work (Now View context) rendered beneath it —
+   * it is never labelled as the owner's top priority, so the Cockpit can never elect a different
+   * winner from Home or Priorities.
    */
-  financeTopPriority?: CockpitFinancePriority | null;
+  ownerDecision?: CurrentOwnerDecision | null;
+  /** False only when the owner has no business yet; drives the "add your business" prompt. */
+  hasBusiness?: boolean;
   /**
    * The currently active business (ActiveBusinessContext) — used ONLY to reset any open inline
    * action form (the top-priority action form and each execution-lifecycle item's Phase 3
@@ -264,43 +243,6 @@ export interface MinimumOwnerCockpitProps {
    * Never used to alter what gets sent for a submit that happens before that change.
    */
   activeBusinessId?: string | null;
-}
-
-/** F3: the Finance-diagnosis top-action card, shared by the primary (clean-state) and secondary renders. */
-function FinanceTopPriorityCard({ priority, primary }: { priority: CockpitFinancePriority; primary: boolean }) {
-  const testId = primary ? "cockpit-finance-priority-primary" : "cockpit-finance-priority-secondary";
-  return (
-    <div
-      data-testid={testId}
-      className={primary ? "flex flex-col gap-2.5 border-l-2 pl-5 py-1" : "flex flex-col gap-2 border-t border-border pt-3.5"}
-      style={primary ? { borderColor: "var(--accent-ink)" } : undefined}
-    >
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span
-          className={primary ? "text-xs font-semibold uppercase tracking-[0.08em]" : "text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"}
-          style={primary ? { color: "var(--accent-ink)" } : undefined}
-        >
-          {primary ? "From your latest finance diagnosis" : "Latest finance diagnosis"}
-        </span>
-        <Badge variant={SURVIVAL_VARIANT[priority.survivalState] ?? "default-accessible"}>
-          {SURVIVAL_LABEL[priority.survivalState] ?? priority.survivalState.replace(/_/g, " ")}
-        </Badge>
-      </div>
-      {priority.topAction ? (
-        <>
-          <strong data-testid="cockpit-finance-priority-title" className={primary ? "font-display text-[1.1rem] font-semibold leading-snug tracking-tight text-foreground" : "text-sm font-medium text-foreground"}>{priority.topAction.title}</strong>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>{priority.topAction.description}</p>
-        </>
-      ) : (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
-          A finance diagnosis ran for {priority.businessName || "your business"} but has no ranked action yet.
-        </p>
-      )}
-      <a href="/owner/finance" style={{ fontSize: 12, color: "var(--primary-text)", textDecoration: "underline" }}>
-        See the full finance diagnosis →
-      </a>
-    </div>
-  );
 }
 
 const RECOVERY_STATUS_LABEL: Record<string, string> = {
@@ -332,24 +274,24 @@ function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsRespons
   const active = signals.publicSignalStatus !== "NONE";
   return (
     <details data-testid="cockpit-signals-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Outside signals
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {PUBLIC_SIGNAL_STATUS_LABEL[signals.publicSignalStatus] ?? signals.publicSignalStatus}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
         {!active ? (
-          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-none">No outside signals for this workspace right now.</p>
+          <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-none">No outside signals for your business right now.</p>
         ) : (
           <>
             {signals.topPublicSignalAction && (
-              <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Next step:</strong> {signals.topPublicSignalAction}</p>
+              <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Signal follow-up:</strong> {signals.topPublicSignalAction}</p>
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-why">{signals.whyThisMatters}</p>
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-signals-quality">
               Source quality: {signals.sourceQualitySummary} · Evidence: {signals.evidenceStrengthSummary}
             </p>
             {signals.missingData.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-missing">Missing data: {ownerMissingItems(signals.missingData).slice(0, 3).join("; ")}</p>
             )}
             {signals.validationRequired && (
               <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
@@ -414,12 +356,13 @@ const CONDITION_FIELD_ORDER: (keyof DerivedBusinessConditionSignals)[] = [
 ];
 
 const VERIFICATION_CLASS_LABEL: Record<string, string> = {
-  SUCCESS: "Verified: Success",
-  PARTIAL_SUCCESS: "Verified: Partial success",
-  NO_MEASURABLE_IMPACT: "Verified: No measurable impact",
-  FAILURE: "Verified: Failure",
-  NEGATIVE_IMPACT: "Verified: Negative impact",
-  INCONCLUSIVE: "Verified: Inconclusive",
+  SUCCESS: "Result recorded: Success",
+  PARTIAL_SUCCESS: "Result recorded: Partial success",
+  NO_MEASURABLE_IMPACT: "Result recorded: No measurable impact",
+  FAILURE: "Result recorded: Failure",
+  NEGATIVE_IMPACT: "Result recorded: Negative impact",
+  INCONCLUSIVE: "Result recorded: Inconclusive",
+  EXTERNAL_EVENT_INTERFERENCE: "External event interfered — not credited to the action",
   OBSERVATION_WINDOW_OPEN: "Observation window open",
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };
@@ -427,7 +370,7 @@ const VERIFICATION_CLASS_LABEL: Record<string, string> = {
 const VERIFICATION_CLASS_VARIANT = (c: string): "destructive-accessible" | "warning-accessible" | "default-accessible" | "muted-accessible" =>
   c === "SUCCESS" ? "default-accessible"
   : c === "FAILURE" || c === "NEGATIVE_IMPACT" ? "destructive-accessible"
-  : c === "PARTIAL_SUCCESS" ? "warning-accessible"
+  : c === "PARTIAL_SUCCESS" || c === "EXTERNAL_EVENT_INTERFERENCE" ? "warning-accessible"
   : "muted-accessible";
 
 const OUTCOME_STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -547,7 +490,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-ACKNOWLEDGE-${item.taskKey}`} disabled={busy}
               aria-label={`Acknowledge: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "ACKNOWLEDGE")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #0369a1", background: "#0369a1", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid #0369a1", background: "#0369a1", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Acknowledge
             </button>
           )}
@@ -555,7 +498,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-RECORD_PROGRESS-${item.taskKey}`} disabled={busy}
               aria-label={`Record progress: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "RECORD_PROGRESS")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: busy ? "default" : "pointer" }}>
               Record progress
             </button>
           )}
@@ -563,7 +506,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-RECORD_OUTCOME-${item.taskKey}`} disabled={busy}
               aria-label={`Record outcome: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "RECORD_OUTCOME")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Record outcome
             </button>
           )}
@@ -571,7 +514,7 @@ function ExecutionLifecycleSection({
             <button type="button" data-testid={`cockpit-action-VERIFY_OUTCOME-${item.taskKey}`} disabled={busy}
               aria-label={`Verify outcome: ${item.ownerVisibleSummary}`}
               onClick={() => clickPhase3(item.taskKey, "VERIFY_OUTCOME")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #16a34a", background: "#16a34a", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 6, border: "1px solid #16a34a", background: "#16a34a", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Verify outcome
             </button>
           )}
@@ -586,19 +529,19 @@ function ExecutionLifecycleSection({
                 Progress % (0–100, optional)
                 <input type="number" min={0} max={100} value={progressPct}
                   onChange={(e) => setProgressPct(e.target.value)} data-testid="cockpit-progress-pct-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
               <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Stage label (optional)
                 <input type="text" value={stage}
                   onChange={(e) => setStage(e.target.value)} data-testid="cockpit-stage-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
               <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 Note (optional)
                 <input type="text" value={reason}
                   onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
             </>
           )}
@@ -608,7 +551,7 @@ function ExecutionLifecycleSection({
                 Outcome
                 <select value={outcomeStatus} onChange={(e) => setOutcomeStatus(e.target.value)}
                   data-testid="cockpit-outcome-status-select"
-                  style={{ display: "block", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }}>
+                  style={{ display: "block", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }}>
                   {OUTCOME_STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
@@ -618,7 +561,7 @@ function ExecutionLifecycleSection({
                 Outcome notes (optional)
                 <input type="text" value={reason}
                   onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                  style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                  style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
               </label>
             </>
           )}
@@ -627,17 +570,17 @@ function ExecutionLifecycleSection({
               Verification notes (optional)
               <input type="text" value={reason}
                 onChange={(e) => setReason(e.target.value)} data-testid="cockpit-reason-input"
-                style={{ display: "block", width: "100%", marginTop: 4, padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12, background: "var(--background)", color: "var(--foreground)" }} />
+                style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
             </label>
           )}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" disabled={busy} data-testid="cockpit-phase3-confirm"
               onClick={() => submitPhase3(item.taskKey, pending.action)}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
               Confirm
             </button>
             <button type="button" data-testid="cockpit-phase3-cancel" onClick={resetForm}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}>
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}>
               Cancel
             </button>
           </div>
@@ -671,7 +614,7 @@ function ExecutionLifecycleSection({
           <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>Reported {humanizeReported(earliestReported)}</span>
         </div>
         <details style={{ marginTop: 6 }}>
-          <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--primary-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 12, color: "var(--primary-text)" }}>
             Show all {group.items.length}
           </summary>
           <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -686,7 +629,7 @@ function ExecutionLifecycleSection({
 
   return (
     <details data-testid="cockpit-execution-lifecycle" open={total > 0} style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Execution lifecycle{total > 0 ? ` (${total} active)` : ""}
         {lifecycle.totalPendingVerification > 0 && (
           <span style={{ marginLeft: 8, fontSize: 12, padding: "1px 6px", borderRadius: 10, background: "#fef3c7", color: "#92400e" }}>
@@ -697,7 +640,7 @@ function ExecutionLifecycleSection({
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
         <details data-testid="cockpit-requires-decision-group" open={lifecycle.requiresDecision.length > 0}
           style={{ borderLeft: "3px solid #fef3c7", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
             Requires your decision ({lifecycle.requiresDecision.length})
           </summary>
           {lifecycle.requiresDecision.length === 0
@@ -712,7 +655,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-in-execution-group" open={lifecycle.inExecution.length > 0}
           style={{ borderLeft: "3px solid #dbeafe", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--primary-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--primary-text)" }}>
             In execution ({lifecycle.inExecution.length})
           </summary>
           {lifecycle.inExecution.length === 0
@@ -723,7 +666,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-awaiting-verification-group" open={lifecycle.awaitingVerification.length > 0}
           style={{ borderLeft: "3px solid #fde68a", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--warning-text)" }}>
             Awaiting verification ({lifecycle.awaitingVerification.length})
           </summary>
           {lifecycle.awaitingVerification.length === 0
@@ -734,7 +677,7 @@ function ExecutionLifecycleSection({
         </details>
         <details data-testid="cockpit-recently-verified-group"
           style={{ borderLeft: "3px solid #d1fae5", paddingLeft: 8 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--success-text)" }}>
+          <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13, fontWeight: 600, color: "var(--success-text)" }}>
             Recently verified ({lifecycle.recentlyVerified.length})
           </summary>
           {lifecycle.recentlyVerified.length === 0
@@ -806,7 +749,7 @@ function BusinessOperatingSystemSection({
 
   return (
     <details open={bos.totalActiveObjectives > 0} data-testid="cockpit-bos-section" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Goals &amp; objectives
         <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>
           {" "}
@@ -831,7 +774,7 @@ function BusinessOperatingSystemSection({
               data-testid="cockpit-bos-run-arbitration"
               onClick={() => void handleRunArbitration()}
               disabled={busy || overrideSubmitting}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
+              style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
             >
               Run arbitration
             </button>
@@ -909,7 +852,7 @@ function BusinessOperatingSystemSection({
                         data-testid={`cockpit-bos-resolve-constraint-${c.constraintId}`}
                         onClick={() => void handleConstraintAction(c.constraintId, "RESOLVE")}
                         disabled={busy}
-                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
+                        style={{ fontSize: 14, padding: "10px 12px", minHeight: 44, borderRadius: 6, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
                       >
                         Resolve
                       </button>
@@ -917,7 +860,7 @@ function BusinessOperatingSystemSection({
                         data-testid={`cockpit-bos-accept-constraint-${c.constraintId}`}
                         onClick={() => void handleConstraintAction(c.constraintId, "ACCEPT")}
                         disabled={busy}
-                        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
+                        style={{ fontSize: 14, padding: "10px 12px", minHeight: 44, borderRadius: 6, border: "1px solid var(--border)", cursor: "pointer", background: "var(--card)", color: "var(--foreground)" }}
                       >
                         Accept
                       </button>
@@ -964,7 +907,7 @@ function BusinessOperatingSystemSection({
               <button
                 data-testid="cockpit-bos-override-open"
                 onClick={() => setOverrideOpen(true)}
-                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--warning)", color: "var(--warning-text)", cursor: "pointer", background: "transparent" }}
+                style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--warning)", color: "var(--warning-text)", cursor: "pointer", background: "transparent" }}
               >
                 Record owner override
               </button>
@@ -1002,14 +945,14 @@ function BusinessOperatingSystemSection({
                     data-testid="cockpit-bos-override-submit"
                     onClick={() => void handleSubmitOverride()}
                     disabled={overrideSubmitting || overrideRationale.trim().length < 10}
-                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "none", background: "#b45309", color: "#fff", cursor: "pointer" }}
+                    style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "none", background: "#b45309", color: "#fff", cursor: "pointer" }}
                   >
                     {overrideSubmitting ? "Saving…" : "Submit override"}
                   </button>
                   <button
                     data-testid="cockpit-bos-override-cancel"
                     onClick={() => { setOverrideOpen(false); setOverrideRationale(""); }}
-                    style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "transparent", color: "var(--foreground)" }}
+                    style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "transparent", color: "var(--foreground)" }}
                   >
                     Cancel
                   </button>
@@ -1030,18 +973,12 @@ function BusinessOperatingSystemSection({
 function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition: DerivedBusinessConditionSignals; dataFreshnessWeak?: boolean | null }) {
   const knownFields = CONDITION_FIELD_ORDER.filter((k) => condition[k] !== "unknown");
   const unknownCount = CONDITION_FIELD_ORDER.length - knownFields.length;
-  const worstLevel = CONDITION_FIELD_ORDER
-    .map((k) => condition[k])
-    .reduce<string>((worst, level) => {
-      const rank: Record<string, number> = { CRITICAL: 4, BLOCKED: 3, HIGH: 3, MEDIUM: 2, LOW: 1, unknown: 0 };
-      return (rank[level] ?? 0) > (rank[worst] ?? 0) ? level : worst;
-    }, "LOW");
+  const worstLevel = highestConditionRisk(condition as unknown as Record<string, string>);
 
   return (
     <details data-testid="cockpit-business-condition-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
-        Business condition
-        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — highest risk: {RISK_LEVEL_LABEL[worstLevel] ?? worstLevel}</span>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+        {conditionHeadline(worstLevel, knownFields.length, unknownCount)}
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
         {knownFields.length === 0 ? (
@@ -1050,7 +987,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "4px 12px" }}>
             {knownFields.map((k) => (
               <span key={k} style={{ display: "flex", gap: 6, alignItems: "center" }} data-testid={`cockpit-condition-${k}`}>
-                <Badge variant={RISK_VARIANT(condition[k])}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
+                <Badge variant={RISK_VARIANT(conditionRiskLevel(k, condition[k]))}>{RISK_LEVEL_LABEL[condition[k]] ?? condition[k]}</Badge>
                 <span style={{ color: "var(--muted-foreground)" }}>{CONDITION_FIELD_LABEL[k]}</span>
               </span>
             ))}
@@ -1063,7 +1000,7 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
         )}
         {dataFreshnessWeak && (
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--warning-text)", fontStyle: "italic" }} data-testid="cockpit-condition-stale">
-            Data confidence is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
+            Data completeness is low — some signals may be stale. Update cashflow and workload records for a fresh assessment.
           </p>
         )}
       </div>
@@ -1072,13 +1009,19 @@ function BusinessConditionSection({ condition, dataFreshnessWeak }: { condition:
 }
 
 /** Read-only recovery status — a concise, collapsed summary (PASS 37). NOT a second cockpit. */
-function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }) {
+function RecoverySection({ recovery, ownerDecision }: { recovery: OwnerRecoveryStatusResponse; ownerDecision: CurrentOwnerDecision | null }) {
   const inProgress = recovery.recoveryStatus !== "NONE";
+  // Recovery's growth constraints pass through the shared reconciler: they constrain GROW work only and
+  // become conditions on a canonical growth step, never a veto of the main target or a supporting step.
+  const imperativeCtx = ownerImperativeContext(ownerDecision);
+  const recoveryBlocks = reconcileRecoveryBlocks(recovery.blockedUnsafeActions, imperativeCtx);
+  const statusLabel = RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus;
+  const recoveryStatusLabel = recovery.recoveryStatus === "THRIVE_GATE_BLOCKED" ? reconcileRecoveryGrowthGate(statusLabel, imperativeCtx) : statusLabel;
   return (
     <details data-testid="cockpit-recovery-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-      <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+      <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
         Recovery status
-        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</span>
+        <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> — {recoveryStatusLabel}</span>
       </summary>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
         {!inProgress ? (
@@ -1086,25 +1029,28 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
         ) : (
           <>
             <div data-testid="cockpit-recovery-state" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <Badge variant="muted-accessible">{RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</Badge>
+              <Badge variant="muted-accessible">{recoveryStatusLabel}</Badge>
               <span data-testid="cockpit-recovery-stabilization">Stabilization: {recovery.stabilizationGate}</span>
-              <span data-testid="cockpit-recovery-thrive">Growth gate: {recovery.thriveGate}</span>
+              <span data-testid="cockpit-recovery-thrive">Growth gate: {reconcileRecoveryGrowthGate(recovery.thriveGate, imperativeCtx, recovery.thriveGate === "BLOCKED")}</span>
             </div>
             {recovery.topRecoveryBottleneck && (
-              <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Next step:</strong> {recovery.topRecoveryBottleneck}</p>
+              <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Recovery follow-up:</strong> {recovery.topRecoveryBottleneck}</p>
             )}
             {recovery.requiredEvidence.length > 0 && (
               <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-evidence">Evidence required: {recovery.requiredEvidence.slice(0, 3).join("; ")}</p>
             )}
             <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
-            {recovery.blockedUnsafeActions.length > 0 && (
-              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+            {recoveryBlocks.blocked.length > 0 && (
+              <p style={{ margin: 0, color: "var(--warning-text)" }} data-testid="cockpit-recovery-blocked">Blocked: {recoveryBlocks.blocked.slice(0, 2).join("; ")}</p>
+            )}
+            {recoveryBlocks.conditions.length > 0 && (
+              <p style={{ margin: 0 }} data-testid="cockpit-recovery-conditions">How to run your next steps: {recoveryBlocks.conditions.join(" ")}</p>
             )}
             {recovery.ownerApprovalRequired && (
               <p style={{ margin: 0, color: "var(--destructive)" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
             )}
             {recovery.linkedProcessExecutionTaskIds.length > 0 && (
-              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — act on them in your top action above.</p>
+              <p style={{ margin: 0, color: "var(--muted-foreground)" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — find them under &ldquo;Governed work you can start&rdquo;.</p>
             )}
           </>
         )}
@@ -1114,7 +1060,38 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, financeTopPriority = null, activeBusinessId = null }: MinimumOwnerCockpitProps) {
+/**
+ * Goal Attention Signal (Phase 2 Signal A). One component for both Home layouts: the selected
+ * business's goal (or its explicit "No goal set for <business>" / "Workspace goal" state) must be
+ * visible whether or not a governed top action exists — the clean state is the normal Home for a
+ * business with no urgent action, and hiding the goal there hid it from most owners.
+ */
+function GoalAttentionSection({ signal }: { signal: GoalAttentionSignal }) {
+  return (
+    <div data-testid="cockpit-goal-section" className="flex flex-col gap-1">
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <span className="text-sm font-medium text-foreground">Goal</span>
+        <span data-testid="cockpit-goal-state" data-cockpit-goal-state={signal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: signal.state === "AT_RISK" || signal.state === "NO_GROWTH" ? "#fef2f2" : signal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: signal.state === "AT_RISK" || signal.state === "NO_GROWTH" ? "#b91c1c" : signal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
+          {GOAL_STATE_LABEL[signal.state] ?? GOAL_STATE_FALLBACK}
+        </span>
+        {signal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{signal.goalTitle}</span>}
+      </div>
+      {signal.goalScope && signal.scopeLabel && (
+        <p data-testid="cockpit-goal-scope" data-cockpit-goal-scope={signal.goalScope} className="m-0 text-xs font-medium text-muted-foreground">
+          {signal.scopeLabel}
+        </p>
+      )}
+      {signal.gapToClose !== null && (
+        <p data-testid="cockpit-goal-gap" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
+          Gap to close: {signal.targetCurrency ?? ""} {signal.gapToClose.toLocaleString()}
+        </p>
+      )}
+      <p data-testid="cockpit-goal-explanation" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)", fontStyle: "italic" }}>{signal.beginnerExplanation}</p>
+    </div>
+  );
+}
+
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], stepConditions = [], recovery = null, publicSignals = null, businessCondition = null, dataFreshnessWeak = null, onAction, busy = false, goalAttentionSignal = null, topProfitLeak = null, policyAttentionSignal = null, trendAlerts = undefined, doNotRepeatAnnotation = null, activeEscalations = undefined, onAcknowledgeEscalation, onStartWork, executionLifecycle = null, businessOperatingSystem = null, onBosAction, ownerDecision = null, hasBusiness = true, activeBusinessId = null }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -1142,15 +1119,15 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
     }
   }, [activeBusinessId]);
 
-  // ── Clean state: no governed process-execution route. Nothing is fabricated to fill the primary
-  // slot — but a real Finance diagnosis, when one exists, is a real prioritized recommendation, not a
-  // fabrication, so it takes the primary slot here (F3). ──
+  // The canonical owner decision always owns the primary slot (see `ownerDecision`'s doc comment).
+  const decisionCard = ownerDecision ? <OwnerDecisionCard decision={ownerDecision} /> : null;
+
+  // ── Clean state: no governed process-execution route. The primary slot is the canonical owner
+  // decision; nothing is fabricated when there is none. ──
   if (!top) {
     return (
       <section data-testid="cockpit-clean" className="flex flex-col gap-3 rounded-md border border-border bg-card p-5">
-        {financeTopPriority ? (
-          <FinanceTopPriorityCard priority={financeTopPriority} primary />
-        ) : (
+        {decisionCard ?? (
           <div>
             <strong className="text-base font-semibold text-foreground">No urgent action needs your attention right now.</strong>
             <p className="mt-1.5 text-sm text-muted-foreground">
@@ -1160,14 +1137,17 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             {/* Phase 7's no-data-state contract ("what OpsIQ needs, why, and one clear next action")
                 — a lay owner landing here with no business data yet previously had no path forward
                 except finding "My Business" in the sidebar themselves. */}
-            <p className="mt-3 text-sm text-muted-foreground">
-              Haven&rsquo;t added your business yet? <a href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</a> to get your first result.
-            </p>
+            {!hasBusiness && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Haven&rsquo;t added your business yet? <a href="/owner/data" className="text-[var(--primary-text)] underline">Add your business information</a> to get your first result.
+              </p>
+            )}
           </div>
         )}
         {executionLifecycle && <ExecutionLifecycleSection lifecycle={executionLifecycle} onAction={onAction} busy={busy} activeBusinessId={activeBusinessId} />}
+        {goalAttentionSignal && <GoalAttentionSection signal={goalAttentionSignal} />}
         {businessOperatingSystem && <BusinessOperatingSystemSection bos={businessOperatingSystem} onBosAction={onBosAction} busy={busy} />}
-        {recovery && <RecoverySection recovery={recovery} />}
+        {recovery && <RecoverySection recovery={recovery} ownerDecision={ownerDecision} />}
         {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
       </section>
     );
@@ -1231,21 +1211,30 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
   return (
     <section data-testid="owner-cockpit" data-execution-route={top.executionRoute}
       className="flex max-w-2xl flex-col gap-3.5">
+      {decisionCard}
 
-      {/* 1. Top Priority Action — an editorial "briefing" treatment (a thin accent rule + open
+      {/* 1. Governed work (subordinate to the decision above) — an editorial "briefing" treatment (a thin accent rule + open
           layout) rather than a boxed admin-panel card, per the premium-redesign visual pass.
           Every value rendered here (top.severity, top.ownerVisibleSummary, whyBullets) is
           unchanged from before; only the surrounding markup/classNames changed. */}
-      <div data-testid="cockpit-top-action" className="flex flex-col gap-4 border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
+      {/* Governed work is SUBORDINATE to the canonical decision above: it is never styled as the
+          main target (smaller title, neutral rule) and, without a canonical decision, it is not
+          presented as the business's overall priority. */}
+      <div data-testid="cockpit-top-action" className="flex flex-col gap-4 border-l-2 border-border pl-5 py-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>Your top priority now</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Governed work you can start</span>
           <Badge variant={SEVERITY_VARIANT(top.severity)}>{severityLabel(top.severity)}</Badge>
         </div>
-        <strong data-testid="cockpit-top-action-title" className="font-display text-[1.375rem] font-semibold leading-snug tracking-tight text-foreground">{top.ownerVisibleSummary}</strong>
+        {!ownerDecision && (
+          <p data-testid="cockpit-no-canonical-decision" className="m-0 text-sm text-muted-foreground">
+            OpsIQ has not named a main business target yet, so this is work you can start — not your overall priority.
+          </p>
+        )}
+        <strong data-testid="cockpit-top-action-title" className="text-base font-semibold leading-snug text-foreground">{top.ownerVisibleSummary}</strong>
 
         {/* 2. Why This Is First — stays visible; it's the one thing a lay owner needs up front. */}
         <div data-testid="cockpit-why">
-          <span className="text-sm font-medium text-foreground">Why this is first</span>
+          <span className="text-sm font-medium text-foreground">Why this matters</span>
           <ul className="mt-1.5 list-disc space-y-1 pl-[18px]">
             {whyBullets.map((b, i) => (
               <li key={i} data-testid="cockpit-why-bullet" className="text-[0.9375rem] leading-relaxed text-muted-foreground">{b}</li>
@@ -1261,7 +1250,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           <div data-testid="cockpit-safe-actions" className="flex flex-col gap-3">
             {(dominantIsStartWork || dominantPrimaryAction) && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-foreground">Recommended next step</span>
+                <span className="text-sm font-medium text-foreground">Next step for this work</span>
                 {dominantIsStartWork ? (
                   <button
                     type="button"
@@ -1276,7 +1265,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                   <button type="button" data-testid={`cockpit-action-${dominantPrimaryAction}`} data-cockpit-priority="primary" disabled={busy}
                     onClick={() => clickAction(dominantPrimaryAction!)}
                     className="inline-flex h-11 w-fit items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">
-                    {ACTION_LABEL[dominantPrimaryAction!] ?? dominantPrimaryAction}
+                    {dominantPrimaryAction! === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[dominantPrimaryAction!] ?? dominantPrimaryAction}
                   </button>
                 )}
               </div>
@@ -1290,15 +1279,15 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                   {demotedPrimary.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="primary" disabled={busy}
                       onClick={() => clickAction(a)}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                   {secondaryVisible.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="secondary" disabled={busy}
                       onClick={() => clickAction(a)}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                 </div>
@@ -1306,13 +1295,13 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
             )}
             {secondaryMore.length > 0 && (
               <details data-testid="cockpit-more-actions">
-                <summary className="cursor-pointer text-xs text-muted-foreground">{secondaryMore.length} more action(s)</summary>
+                <summary className="flex min-h-11 cursor-pointer items-center text-xs text-muted-foreground">{secondaryMore.length} more action(s)</summary>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {secondaryMore.map((a) => (
                     <button key={a} type="button" data-testid={`cockpit-action-${a}`} disabled={busy}
                       onClick={() => clickAction(a)}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
-                      {ACTION_LABEL[a] ?? a}
+                      className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-50">
+                      {a === "APPROVE" ? approveActionLabel(top.status) : ACTION_LABEL[a] ?? a}
                     </button>
                   ))}
                 </div>
@@ -1345,21 +1334,21 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                       );
                     })()}
                     <input data-testid="cockpit-evidence-input" value={evidenceText} onChange={(e) => setEvidenceText(e.target.value)}
-                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }} />
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
                   </label>
                 )}
                 {needsReason(pending) && (
                   <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Reason (optional)
                     <input data-testid="cockpit-reason-input" value={reasonText} onChange={(e) => setReasonText(e.target.value)}
-                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }} />
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }} />
                   </label>
                 )}
                 {isDelegate(pending) && (
                   <label style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     Delegate to
                     <select data-testid="cockpit-delegate-select" value={delegateRole} onChange={(e) => setDelegateRole(e.target.value as "MANAGER" | "STAFF")}
-                      style={{ display: "block", marginTop: 4, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 6, fontSize: 13, background: "var(--background)", color: "var(--foreground)" }}>
+                      style={{ display: "block", marginTop: 4, padding: "10px 12px", minHeight: 44, border: "1px solid var(--border)", borderRadius: 6, fontSize: 16, background: "var(--background)", color: "var(--foreground)" }}>
                       <option value="MANAGER">Manager</option>
                       <option value="STAFF">Staff</option>
                     </select>
@@ -1367,9 +1356,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                 )}
                 <div className="flex gap-2">
                   <button type="button" data-testid="cockpit-confirm" disabled={busy} onClick={() => submit(pending)}
-                    className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">Confirm</button>
+                    className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50">Confirm</button>
                   <button type="button" data-testid="cockpit-cancel" onClick={() => setPending(null)}
-                    className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted">Cancel</button>
+                    className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-card px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted">Cancel</button>
                 </div>
               </div>
             )}
@@ -1388,7 +1377,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
               data-testid={`cockpit-start-work-${top.taskKey}`}
               disabled={busy}
               onClick={() => onStartWork(top.taskKey)}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-50"
             >
               Start Work
             </button>
@@ -1422,6 +1411,17 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           </div>
         </Disclosure>
 
+        {stepConditions.length > 0 && (
+          <div data-testid="cockpit-step-conditions" className="border-t border-border pt-2.5">
+            <span className="text-sm font-medium text-foreground">How to carry out your next steps</span>
+            <ul className="mt-1 list-disc space-y-0.5 pl-[18px]">
+              {stepConditions.slice(0, 3).map((c, i) => (
+                <li key={i} style={{ fontSize: 13 }}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* 6. Blocked / Not Allowed */}
         <div data-testid="cockpit-blocked" className="border-t border-border pt-2.5">
           <span className="text-sm font-medium text-foreground">Blocked / not allowed</span>
@@ -1452,7 +1452,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* 8. Secondary Actions (collapsed) */}
       <details data-testid="cockpit-secondary-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
           Other actions{secondaryRoutes.length ? ` (${secondaryRoutes.length})` : ""}
         </summary>
         {secondaryRoutes.length === 0 ? (
@@ -1472,7 +1472,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* 9. Monitor-only (collapsed) */}
       <details data-testid="cockpit-monitor-group" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
+        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>
           Monitor only{monitorRoutes.length ? ` (${monitorRoutes.length})` : ""}
         </summary>
         {monitorRoutes.length === 0 ? (
@@ -1487,13 +1487,6 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         )}
       </details>
 
-      {/*
-        Finance diagnosis top action (F3) — secondary here because a real governed process-execution
-        route (`top`, rendered above as "Your top priority now") is currently primary; never
-        overwrites it. Shown whenever a fresh diagnosis exists, including when `top` is itself only
-        MONITOR_ONLY (nothing actionable in the governed queue) so the owner still sees it prominently.
-      */}
-      {financeTopPriority && <FinanceTopPriorityCard priority={financeTopPriority} primary={isMonitorOnly} />}
 
       {/*
         Also worth knowing — Goal / Profit leak / Operating policies / Trend alerts / Do-not-repeat /
@@ -1511,42 +1504,41 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Also worth knowing</span>
 
           {/* Goal Attention Signal — Phase 2 Signal A */}
-          {goalAttentionSignal && (
-            <div data-testid="cockpit-goal-section" className="flex flex-col gap-1">
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <span className="text-sm font-medium text-foreground">Goal</span>
-                <span data-testid="cockpit-goal-state" data-cockpit-goal-state={goalAttentionSignal.state} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#fef2f2" : goalAttentionSignal.state === "ON_TRACK" ? "#f0fdf4" : "#fafafa", color: goalAttentionSignal.state === "AT_RISK" || goalAttentionSignal.state === "NO_GROWTH" ? "#b91c1c" : goalAttentionSignal.state === "ON_TRACK" ? "#15803d" : "#6b7280" }}>
-                  {GOAL_STATE_LABEL[goalAttentionSignal.state] ?? GOAL_STATE_FALLBACK}
-                </span>
-                {goalAttentionSignal.goalTitle && <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{goalAttentionSignal.goalTitle}</span>}
-              </div>
-              {goalAttentionSignal.gapToClose !== null && (
-                <p data-testid="cockpit-goal-gap" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>
-                  Gap to close: {goalAttentionSignal.targetCurrency ?? ""} {goalAttentionSignal.gapToClose.toLocaleString()}
-                </p>
-              )}
-              <p data-testid="cockpit-goal-explanation" style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)", fontStyle: "italic" }}>{goalAttentionSignal.beginnerExplanation}</p>
-            </div>
-          )}
+          {goalAttentionSignal && <GoalAttentionSection signal={goalAttentionSignal} />}
 
-          {/* Profit Leak — Phase 2 Signal B */}
-          {topProfitLeak && (
+          {/* Profit Leak — Phase 2 Signal B. identifyProfitLeaks() (domain/owner-mode/profit-leak-radar.ts)
+              always returns a non-null topLeak, falling back to a leakType: "DATA_INSUFFICIENT"
+              placeholder when no real leak condition fired -- so `topProfitLeak` alone is truthy in
+              both cases and cannot be used to decide whether a leak was actually detected. The
+              heading and the "Area" line (a real business area is meaningless for the placeholder,
+              whose domain is the literal string "data") are gated on the same leakType check
+              business-control-slo.ts already uses for this exact distinction; the impact figure and
+              ownerExplanation continue to render exactly as before for every case. */}
+          {topProfitLeak && (() => {
+            const view = presentProfitLeakCard(topProfitLeak, ownerDecision);
+            return (
             <div data-testid="cockpit-profit-leak-section" className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-foreground">Profit leak detected</span>
+              <span className="text-sm font-medium text-foreground">{view.headline}</span>
               <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 2 }}>
-                <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
+                {view.radarFinding && (
+                  <span data-testid="cockpit-profit-leak-area" style={{ color: "var(--muted-foreground)" }}>Area: {topProfitLeak.domain}</span>
+                )}
                 {topProfitLeak.estimatedImpact.rangeLow !== undefined && (
                   <span data-testid="cockpit-profit-leak-impact" style={{ color: "var(--destructive)" }}>
                     Estimated impact: {topProfitLeak.estimatedImpact.rangeLow.toLocaleString()}
                     {topProfitLeak.estimatedImpact.rangeHigh !== undefined ? ` – ${topProfitLeak.estimatedImpact.rangeHigh.toLocaleString()}` : ""}
                   </span>
                 )}
-                {topProfitLeak.ownerExplanation && (
+                {view.scopeNote && (
+                  <span data-testid="cockpit-profit-leak-scope" style={{ color: "var(--muted-foreground)" }}>{view.scopeNote}</span>
+                )}
+                {topProfitLeak.ownerExplanation && view.showRadarExplanation && (
                   <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>{topProfitLeak.ownerExplanation}</span>
                 )}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Policy Attention Signal — Phase 2 Signal C */}
           {policyAttentionSignal && (
@@ -1604,18 +1596,28 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
               shared strip. */}
           {doNotRepeatAnnotation?.blocked && (
             <div data-testid="cockpit-dnr-section" style={{ border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", background: "#fffbeb" }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>Do not repeat</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>{doNotRepeatAnnotation.holdsBackTarget || doNotRepeatAnnotation.issueStaysOpen ? "Do not repeat" : "Earlier result in this area"}</span>
+              {doNotRepeatAnnotation.areaOnly && !doNotRepeatAnnotation.holdsBackTarget && (
+                <p data-testid="cockpit-dnr-area-history" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
+                  This is history from the same area, not a verdict on your main target. Do not repeat the approach that failed.
+                </p>
+              )}
+              {(doNotRepeatAnnotation.holdsBackTarget || doNotRepeatAnnotation.issueStaysOpen) && (
+                <p data-testid="cockpit-dnr-holds" style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
+                  {doNotRepeatAnnotation.issueStaysOpen
+                    ? "This rule holds back repeating the earlier step, not the problem: the problem is still open, so respond to it another way or record what has changed."
+                    : doNotRepeatAnnotation.areaOnly
+                      ? "This rule holds back new growth steps in this area until you record what has changed."
+                      : "This rule holds back repeating this step until you record what has changed."}{" "}
+                  <a href={doNotRepeatAnnotation.ruleId ? `#dnr-rule-${doNotRepeatAnnotation.ruleId}` : "#do-not-repeat-rules"} style={{ textDecoration: "underline" }}>Do-not-repeat rules</a>
+                </p>
+              )}
               <p data-testid="cockpit-dnr-prior-action" style={{ margin: "6px 0 0", fontSize: 13, color: "#374151" }}>
                 {doNotRepeatAnnotation.priorActionSummary}
               </p>
               <p data-testid="cockpit-dnr-reason" style={{ margin: "4px 0 0", fontSize: 13, color: "#92400e" }}>
                 {doNotRepeatAnnotation.blockedReason}
               </p>
-              {doNotRepeatAnnotation.changedContextCondition && (
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
-                  Allowed if: {doNotRepeatAnnotation.changedContextCondition}
-                </p>
-              )}
               {doNotRepeatAnnotation.legacyMatch && (
                 <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>Matched by area scope (informational).</p>
               )}
@@ -1640,7 +1642,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
                         type="button"
                         data-testid={`cockpit-escalation-ack-${esc.id}`}
                         onClick={() => onAcknowledgeEscalation(esc.id)}
-                        style={{ fontSize: 12, padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}
+                        style={{ fontSize: 14, padding: "10px 14px", minHeight: 44, borderRadius: 4, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", cursor: "pointer" }}
                       >
                         Acknowledge
                       </button>
@@ -1653,7 +1655,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
       </div>
 
       {/* Recovery status — read-only, collapsed low-load summary (PASS 37). */}
-      {recovery && <RecoverySection recovery={recovery} />}
+      {recovery && <RecoverySection recovery={recovery} ownerDecision={ownerDecision} />}
 
       {/* Outside signals — read-only, collapsed low-load public-signal summary (PASS 39). */}
       {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
@@ -1669,7 +1671,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ borderTop: "1px solid var(--border)", paddingTop: 14, paddingBottom: 2 }}>
-        <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>View proof &amp; details</summary>
+        <summary style={{ cursor: "pointer", display: "flex", alignItems: "center", minHeight: 44, fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>View proof &amp; details</summary>
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 6 }}>
           <span><strong>Done when:</strong> {top.completionCriteria}</span>
           {top.evidenceRefs.length > 0

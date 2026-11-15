@@ -123,6 +123,8 @@ export const PROVIDERS: Record<string, Provider> = {
     isActive: true,
     readiness: "PLACEHOLDER_ONLY",
   },
+  // Placeholder DESCRIPTOR only (import-format catalogue). QuickBooks Online is connected exclusively through the business-scoped,
+  // read-only OAuth integration in src/services/quickbooks; nothing can create a connection from this entry.
   QUICKBOOKS: {
     id: "quickbooks",
     name: "QuickBooks",

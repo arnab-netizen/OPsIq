@@ -39,7 +39,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             id={inputId}
             type={visible ? "text" : "password"}
             disabled={disabled}
-            className={`h-10 w-full rounded-md border border-border bg-background px-3 py-2 pr-16 text-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+            className={`h-11 w-full rounded-md border border-border bg-background px-3 py-2 pr-16 text-base transition-colors sm:h-10 sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
             {...props}
           />
           <button
@@ -47,7 +47,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             onClick={() => setVisible((v) => !v)}
             disabled={disabled}
             aria-label={visible ? "Hide password" : "Show password"}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded-md disabled:cursor-not-allowed disabled:opacity-50"
+            className="absolute inset-y-0 right-0 flex min-h-11 min-w-11 items-center justify-center px-3 text-sm font-medium text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             {visible ? "Hide" : "Show"}
           </button>

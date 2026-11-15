@@ -99,7 +99,7 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  {
+  { requireCommercial: "reassessment",
     requireCapabilities: [CAPABILITIES.CONDITION_ASSESS],
     requireWorkspace: true,
   }

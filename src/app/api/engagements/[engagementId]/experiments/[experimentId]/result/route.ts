@@ -69,5 +69,5 @@ export const POST = withCanonicalEnforcement(
       analysis,
     };
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
+  { requireCommercial: "continuation_action", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
 );

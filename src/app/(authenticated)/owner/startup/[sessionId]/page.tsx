@@ -457,7 +457,7 @@ export default function StartupSessionPage({
           >
             {STATUS_LABELS[session.status] ?? session.status}
           </span>
-          <span data-testid="startup-profile-version">Profile v{session.profileVersion}</span>
+          <span data-testid="startup-profile-version">{session.profileVersion > 0 ? `Profile updated ${session.profileVersion} time${session.profileVersion === 1 ? "" : "s"}` : "Profile not started yet"}</span>
         </div>
       </div>
 

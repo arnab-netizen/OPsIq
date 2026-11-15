@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createBudgetPeriod, addBudgetLine, reassessBudget } from "@/services/owner-budget/budget.service";
 import { recordArchetypeMetric, listArchetypeMetrics } from "@/services/owner-budget/archetype-metrics.service";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 
 const actor = randomUUID();
 const ws = () => randomUUID();
@@ -53,6 +54,7 @@ async function seedFinance(workspaceId: string, businessId: string, industryTemp
       industryTemplate, dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 async function growPeriod(workspaceId: string, businessId: string) {

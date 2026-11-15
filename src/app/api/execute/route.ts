@@ -56,7 +56,7 @@ export const POST = withCanonicalEnforcement(
       throw error;
     }
   },
-  {
+  { requireCommercial: "governed_execution",
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_CREATE],
     requireWorkspace: true,
   }

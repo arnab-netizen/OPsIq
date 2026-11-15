@@ -51,9 +51,19 @@ function trinityFinanceInput(): FinancialSnapshotInput {
   };
 }
 
+/**
+ * Trinity with the cost picture CONFIRMED COMPLETE. The pilot row recorded only rent and payroll; under the evidence
+ * contract (blank = UNKNOWN, never 0) a total needs every part known, so tests about thresholds and liquidity — which
+ * need a real total — state the lines the row left blank as explicit zeros (utilities 0, variable costs 0). The
+ * as-persisted row itself is covered by the "as persisted" tests below.
+ */
+function trinityConfirmedCosts(): FinancialSnapshotInput {
+  return { ...trinityFinanceInput(), utilities: 0, variableCosts: 0 };
+}
+
 /** Trinity with bank balance enrichment (as the service layer would produce). */
 function trinityEnriched(): FinancialSnapshotInput {
-  return { ...trinityFinanceInput(), bankBalance: 129923.99, industryTemplate: "laundry_local_service" };
+  return { ...trinityConfirmedCosts(), bankBalance: 129923.99, industryTemplate: "laundry_local_service" };
 }
 
 /** Generic profitable business with no bank balance supplied. */
@@ -83,7 +93,7 @@ describe("DEFECT 1 — cashDaysOfCosts uses total liquid funds", () => {
   });
 
   it("TEST 1a: cashDaysOfCosts metric uses bankBalance when cashOnHand is zero", () => {
-    const cash = cashDaysOfCosts({ ...trinityFinanceInput(), bankBalance: 129923.99 });
+    const cash = cashDaysOfCosts({ ...trinityConfirmedCosts(), bankBalance: 129923.99 });
     // fixedCosts = 60000+85760=145760; totalCosts = 145760; 31 days → daily ≈ 4702
     // cashDays ≈ 129923.99 / 4702 ≈ 27.6 — well above 14
     expect(cash).not.toBeNull();
@@ -91,7 +101,7 @@ describe("DEFECT 1 — cashDaysOfCosts uses total liquid funds", () => {
   });
 
   it("TEST 2: both cashOnHand=0 and bankBalance=0 → low-liquidity finding fires", () => {
-    const input: FinancialSnapshotInput = { ...trinityFinanceInput(), cashOnHand: 0, bankBalance: 0 };
+    const input: FinancialSnapshotInput = { ...trinityConfirmedCosts(), cashOnHand: 0, bankBalance: 0 };
     const r = diagnoseFinanceSnapshot(input, { now: NOW });
     const codes = r.riskFindings.map((f) => f.code);
     expect(codes).toContain("FIN_LOW_ABSOLUTE_CASH");
@@ -119,21 +129,23 @@ describe("DEFECT 1 — cashDaysOfCosts uses total liquid funds", () => {
     };
     expect(computeFinancialMetrics(inputNoFunds, { now: NOW }).cashDaysOfCosts).toBeNull();
 
-    // cashOnHand=0 (explicitly zero) + absent bankBalance → cashDaysOfCosts = 0 (not null, not inflated)
+    // cashOnHand=0 (physical cash only) + absent bankBalance → total liquid funds UNKNOWN: abstain (null),
+    // never a fabricated 0 days of cover and never an inflated figure (liquidity contract, A1).
     const inputZeroCash = trinityFinanceInput(); // cashOnHand=0, no bankBalance
     const m = computeFinancialMetrics(inputZeroCash, { now: NOW });
-    expect(m.cashDaysOfCosts).toBe(0); // 0 cash reported explicitly; bankBalance was not fabricated
+    expect(m.cashDaysOfCosts).toBeNull();
+    expect(m.liquidityStatus).toBe("BANK_UNKNOWN");
   });
 
   it("TEST 11: stale bank balance (>45 days apart) must NOT inflate cashDaysOfCosts", () => {
     // Simulate what the service layer would do: it checks ageDays <= 45 before injecting.
     // A finance snapshot ending 2026-07-31 + cashflow ending 2026-01-01 → 211 days → NOT injected.
-    // Without bank enrichment, cashDaysOfCosts is based on cashOnHand=0 only → 0, not ~27.6.
+    // Without bank enrichment total liquid funds is unknown → abstain, not 0 and not ~27.6.
     const input = trinityFinanceInput(); // cashOnHand=0, no bankBalance (stale cashflow not injected)
     const m = computeFinancialMetrics(input, { now: NOW });
-    // cashDaysOfCosts = 0 (owner reported 0 cash, no bank enrichment applied)
-    // NOT ~27.6 (which stale enrichment would have produced)
-    expect(m.cashDaysOfCosts).toBe(0);
+    // cashDaysOfCosts = null (stale bank rejected, so total liquid funds is unknown)
+    // NOT ~27.6 (which stale enrichment would have produced) and NOT 0 (bank is unknown, not empty)
+    expect(m.cashDaysOfCosts).toBeNull();
     // bankBalance is not on the input — the service did not inject it
     expect(input.bankBalance).toBeUndefined();
   });
@@ -158,9 +170,9 @@ describe("DEFECT 1 — cashDaysOfCosts uses total liquid funds", () => {
     // { workspaceId, businessId } — cross-workspace contamination is structurally impossible.
     const isolatedInput = trinityFinanceInput(); // bankBalance not set
     const crossWorkspaceBank = 999999; // hypothetical value from another workspace
-    // cashOnHand=0 is explicitly zero (owner reported 0), so cashDaysOfCosts = 0, not crossWorkspaceBank-derived
+    // No bank balance on the input → total liquid funds unknown → abstain; crossWorkspaceBank never used
     const m = computeFinancialMetrics(isolatedInput, { now: NOW });
-    expect(m.cashDaysOfCosts).toBe(0); // based on cashOnHand=0 only; crossWorkspaceBank never used
+    expect(m.cashDaysOfCosts).toBeNull();
     void crossWorkspaceBank;
   });
 });
@@ -189,7 +201,7 @@ describe("DEFECT 2 — industry template resolved from business type", () => {
 
   it("TEST 4c: Trinity at 55% fixed-cost burden WOULD trigger finding with generic thresholds (50%)", () => {
     // Same data but generic template → 55% > 50% → finding fires
-    const input = { ...trinityFinanceInput(), bankBalance: 129923.99 }; // no industryTemplate
+    const input = { ...trinityConfirmedCosts(), bankBalance: 129923.99 }; // no industryTemplate
     const r = diagnoseFinanceSnapshot(input, { now: NOW });
     const codes = r.riskFindings.map((f) => f.code);
     expect(codes).toContain("FIN_HIGH_FIXED_COST_BURDEN");
@@ -266,10 +278,10 @@ describe("DEFECT 3 — FIN_LOW_ABSOLUTE_CASH has recommendation template", () =>
     const inputs: FinancialSnapshotInput[] = [
       // Zero-cash losing business
       { periodStart: "2026-07-01", periodEnd: "2026-07-31", currency: "INR",
-        revenue: 50000, fixedCosts: 40000, variableCosts: 20000, cashOnHand: 500 },
+        revenue: 50000, fixedCosts: 40000, variableCosts: 20000, cashOnHand: 500, bankBalance: 0 },
       // Negative gross margin
       { periodStart: "2026-07-01", periodEnd: "2026-07-31", currency: "INR",
-        revenue: 50000, costOfGoodsOrServices: 60000, cashOnHand: 10000 },
+        revenue: 50000, costOfGoodsOrServices: 60000, cashOnHand: 10000, bankBalance: 0 },
       // High debt + receivables
       { periodStart: "2026-07-01", periodEnd: "2026-07-31", currency: "INR",
         revenue: 100000, fixedCosts: 40000, variableCosts: 20000,
@@ -305,7 +317,7 @@ describe("DEFECT 3 — FIN_LOW_ABSOLUTE_CASH has recommendation template", () =>
     const missingTemplate: string[] = [];
     const inputs: FinancialSnapshotInput[] = [
       { periodStart: "2026-07-01", periodEnd: "2026-07-31", currency: "INR",
-        revenue: 50000, fixedCosts: 60000, variableCosts: 20000, cashOnHand: 200 },
+        revenue: 50000, fixedCosts: 60000, variableCosts: 20000, cashOnHand: 200, bankBalance: 0 },
       { periodStart: "2026-07-01", periodEnd: "2026-07-31", currency: "INR",
         revenue: 100000, fixedCosts: 40000, variableCosts: 20000,
         loanEmiDebtPayments: 30000, payables: 50000, cashOnHand: 5000, bankBalance: 0 },
@@ -464,7 +476,7 @@ describe("TEST 13 — existing diagnosis regression suite (golden path)", () => 
   it("insolvent runway still fires FIN_INSOLVENT_RUNWAY at critical severity", () => {
     const r = diagnoseFinanceSnapshot(
       { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR",
-        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000 },
+        revenue: 50000, fixedCosts: 40000, variableCosts: 40000, cashOnHand: 4000, bankBalance: 0 },
       { now: NOW }
     );
     const f = r.riskFindings.find((x) => x.code === "FIN_INSOLVENT_RUNWAY");
@@ -529,6 +541,8 @@ describe("Trinity Services July 2026 — regression fixture (exact pilot data)",
     revenue: 265076,
     rent: 60000,
     salaryPayroll: 85760,
+    utilities: 0, // confirmed none (the pilot row left it blank = UNKNOWN; see "as persisted" below)
+    variableCosts: 0, // confirmed none
     cashOnHand: 0,
     bankBalance: 129923.99,
     industryTemplate: "laundry_local_service",

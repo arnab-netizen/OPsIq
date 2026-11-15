@@ -126,15 +126,22 @@ describe("presentDomainError — known 4xx message allowlist (Rule 2 & 3)", () =
     assertNoLeak(message);
   });
 
-  it("REALISTIC: Strategy/Marketing/Cashflow baseline-verification message ('before (baseline) value')", () => {
-    for (const domain of ["strategy", "marketing", "cashflow"]) {
-      const err = httpResponseErrorFromBody(400, {
-        error: `Cannot verify a ${domain} action without a before (baseline) value for the metric.`,
-      });
-      expect(presentDomainError(err, "action")).toBe(
-        "This action doesn't have a baseline value to verify against yet. Run diagnosis again to capture one."
-      );
+  it("REALISTIC: outcome-evidence policy messages (all domain verification services) are shown as written", () => {
+    for (const error of [
+      "Start this action before recording its outcome.",
+      "Enter the before (baseline) value — the diagnosis did not measure this metric.",
+    ]) {
+      const message = presentDomainError(httpResponseErrorFromBody(400, { error }), "action");
+      expect(message).toBe(error);
+      assertNoLeak(message);
     }
+  });
+
+  it("the retired 'Cannot verify a <domain> action without a before (baseline) value' template is no longer allowlisted", () => {
+    const err = httpResponseErrorFromBody(400, {
+      error: "Cannot verify a marketing action without a before (baseline) value for the metric.",
+    });
+    expect(presentDomainError(err, "action")).toBe("Couldn't complete this action. Please try again.");
   });
 
   it("REALISTIC: Recovery's differently-worded baseline-verification message is still recognized", () => {

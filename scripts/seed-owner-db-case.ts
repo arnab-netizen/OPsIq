@@ -158,5 +158,7 @@ export async function cleanupOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds):
   await db.ownerWorkingCapitalItem.deleteMany({ where: { workspaceId, businessId } });
   await db.ownerFinancialSnapshot.deleteMany({ where: { id: rid(businessId, "fin1") } });
   await db.ownerCashflowSnapshot.deleteMany({ where: { id: rid(businessId, "cf1") } });
+  // owner_goals.business_id is ON DELETE RESTRICT: remove this test business's goals first.
+  await db.ownerGoal.deleteMany({ where: { businessId } });
   await db.ownerBusiness.deleteMany({ where: { id: businessId } });
 }

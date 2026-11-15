@@ -99,3 +99,70 @@ describe("[db] Owner wealth command-center — full journey", () => {
     await teardownOwnerBusiness(businessId);
   });
 });
+
+// R10 P2-13 — behavioral proof of the evidence-period policy through getWealthCommandCenter's REAL output
+// (not merely the shared period-selection helpers or a governance source scan).
+describe("[db] Owner wealth command-center — evidence-period policy (R10 P2-13)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+  it("[db] A. a latest COMPLETED period drives classification (hasData, snapshotPeriodEnd, a real wealth path)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    await createSnapshot(businessId, snapshotInput(), actor, workspaceId); // ended 2026-05-31, in the past
+
+    const out = await getWealthCommandCenter(workspaceId, businessId);
+    expect(out.hasData).toBe(true);
+    expect(out.snapshotPeriodEnd).toBe(new Date("2026-05-31").toISOString());
+    expect(out.commandCenter.wealthPath).not.toBeNull();
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] B. a genuinely FUTURE period (has not started) is ignored entirely — never read as data, never as in-progress", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const future = { ...snapshotInput(), periodStart: iso(new Date(Date.now() + 20 * DAY)), periodEnd: iso(new Date(Date.now() + 50 * DAY)) };
+    await createSnapshot(businessId, future, actor, workspaceId);
+
+    const out = await getWealthCommandCenter(workspaceId, businessId);
+    expect(out.hasData).toBe(false);
+    expect(out.snapshotPeriodEnd).toBeNull();
+    expect(out.inProgressPeriodEnd).toBeNull();
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] C. in-progress (provisional) current-period data cannot masquerade as a completed period", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const inProgress = { ...snapshotInput(), periodStart: iso(new Date(Date.now() - 10 * DAY)), periodEnd: iso(new Date(Date.now() + 5 * DAY)) };
+    await createSnapshot(businessId, inProgress, actor, workspaceId);
+
+    const out = await getWealthCommandCenter(workspaceId, businessId);
+    // Not treated as completed evidence:
+    expect(out.hasData).toBe(false);
+    expect(out.snapshotPeriodEnd).toBeNull();
+    // But it is not silently dropped either — reported distinctly as in progress:
+    expect(out.inProgressPeriodEnd).toBe(new Date(inProgress.periodEnd).toISOString());
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] D. older completed evidence remains the baseline when in-progress current-period data also exists", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    await createSnapshot(businessId, snapshotInput(), actor, workspaceId); // completed, ended 2026-05-31
+    const inProgress = { ...snapshotInput(), periodStart: iso(new Date(Date.now() - 10 * DAY)), periodEnd: iso(new Date(Date.now() + 5 * DAY)) };
+    await createSnapshot(businessId, inProgress, actor, workspaceId);
+
+    const out = await getWealthCommandCenter(workspaceId, businessId);
+    // The completed period is still the classification baseline...
+    expect(out.hasData).toBe(true);
+    expect(out.snapshotPeriodEnd).toBe(new Date("2026-05-31").toISOString());
+    // ...and the in-progress period is reported alongside it, never replacing it.
+    expect(out.inProgressPeriodEnd).toBe(new Date(inProgress.periodEnd).toISOString());
+
+    await teardownOwnerBusiness(businessId);
+  });
+});

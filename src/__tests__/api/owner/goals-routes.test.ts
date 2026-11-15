@@ -2,9 +2,9 @@
  * Goals + trajectory + collective-decision route contract tests (non-DB).
  *
  * Routes covered:
- *   POST /api/owner/goals           — create active goal (OWNER_MANAGE)
- *   GET  /api/owner/goals           — retrieve active goal (OWNER_VIEW)
- *   GET  /api/owner/goals/trajectory — compute trajectory (OWNER_VIEW)
+ *   POST /api/owner/goals           — create a business goal (OWNER_MANAGE)
+ *   GET  /api/owner/goals           — business-scoped goals overview (OWNER_VIEW)
+ *   GET  /api/owner/goals/trajectory — business goal (or legacy workspace goal) trajectory (OWNER_VIEW)
  *   GET  /api/owner/collective-decision — owner command-center packet (OWNER_VIEW)
  *
  * DB-backed services are mocked; tests run without PostgreSQL.
@@ -18,8 +18,7 @@ import type { CanonicalJsonResponse } from "@/lib/canonical-json-response";
 
 const mocks = vi.hoisted(() => ({
   createGoal: vi.fn(),
-  getActiveGoal: vi.fn(),
-  computeActiveGoalTrajectory: vi.fn(),
+  getGoalsOverview: vi.fn(),
   getOwnerCommandCenter: vi.fn(),
 }));
 
@@ -38,8 +37,8 @@ vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}
 
 vi.mock("@/services/owner-strategy/goal.service", () => ({
   createGoal: mocks.createGoal,
-  getActiveGoal: mocks.getActiveGoal,
-  computeActiveGoalTrajectory: mocks.computeActiveGoalTrajectory,
+  getGoalsOverview: mocks.getGoalsOverview,
+  NEW_GOAL_TARGET_TYPES: ["REVENUE", "PROFIT"],
 }));
 
 vi.mock("@/services/owner-collective/collective-decision.service", () => ({
@@ -55,6 +54,7 @@ import { GET as collectiveDecisionGet } from "@/app/api/owner/collective-decisio
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const WS = "ws-goals-test";
+const BIZ = "b1000001-0000-4000-8000-000000000001";
 
 function makeGetCtx(rawUrl: string, workspaceId = WS) {
   return {
@@ -77,6 +77,7 @@ function getBody(res: unknown): Record<string, unknown> {
 }
 
 const VALID_GOAL_BODY = {
+  businessId: BIZ,
   targetType: "PROFIT" as const,
   targetAmount: 500000,
   targetCurrency: "GBP",
@@ -93,6 +94,14 @@ const SAMPLE_GOAL_SUMMARY = {
   targetCurrency: "GBP",
   targetDate: new Date("2027-12-31"),
   status: "ACTIVE",
+};
+
+const SAMPLE_OVERVIEW = {
+  business: { id: BIZ, name: "Trinity Services", currency: "GBP", isActive: true, isFixtureBusiness: false },
+  goal: { goal: SAMPLE_GOAL_SUMMARY, trajectory: {} },
+  legacyGoal: null,
+  legacyAttributable: false,
+  history: [],
 };
 
 const SAMPLE_TRAJECTORY = {
@@ -204,6 +213,32 @@ describe("[goals-post] POST /api/owner/goals — handler", () => {
     expect(arg.targetDate).toBeInstanceOf(Date);
   });
 
+  it("passes the explicit businessId from the body to the service", async () => {
+    mocks.createGoal.mockResolvedValue("goal-1");
+    await goalsPost(makePostCtx(VALID_GOAL_BODY));
+    expect(mocks.createGoal.mock.calls[0][0].businessId).toBe(BIZ);
+  });
+
+  it("rejects a goal without a businessId (no workspace goals can be created)", async () => {
+    const { businessId: _omit, ...noBusiness } = VALID_GOAL_BODY;
+    void _omit;
+    await expect(goalsPost(makePostCtx(noBusiness))).rejects.toThrow();
+    expect(mocks.createGoal).not.toHaveBeenCalled();
+  });
+
+  it("rejects new NET_WORTH and MULTIPLE goals (not measured by OpsIQ)", async () => {
+    for (const targetType of ["NET_WORTH", "MULTIPLE"]) {
+      await expect(goalsPost(makePostCtx({ ...VALID_GOAL_BODY, targetType }))).rejects.toThrow();
+    }
+    expect(mocks.createGoal).not.toHaveBeenCalled();
+  });
+
+  it("accepts REVENUE goals", async () => {
+    mocks.createGoal.mockResolvedValue("goal-1");
+    await goalsPost(makePostCtx({ ...VALID_GOAL_BODY, targetType: "REVENUE" }));
+    expect(mocks.createGoal.mock.calls[0][0].targetType).toBe("REVENUE");
+  });
+
   it("rejects invalid targetType", async () => {
     await expect(
       goalsPost(makePostCtx({ ...VALID_GOAL_BODY, targetType: "INVALID" }))
@@ -258,8 +293,8 @@ describe("[goals-get] GET /api/owner/goals — static enforcement", () => {
     expect(src).toContain("ctx.verifiedWorkspaceId");
   });
 
-  it("calls getActiveGoal", () => {
-    expect(src).toContain("getActiveGoal");
+  it("calls getGoalsOverview", () => {
+    expect(src).toContain("getGoalsOverview");
   });
 });
 
@@ -274,34 +309,32 @@ describe("[goals-get] GET /api/owner/goals — handler", () => {
     expect(opts?.requireWorkspace).toBe(true);
   });
 
-  it("returns goal in canonicalJson body with status 200", async () => {
-    mocks.getActiveGoal.mockResolvedValue(SAMPLE_GOAL_SUMMARY);
-    const res = await goalsGet(makeGetCtx(`https://x/api/owner/goals`));
-    const body = getBody(res);
-    expect(body.goal).toEqual(SAMPLE_GOAL_SUMMARY);
+  it("returns the overview in canonicalJson body with status 200", async () => {
+    mocks.getGoalsOverview.mockResolvedValue(SAMPLE_OVERVIEW);
+    const res = await goalsGet(makeGetCtx(`https://x/api/owner/goals?businessId=${BIZ}`));
+    expect(getBody(res)).toEqual(SAMPLE_OVERVIEW);
     expect((res as CanonicalJsonResponse).status).toBe(200);
   });
 
-  it("returns null goal when no active goal exists", async () => {
-    mocks.getActiveGoal.mockResolvedValue(null);
-    const res = await goalsGet(makeGetCtx(`https://x/api/owner/goals`));
-    const body = getBody(res);
-    expect(body.goal).toBeNull();
-    expect((res as CanonicalJsonResponse).status).toBe(200);
-  });
-
-  it("calls getActiveGoal with verified workspaceId", async () => {
-    mocks.getActiveGoal.mockResolvedValue(null);
+  it("passes the requested businessId (or null) with the verified workspaceId", async () => {
+    mocks.getGoalsOverview.mockResolvedValue(SAMPLE_OVERVIEW);
+    await goalsGet(makeGetCtx(`https://x/api/owner/goals?businessId=${BIZ}`, "ws-SPECIFIC"));
     await goalsGet(makeGetCtx(`https://x/api/owner/goals`, "ws-SPECIFIC"));
-    expect(mocks.getActiveGoal.mock.calls[0][0]).toBe("ws-SPECIFIC");
+    expect(mocks.getGoalsOverview.mock.calls[0]).toEqual(["ws-SPECIFIC", BIZ]);
+    expect(mocks.getGoalsOverview.mock.calls[1]).toEqual(["ws-SPECIFIC", null]);
+  });
+
+  it("rejects a malformed businessId", async () => {
+    await expect(goalsGet(makeGetCtx(`https://x/api/owner/goals?businessId=not-a-uuid`))).rejects.toThrow();
+    expect(mocks.getGoalsOverview).not.toHaveBeenCalled();
   });
 
   it("workspace isolation: different workspaces scoped correctly", async () => {
-    mocks.getActiveGoal.mockResolvedValue(null);
+    mocks.getGoalsOverview.mockResolvedValue(SAMPLE_OVERVIEW);
     await goalsGet(makeGetCtx(`https://x/api/owner/goals`, "ws-ALICE"));
     await goalsGet(makeGetCtx(`https://x/api/owner/goals`, "ws-BOB"));
-    expect(mocks.getActiveGoal.mock.calls[0][0]).toBe("ws-ALICE");
-    expect(mocks.getActiveGoal.mock.calls[1][0]).toBe("ws-BOB");
+    expect(mocks.getGoalsOverview.mock.calls[0][0]).toBe("ws-ALICE");
+    expect(mocks.getGoalsOverview.mock.calls[1][0]).toBe("ws-BOB");
   });
 });
 
@@ -325,8 +358,8 @@ describe("[trajectory] GET /api/owner/goals/trajectory — static enforcement", 
     expect(src).toContain("requireWorkspace: true");
   });
 
-  it("calls computeActiveGoalTrajectory", () => {
-    expect(src).toContain("computeActiveGoalTrajectory");
+  it("calls getGoalsOverview", () => {
+    expect(src).toContain("getGoalsOverview");
   });
 
   it("exports GET only", () => {
@@ -351,33 +384,31 @@ describe("[trajectory] GET /api/owner/goals/trajectory — handler", () => {
     expect(opts?.requireWorkspace).toBe(true);
   });
 
-  it("returns result wrapped in canonicalJson with status 200", async () => {
-    mocks.computeActiveGoalTrajectory.mockResolvedValue(SAMPLE_TRAJECTORY);
-    const res = await trajectoryGet(makeGetCtx(`https://x/api/owner/goals/trajectory`));
-    const body = getBody(res);
-    expect(body.result).toEqual(SAMPLE_TRAJECTORY);
+  it("returns the business goal's trajectory when a businessId is given", async () => {
+    mocks.getGoalsOverview.mockResolvedValue({ ...SAMPLE_OVERVIEW, goal: SAMPLE_TRAJECTORY, legacyGoal: { other: true } });
+    const res = await trajectoryGet(makeGetCtx(`https://x/api/owner/goals/trajectory?businessId=${BIZ}`));
+    expect(getBody(res).result).toEqual(SAMPLE_TRAJECTORY);
     expect((res as CanonicalJsonResponse).status).toBe(200);
   });
 
-  it("returns null result when no active goal", async () => {
-    mocks.computeActiveGoalTrajectory.mockResolvedValue(null);
+  it("returns the legacy workspace goal's trajectory when no businessId is given", async () => {
+    mocks.getGoalsOverview.mockResolvedValue({ ...SAMPLE_OVERVIEW, goal: { other: true }, legacyGoal: SAMPLE_TRAJECTORY });
     const res = await trajectoryGet(makeGetCtx(`https://x/api/owner/goals/trajectory`));
-    const body = getBody(res);
-    expect(body.result).toBeNull();
+    expect(getBody(res).result).toEqual(SAMPLE_TRAJECTORY);
   });
 
-  it("calls computeActiveGoalTrajectory with verified workspaceId", async () => {
-    mocks.computeActiveGoalTrajectory.mockResolvedValue(null);
-    await trajectoryGet(makeGetCtx(`https://x/api/owner/goals/trajectory`, "ws-SPECIFIC"));
-    expect(mocks.computeActiveGoalTrajectory.mock.calls[0][0]).toBe("ws-SPECIFIC");
+  it("returns null result when no goal applies", async () => {
+    mocks.getGoalsOverview.mockResolvedValue({ ...SAMPLE_OVERVIEW, goal: null });
+    const res = await trajectoryGet(makeGetCtx(`https://x/api/owner/goals/trajectory?businessId=${BIZ}`));
+    expect(getBody(res).result).toBeNull();
   });
 
   it("workspace isolation: different workspaces scoped correctly", async () => {
-    mocks.computeActiveGoalTrajectory.mockResolvedValue(null);
+    mocks.getGoalsOverview.mockResolvedValue({ ...SAMPLE_OVERVIEW, goal: null });
     await trajectoryGet(makeGetCtx(`https://x/api/owner/goals/trajectory`, "ws-ALICE"));
     await trajectoryGet(makeGetCtx(`https://x/api/owner/goals/trajectory`, "ws-BOB"));
-    expect(mocks.computeActiveGoalTrajectory.mock.calls[0][0]).toBe("ws-ALICE");
-    expect(mocks.computeActiveGoalTrajectory.mock.calls[1][0]).toBe("ws-BOB");
+    expect(mocks.getGoalsOverview.mock.calls[0][0]).toBe("ws-ALICE");
+    expect(mocks.getGoalsOverview.mock.calls[1][0]).toBe("ws-BOB");
   });
 });
 

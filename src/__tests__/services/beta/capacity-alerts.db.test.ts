@@ -116,7 +116,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] capacity alerts — tier-crossing st
     await checkAndSendCapacityAlert();
     expect(sendMock).toHaveBeenCalledTimes(1);
 
-    await updatePlatformSettings({ actorId: ACTOR_ID, capacityLimit: 40 }); // 10/40 = 25% -> tier 0, triggers the alert check itself
+    await updatePlatformSettings({ actorId: ACTOR_ID, capacityLimit: 40, capacityIncreaseConfirmation: { from: 10, to: 40 }, reason: "test increase" }); // 10/40 = 25% -> tier 0, triggers the alert check itself
     expect(sendMock).toHaveBeenCalledTimes(1); // still just the original — the reset itself is silent
 
     const state = await db.capacityAlertState.findUniqueOrThrow({ where: { id: "global" } });
@@ -126,7 +126,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] capacity alerts — tier-crossing st
   it("[db] 0 -> 80 again: a later re-crossing of 80% after the reset above fires a NEW alert", async () => {
     await seedWorkspaces(10, workspaceIds); // 100%
     await checkAndSendCapacityAlert();
-    await updatePlatformSettings({ actorId: ACTOR_ID, capacityLimit: 40 }); // resets to 0, silent
+    await updatePlatformSettings({ actorId: ACTOR_ID, capacityLimit: 40, capacityIncreaseConfirmation: { from: 10, to: 40 }, reason: "test increase" }); // resets to 0, silent
     sendMock.mockClear();
 
     await seedWorkspaces(22, workspaceIds); // 32/40 = 80%

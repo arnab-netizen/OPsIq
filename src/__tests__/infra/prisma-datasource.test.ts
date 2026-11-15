@@ -14,6 +14,7 @@ import { describe, it, expect } from "vitest";
 import {
   BUILT_IN_LOCAL_DEFAULT,
   PrismaDatasourceError,
+  PRODUCTION_ALLOWED_OPERATIONS,
   classifyOperation,
   isMutationCommand,
   resolvePrismaDatasource,
@@ -114,9 +115,17 @@ describe("6-8, 10. fail-closed behaviour", () => {
   });
 
   it("8b. authorization flag alone, without the target, never reaches production", () => {
+    // A mutation-capable command now refuses outright without an explicit target.
+    expect(() =>
+      resolve(
+        { OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true", MIGRATION_DATABASE_URL: PROD, DATABASE_URL: LOCAL },
+        MIGRATE
+      )
+    ).toThrow(/explicit OPSIQ_DB_TARGET/);
+    // A read-only command keeps the safe fallback and still never selects production.
     const r = resolve(
       { OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true", MIGRATION_DATABASE_URL: PROD, DATABASE_URL: LOCAL },
-      MIGRATE
+      ["node", "prisma", "migrate", "status"]
     );
     expect(r.url).toBe(LOCAL);
     expect(r.target).not.toBe("production-authorized");
@@ -124,7 +133,10 @@ describe("6-8, 10. fail-closed behaviour", () => {
 
   it("10. a mutation-capable command cannot silently fall back to the built-in default", () => {
     expect(() => resolve({}, MIGRATE)).toThrow(/mutation-capable/);
-    expect(() => resolve({}, MIGRATE)).toThrow(/Refusing to use the built-in local default/);
+    expect(() => resolve({}, MIGRATE)).toThrow(/explicit OPSIQ_DB_TARGET/);
+    // ...and neither can it fall back to DATABASE_URL (A3: no implicit datasource for a mutation).
+    expect(() => resolve({ DATABASE_URL: LOCAL }, MIGRATE)).toThrow(/explicit OPSIQ_DB_TARGET/);
+    expect(() => resolve({ DATABASE_URL: LOCAL, CI: "true" }, MIGRATE)).toThrow(/explicit OPSIQ_DB_TARGET/);
   });
 
   it("10b. production mode authorized but MIGRATION_DATABASE_URL missing does not fall back", () => {
@@ -168,7 +180,7 @@ describe("16. production operation allowlist", () => {
   };
   const argvFor = (op: string) => ["node", "prisma", ...op.split(" ")];
 
-  it.each(["migrate dev", "migrate reset", "db push", "db execute", "studio"])(
+  it.each(["migrate dev", "migrate reset", "migrate resolve", "db push", "db execute", "db seed", "studio"])(
     "16a. %s is refused against production at any authorization level",
     (op) => {
       // Even declaring the operation and holding the authorization flag fails.
@@ -197,32 +209,33 @@ describe("16. production operation allowlist", () => {
       )
     ).toThrow(/never permitted against production/);
 
-    // And a non-forbidden mismatch is still refused for not matching.
+    // And a non-forbidden mismatch (an operation Prisma does not document) is still refused for not matching.
     expect(() =>
       resolve(
         { ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "migrate deploy" },
-        argvFor("db seed")
+        argvFor("migrate unknown-subcommand")
       )
     ).toThrow(/does not match the operation being run/);
   });
 
   it("16e. an allowlisted, declared, matching production mutation is permitted", () => {
-    for (const op of ["migrate deploy", "db seed"]) {
-      const r = resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: op }, argvFor(op));
-      expect(r.url).toBe(PROD);
-      expect(r.target).toBe("production-authorized");
-    }
-  });
-
-  it("16f. production migration verification stays possible, but must be declared", () => {
-    // isMutationCommand conservatively treats every `migrate *` subcommand as
-    // mutation-capable, so even the read-only `migrate status` must be declared.
-    const argv = ["node", "prisma", "migrate", "status"];
-    expect(() => resolve(prodAuth, argv)).toThrow(/requires OPSIQ_PRODUCTION_OPERATION/);
-
-    const r = resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "migrate status" }, argv);
+    // `migrate deploy` is the ONLY production mutation: the governed workflow never seeds or resets.
+    expect([...PRODUCTION_ALLOWED_OPERATIONS]).toEqual(["migrate deploy"]);
+    const r = resolve({ ...prodAuth, OPSIQ_PRODUCTION_OPERATION: "migrate deploy" }, argvFor("migrate deploy"));
     expect(r.url).toBe(PROD);
     expect(r.target).toBe("production-authorized");
+  });
+
+  it("16f. production migration verification stays possible: read-only status needs the read authorization only", () => {
+    const argv = ["node", "prisma", "migrate", "status"];
+    const r = resolve(prodAuth, argv);
+    expect(r.url).toBe(PROD);
+    expect(r.target).toBe("production-authorized");
+    expect(r.mutating).toBe(false);
+    // ...and without the authorization pair it never selects production.
+    expect(() => resolve({ OPSIQ_DB_TARGET: "production", MIGRATION_DATABASE_URL: PROD }, argv)).toThrow(
+      /requires OPSIQ_ALLOW_PRODUCTION_DB_COMMAND=true/
+    );
   });
 
   it("16g. allowlist refusals never leak the datasource", () => {
@@ -274,7 +287,7 @@ describe("12-13. real CI workflow shapes", () => {
   it("12. LANE_B resolves to its throwaway container", () => {
     // db-verification.yml sets all three to the local throwaway container.
     const r = resolve(
-      { CI: "true", DATABASE_URL: CI, TEST_DATABASE_URL: CI, MIGRATION_DATABASE_URL: CI },
+      { CI: "true", OPSIQ_DB_TARGET: "ci", DATABASE_URL: CI, TEST_DATABASE_URL: CI, MIGRATION_DATABASE_URL: CI },
       MIGRATE
     );
     expect(r.url).toBe(CI);
@@ -283,15 +296,19 @@ describe("12-13. real CI workflow shapes", () => {
 
   it("13. Main Integration resolves to its CI container", () => {
     // main-integration.yml sets DATABASE_URL only.
-    const r = resolve({ CI: "true", DATABASE_URL: CI, DATABASE_URL_TEST: CI }, MIGRATE);
+    const r = resolve({ CI: "true", OPSIQ_DB_TARGET: "ci", DATABASE_URL: CI, DATABASE_URL_TEST: CI }, MIGRATE);
     expect(r.url).toBe(CI);
     expect(r.target).toBe("ci");
   });
 
-  it("13b. the Neon migration workflows keep working via DATABASE_URL", () => {
-    // Every module-*-migrate.yml sets DATABASE_URL to the same secret value.
-    const r = resolve({ CI: "true", DATABASE_URL: PROD, MIGRATION_DATABASE_URL: PROD }, MIGRATE);
-    expect(r.url).toBe(PROD);
+  it("13b. the staging migration workflows keep working through an explicitly approved staging endpoint", () => {
+    const STAGING = "postgresql://s-user:s-pass@ep-synthetic-stg-1.invalid:5432/app";
+    const env = { CI: "true", OPSIQ_DB_TARGET: "staging", DATABASE_URL: STAGING, MIGRATION_DATABASE_URL: STAGING };
+    // Without the approved endpoint list nothing is mutated.
+    expect(() => resolve(env, MIGRATE)).toThrow(/OPSIQ_APPROVED_STAGING_ENDPOINT_IDS/);
+    const r = resolve({ ...env, OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: "ep-synthetic-stg-1" }, MIGRATE);
+    expect(r.url).toBe(STAGING);
+    expect(r.target).toBe("staging");
   });
 });
 
@@ -320,7 +337,8 @@ describe("14. output never leaks credentials", () => {
 
 describe("15. named regression: the exact historical incident", () => {
   it("MIGRATION_DATABASE_URL in the shell plus an intended local DATABASE_URL never selects production", () => {
-    const r = resolve({ MIGRATION_DATABASE_URL: PROD, DATABASE_URL: LOCAL }, MIGRATE);
+    expect(() => resolve({ MIGRATION_DATABASE_URL: PROD, DATABASE_URL: LOCAL }, MIGRATE)).toThrow(/explicit OPSIQ_DB_TARGET/);
+    const r = resolve({ OPSIQ_DB_TARGET: "local", MIGRATION_DATABASE_URL: PROD, DATABASE_URL: LOCAL }, MIGRATE);
 
     expect(r.url).toBe(LOCAL);
     expect(r.url).not.toBe(PROD);

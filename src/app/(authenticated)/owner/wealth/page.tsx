@@ -142,6 +142,14 @@ export default function OwnerWealthPage() {
         />
       </div>
 
+      {data.inProgressPeriodEnd && (
+        <p data-testid="wealth-in-progress-period" style={{ color: "#b45309", fontSize: 13, marginBottom: 12 }}>
+          {data.snapshotPeriodEnd
+            ? `Figures for the period ending ${String(data.inProgressPeriodEnd).slice(0, 10)} are still in progress, so they are not used here: this view rests on the latest completed period (ending ${String(data.snapshotPeriodEnd).slice(0, 10)}).`
+            : `Figures for the period ending ${String(data.inProgressPeriodEnd).slice(0, 10)} are still in progress, and there is no completed period yet, so this view has no completed figures to rest on.`}
+        </p>
+      )}
+
       {cc.provisional && (
         <p style={{ color: "#b45309", fontSize: 13, marginBottom: 12 }}>
           Provisional: this view is based on limited data. Add more business inputs to sharpen it.
@@ -151,7 +159,7 @@ export default function OwnerWealthPage() {
       {/* Next Best Move — the headline decision */}
       <section style={{ border: "1px solid var(--border, #e5e7eb)", borderRadius: 10, padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <span style={{ fontSize: 13, color: "#6b7280" }}>Next best move</span>
+          <span style={{ fontSize: 13, color: "#6b7280" }}>Next wealth move (wealth plan only — your overall main target is on Home)</span>
           <Badge variant={MOVE_VARIANT(move.decision ?? "")}>{(move.decision && MOVE_LABEL[move.decision]) ?? move.decision ?? "—"}</Badge>
         </div>
         <p style={{ fontSize: 18, fontWeight: 600 }}>{move.actionLabel ?? "No action proposed"}</p>

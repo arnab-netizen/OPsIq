@@ -87,11 +87,13 @@ jobs:
     needs: classify
     runs-on: ubuntu-latest
     # Must stay strictly greater than the non-DB suite step cap below plus setup.
-    # A step timeout is only reachable if the job outlives it: with a 25-minute job
-    # cap, raising the step to 30 would change nothing, because the job would be
-    # killed at 25 first and the step would never report its own timeout.
-    # Observed: setup through step start costs ~2 minutes, so 40 leaves real room.
-    timeout-minutes: 40
+    # A step timeout is only reachable if the job outlives it: a job cap at or below
+    # step cap + setup kills the job first and the step never reports its own timeout.
+    # Observed (run 43212944581): job start through suite-step start = 306s (5.1 min:
+    # npm ci, tsc, lint, build), post-steps ~3s. Worst case at the 45-minute step cap
+    # = 306s + 2700s + 3s = ~50.2 min, so 55 leaves ~4.8 min of real room.
+    # See docs/opsiq/ci/NON_DB_SUITE_CAPACITY.md (2026-11 addendum).
+    timeout-minutes: 55
 
     env:
       TEST_WITH_DB: "false"
@@ -103,6 +105,11 @@ jobs:
         node-version: [20.x]
 
     steps:
+      # Timing diagnostics only (no effect on pass/fail): records the wall-clock start of
+      # the job's own steps so the always() report below can split setup / suite / total.
+      - name: Record job step start time (diagnostic)
+        run: echo "OPSIQ_JOB_T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -113,6 +120,19 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+
+      # Release-migration signal (incident 58f1d87e: app code was promoted before
+      # its production migration ran). Reports PRODUCTION MIGRATION REQUIRED for a
+      # PR that adds prisma/migrations/**, and blocks modified/deleted/misnamed or
+      # unacknowledged destructive migrations. Plain node + git, no credentials;
+      # runs for every PR (a migration-only PR must never skip it). The hard stop
+      # for an unapplied migration is the production build gate
+      # (scripts/release/production-migration-gate.mjs).
+      - name: Production migration release signal
+        run: |
+          node scripts/release/migration-release-signal.mjs \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}"
 
       # CI-MIN-01: every step from here through "Production build" is skipped
       # for a DOCS_ONLY change (docs/*.md-only PRs pay for nothing but
@@ -330,6 +350,10 @@ jobs:
           TEST_WITH_DB: "false"
           NODE_ENV: test
 
+      - name: Record non-DB suite start time (diagnostic)
+        if: needs.classify.outputs.suite_mode == 'BROAD_NON_DB'
+        run: echo "OPSIQ_SUITE_T0=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Run non-DB test suite (blocking; DB tests and quarantine excluded)
         if: needs.classify.outputs.suite_mode == 'BROAD_NON_DB'
         # DB tests self-skip when TEST_WITH_DB != 'true', but we also explicitly
@@ -365,7 +389,18 @@ jobs:
         # Nothing about what is asserted changed. Same command, same selection, same
         # blocking behaviour, same exit-code handling. The tests were already passing;
         # they were being denied the time to say so.
-        timeout-minutes: 30
+        #
+        # ─── 2026-11 addendum: 30 -> 45 ───────────────────────────────────────
+        # The suite grew to ~37,142 tests / 1,488 files. Passing runs now sit within
+        # ~1% of the old 1800s cap on slow runners (run 43212944581: step 1782s, 18s
+        # of headroom; a local run of the identical suite took 1858s). Runner speed is
+        # bimodal (fast ~1415-1441s, slow ~1771-1782s) and ~53% of the time is
+        # environment instantiation, so passing-and-killed with zero failures recurred
+        # (PR #657 run 43203570990, PR #642 run 43205174093). 45 min = 1.5x the slowest
+        # observed. Same command, selection, blocking behaviour and exit handling; the
+        # always() report step below records setup / suite / total so the next
+        # headroom decision uses data. This does NOT fix the underlying cost.
+        timeout-minutes: 45
         run: |
           EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
           echo "Quarantined (excluded from blocking lane): $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") file(s)"
@@ -374,6 +409,37 @@ jobs:
           TEST_WITH_DB: "false"
           NODE_ENV: test
         continue-on-error: false
+
+      # Diagnostics only: always() so it also reports when the suite step is killed by its
+      # timeout (the case the numbers matter most). It never fails the job (it only prints),
+      # never changes the suite step's outcome and has no continue-on-error masking of it.
+      - name: Non-DB suite timing diagnostics (setup / suite / total)
+        if: always() && needs.classify.outputs.suite_mode == 'BROAD_NON_DB'
+        run: |
+          NOW=$(date +%s)
+          T0="${OPSIQ_JOB_T0:-}"
+          S0="${OPSIQ_SUITE_T0:-}"
+          STEP_CAP_S=2700
+          if [ -z "$T0" ] || [ -z "$S0" ]; then
+            echo "NON_DB_SUITE_TIMING unavailable (start markers not recorded; an earlier step failed before the suite started)"
+            exit 0
+          fi
+          SETUP=$((S0 - T0))
+          SUITE=$((NOW - S0))
+          TOTAL=$((NOW - T0))
+          HEADROOM=$((STEP_CAP_S - SUITE))
+          echo "NON_DB_SUITE_TIMING setup_s=$SETUP suite_s=$SUITE total_s=$TOTAL step_cap_s=$STEP_CAP_S suite_headroom_s=$HEADROOM"
+          {
+            echo "### Non-DB suite timing"
+            echo "| phase | seconds |"
+            echo "|---|---|"
+            echo "| setup (npm ci, tsc, lint, build, gates) | $SETUP |"
+            echo "| suite step (vitest, incl. environment instantiation) | $SUITE |"
+            echo "| total (job steps so far) | $TOTAL |"
+            echo "| suite step cap / headroom | $STEP_CAP_S / $HEADROOM |"
+            echo ""
+            echo "vitest's own transform / setup / import / tests / environment split is in the suite step's final \`Duration\` line."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # CI-MIN-01 owner correction: DB validation now runs INSIDE ci.yml (the
   # one required PR gate) instead of db-verification.yml's own pull_request
@@ -400,7 +466,7 @@ jobs:
     needs: classify
     if: needs.classify.outputs.db_required == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     services:
       postgres:
@@ -417,8 +483,25 @@ jobs:
           --health-start-period 10s
         ports:
           - 5432:5432
+      # Disposable PostgreSQL 18 server (production's major) used ONLY by the restore-portability proof below, with
+      # the runner's matching PostgreSQL 18 client. Separate from the postgres:16 app-test database above.
+      postgres18:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5433:5432
 
     env:
+      OPSIQ_DB_TARGET: ci
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
       MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
@@ -470,9 +553,178 @@ jobs:
         env:
           DATABASE_URL: ${{ env.MIGRATION_DATABASE_URL }}
 
+      # Real-age restore proof prerequisites. The runner image (ubuntu-24.04) ships neither
+      # `age` nor guarantees the PostgreSQL client matches the server; without `age` the
+      # backup-restore-local-proof.db.test.ts suite SKIPPED silently (describe.skipIf), so a green
+      # DB job proved nothing about restore. Installed from the distro archive (apt verifies the
+      # package signature chain); the step then FAILS CLOSED unless the binaries run, are the
+      # expected major.minor, can do a real encrypt/decrypt round trip with TWO recipients (each
+      # identity alone), and pg_dump / psql are present. No secret, no network beyond apt.
+      - name: Install and verify real age (restore-proof prerequisite; fail-closed)
+        run: |
+          set -euo pipefail
+          . /etc/os-release
+          echo "::notice title=runner-os::$PRETTY_NAME default_pg_dump=$(pg_dump --version 2>/dev/null || echo none) installed_pg_majors=$(ls /usr/lib/postgresql 2>/dev/null | tr '\n' ' ')"
+          sudo apt-get update
+          # Ubuntu archive first; on ANY failure surface the real apt error as an annotation (job logs
+          # are not readable from tooling) and retry once via the PGDG archive, the same proven
+          # approach as scheduled-backup-r2.yml. Both failing is a hard, explained failure.
+          if ! sudo apt-get install -y --no-install-recommends age postgresql-client-16 > "$RUNNER_TEMP/apt1.log" 2>&1; then
+            echo "::warning title=apt-archive-install-failed::$(tail -5 "$RUNNER_TEMP/apt1.log" | tr '\n' ' ' | cut -c1-700)"
+            sudo apt-get install -y --no-install-recommends curl ca-certificates
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+            sudo apt-get update
+            if ! sudo apt-get install -y --no-install-recommends age postgresql-client-16 > "$RUNNER_TEMP/apt2.log" 2>&1; then
+              echo "::error title=apt-pgdg-install-failed::$(tail -5 "$RUNNER_TEMP/apt2.log" | tr '\n' ' ' | cut -c1-700)"
+              exit 1
+            fi
+          fi
+          # Root cause F-RESTORE-PROOF-PG-MAJOR-MISMATCH (found by the first real CI execution of the
+          # proof, PR #660 run 43274968678): the runner's default pg_dump is newer than the postgres:16
+          # service container; a newer pg_dump emits `SET transaction_timeout = 0;` which a PG16 server
+          # rejects, so every runner-made dump failed to restore. Use the client whose major matches the
+          # server, and FAIL CLOSED if it does not.
+          PGBIN=/usr/lib/postgresql/16/bin
+          test -x "$PGBIN/pg_dump" && test -x "$PGBIN/psql"
+          export PATH="$PGBIN:$PATH"
+          echo "$PGBIN" >> "$GITHUB_PATH"
+          SRV_NUM="$(PGPASSWORD=postgres psql -h localhost -U postgres -d opsiq_test -tAc 'show server_version_num')"
+          SRV_MAJOR=$((SRV_NUM / 10000))
+          DUMP_MAJOR="$(pg_dump --version | sed -E 's/^pg_dump \(PostgreSQL\) ([0-9]+).*/\1/')"
+          if [ "$DUMP_MAJOR" != "$SRV_MAJOR" ]; then
+            echo "::error::pg_dump major $DUMP_MAJOR != PostgreSQL server major $SRV_MAJOR; dumps would not restore"
+            exit 1
+          fi
+          AGE_V="$(age --version)"
+          KG_V="$(age-keygen --version)"
+          echo "age=$AGE_V age-keygen=$KG_V"
+          case "$AGE_V" in 1.1.*|1.2.*|1.3.*) ;; *) echo "::error::unexpected age version: $AGE_V"; exit 1 ;; esac
+          case "$KG_V" in 1.1.*|1.2.*|1.3.*) ;; *) echo "::error::unexpected age-keygen version: $KG_V"; exit 1 ;; esac
+          pg_dump --version
+          psql --version
+          T="$(mktemp -d)"
+          age-keygen -o "$T/a.key" 2> "$T/a.pub"
+          age-keygen -o "$T/b.key" 2> "$T/b.pub"
+          RA="$(sed -n 's/^Public key: //p' "$T/a.pub")"
+          RB="$(sed -n 's/^Public key: //p' "$T/b.pub")"
+          test -n "$RA" && test -n "$RB" && test "$RA" != "$RB"
+          printf 'restore-proof-smoke' | age -r "$RA" -r "$RB" -o "$T/o.age"
+          test "$(age -d -i "$T/a.key" "$T/o.age")" = "restore-proof-smoke"
+          test "$(age -d -i "$T/b.key" "$T/o.age")" = "restore-proof-smoke"
+          if age -d -i "$T/a.key" "$T/o.age" | grep -q wrong; then exit 1; fi
+          rm -rf "$T"
+          echo "real age verified: two independent identities each decrypt a two-recipient object"
+          echo "::notice title=restore-proof-env::age=$AGE_V age-keygen=$KG_V pg_dump_major=$DUMP_MAJOR server_major=$SRV_MAJOR"
+
       - name: Run DB test suite (*.db.test.ts only)
         run: npm test -- '.db.test.ts' --maxWorkers=1
+        env:
+          # Makes backup-restore-local-proof.db.test.ts MANDATORY: if it cannot run (age or
+          # pg_dump missing, DB gate off) the suite fails instead of skipping.
+          OPSIQ_REQUIRE_RESTORE_PROOF: '1'
+          # Same for the restore-database.sh portability proof (real pg_dump | gzip | script; PG client == server major).
+          OPSIQ_REQUIRE_RESTORE_PORTABILITY: '1'
         continue-on-error: false
+
+      # Evidence + fail-closed assertion for the restore proof: re-runs ONLY the proof file (a few
+      # seconds) with the JSON reporter and publishes the per-test outcome as annotations (readable
+      # without the raw log). Fails unless EVERY test passed, none skipped, and BOTH identity-alone
+      # restores ran.
+      - name: Restore-proof evidence (per-test results; fail-closed on any skip)
+        env:
+          OPSIQ_REQUIRE_RESTORE_PROOF: '1'
+        run: |
+          set -euo pipefail
+          npx vitest run src/__tests__/ci-cd/backup-restore-local-proof.db.test.ts --reporter=json --outputFile="$RUNNER_TEMP/restore-proof.json"
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.RUNNER_TEMP + "/restore-proof.json", "utf8"));
+            const t = r.testResults.flatMap((f) => f.assertionResults);
+            const by = (s) => t.filter((x) => x.status === s).length;
+            const passed = by("passed"), failed = by("failed"), skipped = t.length - passed - failed;
+            console.log("::notice title=restore-proof-results::tests=" + t.length + " passed=" + passed + " failed=" + failed + " skipped_or_pending=" + skipped);
+            for (const x of t) console.log("::notice title=restore-proof-test::" + x.status + " | " + x.title.slice(0, 160));
+            const has = (re) => t.some((x) => re.test(x.title) && x.status === "passed");
+            const ok = t.length >= 14 && failed === 0 && skipped === 0 && has(/primary identity ALONE/) && has(/escrow identity ALONE/);
+            if (!ok) { console.log("::error::restore proof incomplete: every test must pass (none skipped) and both identity-alone restores must run"); process.exit(1); }
+          '
+        continue-on-error: false
+
+      # Restore portability proof on production's PostgreSQL major: real PG18 client (runner image; PGDG fallback) +
+      # real postgres:18 server container, majors asserted equal and equal to 18. Runs restore-database.sh end to end
+      # (real pg_dump --create | gzip, checksum sidecar, restore, verification) natively AND under a simulated stock-macOS
+      # tool environment. Linux proof: native macOS proof needs a run on a Mac (see the test header / owner checklist).
+      - name: Restore portability proof on PostgreSQL 18 (real client + real server; fail-closed)
+        env:
+          OPSIQ_REQUIRE_RESTORE_PORTABILITY: '1'
+          RESTORE_PORTABILITY_EXPECT_MAJOR: '18'
+          RESTORE_PORTABILITY_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/postgres
+        run: |
+          set -euo pipefail
+          PG18BIN=/usr/lib/postgresql/18/bin
+          if [ ! -x "$PG18BIN/pg_dump" ] || [ ! -x "$PG18BIN/psql" ]; then
+            . /etc/os-release
+            echo "::warning title=pg18-client-missing::no PostgreSQL 18 client on $PRETTY_NAME; installing via PGDG"
+            sudo apt-get install -y --no-install-recommends curl ca-certificates
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg18.list > /dev/null
+            sudo apt-get update
+            if ! sudo apt-get install -y --no-install-recommends postgresql-client-18 > "$RUNNER_TEMP/apt18.log" 2>&1; then
+              echo "::error title=pg18-client-install-failed::$(tail -5 "$RUNNER_TEMP/apt18.log" | tr '\n' ' ' | cut -c1-700)"
+              exit 1
+            fi
+          fi
+          export PATH="$PG18BIN:$PATH"
+          DUMP_V="$(pg_dump --version)"
+          PSQL_V="$(psql --version)"
+          SRV_NUM="$(PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d postgres -tAc 'show server_version_num')"
+          SRV_MAJOR=$((SRV_NUM / 10000))
+          echo "::notice title=pg18-proof-env::$DUMP_V | $PSQL_V | server_major=$SRV_MAJOR"
+          case "$DUMP_V" in "pg_dump (PostgreSQL) 18."*) ;; *) echo "::error::pg_dump is not PostgreSQL 18: $DUMP_V"; exit 1 ;; esac
+          case "$PSQL_V" in "psql (PostgreSQL) 18."*) ;; *) echo "::error::psql is not PostgreSQL 18: $PSQL_V"; exit 1 ;; esac
+          [ "$SRV_MAJOR" = "18" ] || { echo "::error::server major is $SRV_MAJOR, expected 18"; exit 1; }
+          npx vitest run src/__tests__/scripts/restore-database-portability.db.test.ts --reporter=json --outputFile="$RUNNER_TEMP/restore-portability-pg18.json"
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.RUNNER_TEMP + "/restore-portability-pg18.json", "utf8"));
+            const t = r.testResults.flatMap((f) => f.assertionResults);
+            const by = (s) => t.filter((x) => x.status === s).length;
+            const passed = by("passed"), failed = by("failed"), skipped = t.length - passed - failed;
+            console.log("::notice title=pg18-portability-results::tests=" + t.length + " passed=" + passed + " failed=" + failed + " skipped_or_pending=" + skipped);
+            for (const x of t) console.log("::notice title=pg18-portability-test::" + x.status + " | " + x.title.slice(0, 150));
+            const has = (re) => t.some((x) => re.test(x.title) && x.status === "passed");
+            const ok = t.length >= 7 && failed === 0 && skipped === 0 && has(/client and server majors match/) && has(/simulated stock macOS/) && has(/native tool environment/) && has(/tampered/);
+            if (!ok) { console.log("::error::PG18 restore portability proof incomplete: every test must pass (none skipped)"); process.exit(1); }
+          '
+        continue-on-error: false
+
+      - name: QBO erasure DB proof (disposable database, non-superuser schema owner)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE opsiq_schema_owner LOGIN PASSWORD 'pw' CREATEROLE"
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE opsiq_erasure_test OWNER opsiq_schema_owner"
+          # Roles are cluster-wide: the earlier migrate step (run by the superuser) already created opsiq_privacy_eraser, so the schema owner needs admin over it.
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'opsiq_privacy_eraser') THEN GRANT opsiq_privacy_eraser TO opsiq_schema_owner WITH ADMIN OPTION; END IF; END \$\$"
+          export DATABASE_URL='postgresql://opsiq_schema_owner:pw@localhost:5432/opsiq_erasure_test'
+          npx prisma migrate deploy
+          TEST_WITH_DB=true OPSIQ_DB_TARGET=local npx vitest run src/__tests__/privacy-erasure/qbo-erasure.db.test.ts
+
+      - name: Runtime least-privilege role DB proof (opsiq_app as the runtime login, non-superuser schema owner)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE opsiq_runtime_role_test OWNER opsiq_schema_owner"
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'opsiq_privacy_eraser') THEN GRANT opsiq_privacy_eraser TO opsiq_schema_owner WITH ADMIN OPTION; END IF; END \$\$"
+          export DATABASE_URL='postgresql://opsiq_schema_owner:pw@localhost:5432/opsiq_runtime_role_test'
+          npx prisma migrate deploy
+          # The suite's global setup connects AS opsiq_app before any test runs, so the role must already exist with a throwaway password: create it with the governed tool, then set the password.
+          OWNER_DATABASE_URL="$DATABASE_URL" npx tsx scripts/db/opsiq-role-cutover.ts apply --target ci
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE opsiq_app PASSWORD 'pw'"
+          export ROLE_TEST_OWNER_DATABASE_URL="$DATABASE_URL"
+          export DATABASE_URL='postgresql://opsiq_app:pw@localhost:5432/opsiq_runtime_role_test'
+          TEST_WITH_DB=true OPSIQ_DB_TARGET=local npx vitest run src/__tests__/privacy-erasure/runtime-role.db.test.ts
 
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
   # single-line `run:` value containing an unquoted colon) that no existing

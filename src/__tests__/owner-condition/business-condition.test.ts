@@ -26,6 +26,7 @@ import {
 } from "@/services/owner-condition/business-condition.service";
 import {
   buildBusinessConditionProfile,
+  rankOwnerActions,
   ownerActionSchema,
   domainScoreSchema,
 } from "@/domain/owner-spine/contracts";
@@ -94,7 +95,10 @@ describe("Owner condition — Business Condition Profile assembly", () => {
     });
     expect(profile.domainScores.map((d) => d.domain)).toEqual(["finance"]);
     expect(profile.survivalRiskScore).toBe(80); // finance is a survival domain
-    expect(profile.recommendedNextAction?.id).toBe("a-high"); // highest priority
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].id).toBe("a-high"); // highest priority
     expect(profile.missingCriticalData).toEqual(["revenue"]); // carried, not invented
     expect(profile.generatedAt).toBe(NOW);
   });
@@ -157,7 +161,10 @@ describe("Owner condition — recovery→spine mappers (Module-1-safe, read-only
     ];
     const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "recovery"]);
-    expect(profile.recommendedNextAction?.domain).toBe("recovery"); // critical (90) > finance (80)
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].domain).toBe("recovery"); // critical (90) > finance (80)
   });
 });
 
@@ -216,7 +223,10 @@ describe("Owner condition — cashflow→spine mappers", () => {
     const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["cashflow", "finance"]);
     expect(profile.survivalRiskScore).toBe(80); // max survival-domain risk (finance 80 vs cashflow 78)
-    expect(profile.recommendedNextAction?.domain).toBe("cashflow"); // 92 > 80
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].domain).toBe("cashflow"); // 92 > 80
   });
 });
 
@@ -273,7 +283,10 @@ describe("Owner condition — sales→spine mappers (growth domain)", () => {
     const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "sales"]);
     expect(profile.survivalRiskScore).toBe(80); // only the survival domain (finance) drives this, not sales 70
-    expect(profile.recommendedNextAction?.domain).toBe("sales"); // 78 > 60 across domains
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].domain).toBe("sales"); // 78 > 60 across domains
   });
 });
 
@@ -331,7 +344,10 @@ describe("Owner condition — operations→spine mappers (execution domain)", ()
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "operations"]);
     expect(profile.survivalRiskScore).toBe(80); // operations risk 72 must NOT raise survival
     expect(profile.executionRiskScore).toBe(72); // operations drives execution risk
-    expect(profile.recommendedNextAction?.domain).toBe("operations"); // 82 > 60 across domains
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].domain).toBe("operations"); // 82 > 60 across domains
   });
 });
 
@@ -389,7 +405,10 @@ describe("Owner condition — sop→spine mappers (execution domain)", () => {
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "sop"]);
     expect(profile.survivalRiskScore).toBe(80); // sop risk 74 must NOT raise survival
     expect(profile.executionRiskScore).toBe(74); // sop drives execution risk
-    expect(profile.recommendedNextAction?.domain).toBe("sop"); // 84 > 60 across domains
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].domain).toBe("sop"); // 84 > 60 across domains
   });
 });
 
@@ -446,7 +465,10 @@ describe("Owner condition — marketing→spine mappers (growth domain)", () => 
     const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "marketing"]);
     expect(profile.survivalRiskScore).toBe(80); // marketing risk 72 must NOT raise survival
-    expect(profile.recommendedNextAction?.domain).toBe("marketing"); // 88 > 60 across domains
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].domain).toBe("marketing"); // 88 > 60 across domains
   });
 });
 
@@ -503,7 +525,10 @@ describe("Owner condition — strategy→spine mappers (decision-support domain)
     const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "strategy"]);
     expect(profile.survivalRiskScore).toBe(80); // finance only — strategy is not a survival domain
-    expect(profile.recommendedNextAction?.domain).toBe("strategy"); // 88 > 60 across domains
+    // The profile no longer elects a next action (the ONE overall election is resolveOwnerDecision);
+    // the mapped actions keep their stored-priority order.
+    expect(profile).not.toHaveProperty("recommendedNextAction");
+    expect(rankOwnerActions(topActions)[0].domain).toBe("strategy"); // 88 > 60 across domains
   });
 });
 

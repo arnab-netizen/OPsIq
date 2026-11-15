@@ -18,7 +18,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
-import { applyProcessExecutionAction, getPersistedProcessTasks, persistProcessExecutionRoutes, isBusinessInWorkspace } from "@/services/owner-mode/process-execution-bridge.service";
+import { applyProcessExecutionAction, getPersistedProcessTasks, persistProcessExecutionRoutes, retireResolvedDataGapTasks, isBusinessInWorkspace } from "@/services/owner-mode/process-execution-bridge.service";
 import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.service";
 import { parseBusinessIdFromTaskKey } from "@/domain/owner-mode/process-execution-bridge";
 
@@ -134,6 +134,12 @@ export const POST = withCanonicalEnforcement(
     if (view.processExecution && view.processExecution.routes.length > 0) {
       await persistProcessExecutionRoutes(ctx.verifiedWorkspaceId, view.processExecution, ctx.verifiedActorId);
     }
+    // Same authoritative view: retire this business's generated data-gap tasks it no longer emits (PROPOSED only).
+    if (materialisationBusinessId) {
+      await retireResolvedDataGapTasks(ctx.verifiedWorkspaceId, materialisationBusinessId, view.processExecution, {
+        cashProfitEvaluated: view.cashProfitProtection !== null, triggeredByUserId: ctx.verifiedActorId,
+      });
+    }
     const r = await applyProcessExecutionAction({
       workspaceId: ctx.verifiedWorkspaceId,
       actorId: ctx.verifiedActorId,
@@ -168,5 +174,5 @@ export const POST = withCanonicalEnforcement(
       selfVerified: r.selfVerified ?? null,
     }, { status: 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
+  { requireCommercial: "governed_execution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );

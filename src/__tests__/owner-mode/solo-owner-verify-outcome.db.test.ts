@@ -146,6 +146,9 @@ async function completeTask(workspaceId: string, taskKey: string, actorId: strin
   actAs(actorId, workspaceId, workspaceRole);
   const ack = await post({ taskKey, action: "ACKNOWLEDGE" });
   expect(ack.status).toBe(200);
+  // Owner-approval work is approval-first: ACKNOWLEDGED → APPROVED → IN_PROGRESS.
+  const approve = await post({ taskKey, action: "APPROVE" });
+  expect(approve.status).toBe(200);
   const start = await post({ taskKey, action: "START" });
   expect(start.status).toBe(200);
   const complete = await post({
@@ -422,6 +425,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await seedProposedTask(soloWorkspaceId, key, soloBusinessId);
       actAs(soloOwnerId, soloWorkspaceId, "owner");
       await post({ taskKey: key, action: "ACKNOWLEDGE" });
+      await post({ taskKey: key, action: "APPROVE" });
       await post({ taskKey: key, action: "START" });
       await post({ taskKey: key, action: "COMPLETE", evidenceRefs: ["evidence://d4-1"], outcomeNotes: "done" });
       // not_measurable with evidenceQuality "weak"/no evidenceRefs recorded still classifies past
@@ -450,6 +454,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       await seedProposedTask(soloWorkspaceId, key, soloBusinessId);
       actAs(soloOwnerId, soloWorkspaceId, "owner");
       await post({ taskKey: key, action: "ACKNOWLEDGE" });
+      await post({ taskKey: key, action: "APPROVE" });
       await post({ taskKey: key, action: "START" });
       await post({ taskKey: key, action: "COMPLETE", evidenceRefs: ["evidence://d5-1"], outcomeNotes: "done" });
       const recorded = await post({ taskKey: key, action: "RECORD_OUTCOME", businessId: soloBusinessId, outcomeStatus: "worked" });

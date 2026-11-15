@@ -27,5 +27,5 @@ export const POST = withCanonicalEnforcement(
       actorId: ctx.verifiedActorId,
     });
   },
-  { requireCapabilities: [CAPABILITIES.OVERRIDE_DECIDE], requireWorkspace: true },
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OVERRIDE_DECIDE], requireWorkspace: true },
 );

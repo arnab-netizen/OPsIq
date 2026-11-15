@@ -13,9 +13,13 @@ describe("Dashboard first-diagnosis CTA (empty state)", () => {
     expect(container.textContent ?? "").toMatch(/Run your first diagnosis/i);
   });
 
-  it("explains what a diagnosis returns (risks, findings, action plan)", () => {
+  it("explains what a diagnosis returns (one main problem, how sure, one first step — or what it still needs)", () => {
     const { container } = render(<FirstDiagnosisCta />);
-    expect(container.textContent ?? "").toMatch(/risks, findings, and a prioritized action plan/i);
+    const text = container.textContent ?? "";
+    expect(text).toMatch(/names the main problem the facts support, says how sure it is/i);
+    expect(text).toMatch(/one thing to do first/i);
+    expect(text).toMatch(/what it still needs/i);
+    expect(text).not.toMatch(/action plan|risks, findings/i);
   });
 
   it("introduces no payment / network dependency (presentational only)", () => {

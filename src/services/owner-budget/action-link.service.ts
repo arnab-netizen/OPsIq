@@ -22,9 +22,10 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyBudgetOutcome } from "@/domain/owner-budget";
+import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyBudgetOutcome, budgetActionIntent } from "@/domain/owner-budget";
 import type { UpdatedOwnerPlan } from "@/domain/owner-budget";
-import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
+import { enforceOwnerActionGates, type OwnerGateAssessment } from "@/services/owner-mode/owner-action-gate.service";
+import { applyGuardedActionTransition, classifyActionRequest } from "@/services/owner-mode/owner-action-transition";
 
 export interface SyncBudgetActionsInput {
   plan: UpdatedOwnerPlan;
@@ -150,29 +151,47 @@ export async function updateBudgetAction(
   const action = await db.ownerBudgetAction.findFirst({ where: { id: actionId, workspaceId } });
   if (!action) throw new NotFoundError("OwnerBudgetAction", actionId);
 
+  // The request's own fields — the action's, and the outcome inputs recorded beside it on completion. An
+  // exact replay of what is recorded is a no-op; a completed or cancelled action's record (its outcome
+  // included) is never rewritten (owner-action-transition.ts).
+  const label = `budget-action:${action.title}`;
+  const request = {
+    status: input.status, assignedTo: input.assignedTo, completionNotes: input.completionNotes, completionEvidence: input.completionEvidence,
+    expectedImpact: input.expectedImpact, actualImpact: input.actualImpact, externalFactor: input.externalFactor, ownerOverridden: input.ownerOverridden,
+  };
+  const recordedState = async (client: { fundedInitiativeOutcome: { findMany(a: unknown): Promise<Array<{ expectedImpact: number | null; actualImpact: number | null; note: string | null }>> } }, row: Record<string, unknown>) => {
+    const outcomes = await client.fundedInitiativeOutcome.findMany({
+      where: { workspaceId, businessId: action.businessId, initiativeLabel: label },
+      select: { expectedImpact: true, actualImpact: true, note: true },
+    });
+    const mine = outcomes.map((o) => ({ o, n: parseOutcomeNote(o.note) })).find((x) => x.n?.actionId === actionId) ?? null;
+    return {
+      ...row,
+      expectedImpact: mine?.o.expectedImpact ?? null,
+      actualImpact: mine?.o.actualImpact ?? null,
+      externalFactor: mine ? mine.n?.externalFactor ?? null : null,
+      ownerOverridden: mine ? mine.n?.ownerOverridden ?? null : null,
+    };
+  };
+  if (classifyActionRequest((await recordedState(db, action)) as typeof action & Record<string, unknown>, request) === "replay") return action;
+
+  // Outcome inputs are recorded ONLY with the completion they describe (the learning loop's record). On any
+  // other update they would be silently dropped while the call reported success — so they are refused.
+  const outcomeSent = input.expectedImpact !== undefined || input.actualImpact !== undefined || input.externalFactor !== undefined || input.ownerOverridden !== undefined;
+  if (outcomeSent && input.status !== "completed") {
+    throw new ValidationError("Expected impact, actual impact, external factor and owner override are recorded only when completing a budget action (send them with status \"completed\").");
+  }
+
   const data: Record<string, unknown> = {};
   const now = new Date();
   let completedNow = false;
+  let gateAssessment: OwnerGateAssessment | null = null;
 
   if (input.status !== undefined) {
     if (!isValidRecoveryStatus(input.status)) throw new ValidationError(`Invalid budget action status: ${input.status}`);
     const from = action.status as RecoveryActionStatus;
     const to = input.status as RecoveryActionStatus;
     if (!canTransition(from, to)) throw new ValidationError(`Invalid budget action transition: ${from} → ${to}`);
-
-    // GAP-BUDGET-01 — a budget action is a material owner-domain (finance/spend) decision.
-    // It MUST pass the centralized owner-action safety gate before a material transition
-    // (in_progress/completed): cash safety, cashflow, compliance/professional-review and
-    // do-not-repeat. Without this a budget action could be completed while the Jarvis gate
-    // would 409-block the same transition on the owner-finance service. Registered in
-    // material-gate-registry.ts so dropping this call fails CI.
-    await enforceOwnerActionGates({
-      workspaceId,
-      businessId: action.businessId,
-      actionId,
-      domain: "finance",
-      toStatus: to,
-    });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
@@ -183,59 +202,103 @@ export async function updateBudgetAction(
       data.completedAt = now;
       completedNow = true;
     }
+
+    // GAP-BUDGET-01 — a budget action is a material owner-domain (finance/spend) decision.
+    // It MUST pass the centralized owner-action safety gate before a material transition
+    // (in_progress/completed): cash safety, cashflow, compliance/professional-review and
+    // do-not-repeat. Without this a budget action could be completed while the Jarvis gate
+    // would 409-block the same transition on the owner-finance service. Registered in
+    // material-gate-registry.ts so dropping this call fails CI.
+    // Its intent comes from its business purpose, then its plan decision type (budgetActionIntent):
+    // repricing a loss-making contract, protecting cash (freeze, defer, reduce) and collecting evidence are
+    // never held back by the danger they respond to.
+    gateAssessment = await enforceOwnerActionGates({
+      workspaceId,
+      businessId: action.businessId,
+      actionId,
+      domain: "finance",
+      toStatus: to,
+      intent: budgetActionIntent({ decisionType: action.decisionType, title: action.title }),
+    });
     data.status = to;
   }
   if (input.assignedTo !== undefined) data.assignedTo = input.assignedTo;
   if (input.completionNotes !== undefined) data.completionNotes = input.completionNotes;
   if (input.completionEvidence !== undefined) data.completionEvidence = input.completionEvidence;
 
-  let updated = await db.ownerBudgetAction.update({ where: { id: actionId }, data });
-
-  // Feed the budget OUTCOME LEARNING LOOP on completion: compare expected vs actual,
-  // classify outcome + cause + disposition + confidence impact (pure), persist a
-  // FundedInitiativeOutcome (same store), stamp the action, and audit. A recommendation
-  // that has failed before is escalated/blocked, not blindly repeated.
-  if (completedNow) {
-    const label = `budget-action:${action.title}`;
-    const priorFailures = await db.fundedInitiativeOutcome.count({
-      where: { workspaceId, businessId: action.businessId, initiativeLabel: label, outcome: "FAILED" },
-    });
-    const expectedImpact = typeof input.expectedImpact === "number" ? input.expectedImpact : null;
-    const actualImpact = typeof input.actualImpact === "number" ? input.actualImpact : null;
-    const learning = classifyBudgetOutcome({
-      outcomeVerified: actualImpact !== null,
-      expectedImpact,
-      actualImpact,
-      overridden: input.ownerOverridden === true,
-      externalFactor: input.externalFactor === true,
-      priorFailures,
-    });
-    await db.fundedInitiativeOutcome.create({
-      data: {
-        id: randomUUID(), workspaceId, businessId: action.businessId,
-        initiativeLabel: label,
-        outcome: learning.outcome, nextStep: learning.nextStep,
-        safeForLearning: learning.safeForLearning,
-        expectedImpact, actualImpact,
-        note: JSON.stringify({ disposition: learning.disposition, confidenceImpact: learning.confidenceImpact, priorFailures, reason: learning.reason, completionNotes: input.completionNotes ?? null }),
-        createdBy: actorId, updatedAt: new Date(),
-      },
-    });
-    updated = await db.ownerBudgetAction.update({ where: { id: actionId }, data: { outcomeClass: learning.outcome } });
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.OWNER_BUDGET_INITIATIVE_CLOSED,
+  // Compare-and-set on the status the transition was validated against, atomically with its audit events,
+  // the accepted gate assessment and — on completion — the outcome record and its INITIATIVE_CLOSED audit: a
+  // double-submitted completion never records a second outcome (which would skew priorFailures), a partial
+  // failure never leaves a completed action without its outcome, and a lost race with different outcome
+  // inputs is a conflict, never reported as applied.
+  const guarded = await applyGuardedActionTransition<typeof action>({
+    model: "ownerBudgetAction", entity: "OwnerBudgetAction", actionId, workspaceId, expectedStatus: action.status, data, request,
+    gateAssessment,
+    audits: (row) => [{
+      eventName: AUDIT_EVENTS.OWNER_BUDGET_ACTION_UPDATED,
       actorId, workspaceId, entityType: "OwnerBudgetAction", entityId: actionId,
-      payload: { businessId: action.businessId, outcome: learning.outcome, disposition: learning.disposition, confidenceImpact: learning.confidenceImpact },
-    });
-  }
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OWNER_BUDGET_ACTION_UPDATED,
-    actorId, workspaceId, entityType: "OwnerBudgetAction", entityId: actionId,
-    payload: { businessId: action.businessId, status: data.status ?? action.status },
+      payload: { businessId: action.businessId, status: row.status, previousStatus: action.status, changedFields: Object.keys(data) },
+    }],
+    compareRow: (tx, row) => recordedState(tx as never, row as unknown as Record<string, unknown>),
+    // Feed the budget OUTCOME LEARNING LOOP on completion: compare expected vs actual, classify outcome +
+    // cause + disposition + confidence impact (pure), persist a FundedInitiativeOutcome (same store), stamp
+    // the action, and audit. A recommendation that has failed before is escalated/blocked, not blindly repeated.
+    inTransaction: completedNow
+      ? async (tx) => {
+          const priorFailures = await tx.fundedInitiativeOutcome.count({
+            where: { workspaceId, businessId: action.businessId, initiativeLabel: label, outcome: "FAILED" },
+          });
+          const expectedImpact = typeof input.expectedImpact === "number" ? input.expectedImpact : null;
+          const actualImpact = typeof input.actualImpact === "number" ? input.actualImpact : null;
+          const learning = classifyBudgetOutcome({
+            outcomeVerified: actualImpact !== null,
+            expectedImpact,
+            actualImpact,
+            overridden: input.ownerOverridden === true,
+            externalFactor: input.externalFactor === true,
+            priorFailures,
+          });
+          await tx.fundedInitiativeOutcome.create({
+            data: {
+              id: randomUUID(), workspaceId, businessId: action.businessId,
+              initiativeLabel: label,
+              outcome: learning.outcome, nextStep: learning.nextStep,
+              safeForLearning: learning.safeForLearning,
+              expectedImpact, actualImpact,
+              note: JSON.stringify({
+                actionId, disposition: learning.disposition, confidenceImpact: learning.confidenceImpact, priorFailures, reason: learning.reason,
+                completionNotes: input.completionNotes ?? null, externalFactor: input.externalFactor ?? null, ownerOverridden: input.ownerOverridden ?? null,
+              }),
+              createdBy: actorId, updatedAt: new Date(),
+            },
+          });
+          const stamped = await tx.ownerBudgetAction.update({ where: { id: actionId }, data: { outcomeClass: learning.outcome } });
+          await emitAuditEvent({
+            eventName: AUDIT_EVENTS.OWNER_BUDGET_INITIATIVE_CLOSED,
+            actorId, workspaceId, entityType: "OwnerBudgetAction", entityId: actionId,
+            payload: { businessId: action.businessId, outcome: learning.outcome, disposition: learning.disposition, confidenceImpact: learning.confidenceImpact },
+          }, tx);
+          return stamped as typeof action;
+        }
+      : undefined,
   });
-
+  const updated = guarded.row;
   return updated;
+}
+
+/** The fields of a budget outcome record's note this service reads back (null when unparseable). */
+function parseOutcomeNote(note: string | null): { actionId?: string; externalFactor?: boolean | null; ownerOverridden?: boolean | null } | null {
+  if (!note) return null;
+  try {
+    const v = JSON.parse(note) as Record<string, unknown>;
+    return {
+      actionId: typeof v.actionId === "string" ? v.actionId : undefined,
+      externalFactor: typeof v.externalFactor === "boolean" ? v.externalFactor : null,
+      ownerOverridden: typeof v.ownerOverridden === "boolean" ? v.ownerOverridden : null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function listBudgetActions(workspaceId: string, businessId: string) {

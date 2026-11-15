@@ -60,4 +60,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     { status: result.status, deduped: result.deduped, reassessmentEventId: result.reassessmentEventId, disputeRecord: result.disputeRecord },
     { status: 200 }
   );
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });
+}, { requireCommercial: "governed_execution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_UPDATE] });

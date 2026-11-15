@@ -49,7 +49,9 @@ import {
   enqueueDueEmailRetryTasks,
   enqueueDueFinanceLearningBridgeTasks,
   enqueueDueReassessmentScanTasks,
+  enqueueDueRiskReviewScanTasks,
 } from "@/services/scheduler/scheduler-producers";
+import { enqueueDueQboSyncTasks } from "@/services/quickbooks/qbo-sync-scheduling";
 import { captureError } from "@/infra/observability";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -75,6 +77,9 @@ function verifyCronSecret(request: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** The batch (producer + claimed tasks) must finish inside the platform limit; leases of unfinished tasks are reclaimed on the next run. */
+export const maxDuration = 300;
+
 export async function GET(request: Request): Promise<NextResponse> {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -87,15 +92,17 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   // ─── 1. Producers: enqueue canonical ScheduledTask rows for outstanding work ──
   try {
-    const [emailScan, financeScan, reassessmentScan] = await Promise.all([
+    const [emailScan, financeScan, reassessmentScan, riskReviewScan] = await Promise.all([
       enqueueDueEmailRetryTasks(),
       enqueueDueFinanceLearningBridgeTasks(),
       enqueueDueReassessmentScanTasks(),
+      enqueueDueRiskReviewScanTasks(),
     ]);
     results.producers = {
       emailRetry: emailScan,
       financeLearningBridge: financeScan,
       reassessmentScan,
+      riskReviewScan,
     };
     logger.info("Cron: producer scans complete", results.producers as Record<string, unknown>);
   } catch (err) {
@@ -104,6 +111,15 @@ export async function GET(request: Request): Promise<NextResponse> {
       { context: "load" }
     );
     errors.push(`producers: ${governed.operatorMessage}`);
+    captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
+  }
+
+  // QuickBooks producer runs on its own: a failure here must not hide the other producers' results, and theirs must not hide this.
+  try {
+    results.producers = results.producers ?? {};
+    (results.producers as Record<string, unknown>).qboSync = await enqueueDueQboSyncTasks();
+  } catch (err) {
+    errors.push("producers.qboSync: failed to enqueue QuickBooks sync tasks");
     captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
   }
 

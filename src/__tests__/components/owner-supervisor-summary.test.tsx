@@ -50,7 +50,8 @@ describe("SupervisorSummary panel", () => {
     expect(container.querySelector('[data-testid="owner-supervisor-summary"]')).not.toBeNull();
     const text = container.textContent ?? "";
     expect(text).toMatch(/Below-margin work/);            // main issue
-    expect(text).toMatch(/Do now:/);                      // do now
+    expect(text).toMatch(/Plan analysis suggests:/);      // plan analysis step (subordinate to the main target)
+    expect(text).not.toMatch(/Do now:/);
     expect(text).toMatch(/Do not:/);                      // do not do
     expect(text).toMatch(/Owner vs delegate:/);           // owner/delegate split
     expect(text).toMatch(/Proof needed:/);                // proof

@@ -23,6 +23,9 @@ jobs:
     timeout-minutes: 15
     environment: staging
 
+    env:
+      OPSIQ_DB_TARGET: staging
+      OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: ${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

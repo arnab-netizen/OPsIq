@@ -32,7 +32,7 @@ const recovery = (over: Partial<OwnerRecoveryStatusResponse> = {}): OwnerRecover
   requiredEvidence: ["proof the loss-making activity is paused"],
   requiredReassessment: "The next milestone must be executed with evidence before recovery advances.",
   ownerApprovalRequired: true, managerStaffActions: [],
-  blockedUnsafeActions: ["Scale/growth/expansion stays blocked until stabilization is proven."],
+  blockedUnsafeActions: ["Scaling (acquisition spend, campaign expansion, new launches) stays blocked until stabilization is proven."],
   stabilizationGate: "BLOCKED", thriveGate: "BLOCKED",
   uncertaintyCaveat: "OpsIQ shows the next governed recovery step based on current evidence.",
   noGuaranteeStatement: "Recovery is not guaranteed.",

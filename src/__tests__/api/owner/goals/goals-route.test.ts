@@ -1,7 +1,7 @@
 /**
  * Non-DB mock tests for:
  *   POST /api/owner/goals — declare a financial goal
- *   GET  /api/owner/goals — retrieve the active goal
+ *   GET  /api/owner/goals — business-scoped goals overview (getGoalsOverview)
  *
  * Pattern: vi.hoisted() + wrapper mock + vi.resetAllMocks() per canonical Bundle 7.
  * Uses error-catching allowAll() because route uses parseRequestBody.
@@ -14,22 +14,25 @@ const {
   mockCreateGoal,
   mockGetActiveGoal,
   mockParseRequestBody,
+  mockParseOrThrow,
   mockCanonicalJson,
   mockWithCanonical,
 } = vi.hoisted(() => ({
   mockCreateGoal: vi.fn(),
   mockGetActiveGoal: vi.fn(),
   mockParseRequestBody: vi.fn(),
+  mockParseOrThrow: vi.fn(),
   mockCanonicalJson: vi.fn(),
   mockWithCanonical: vi.fn(),
 }));
 
 vi.mock("@/services/owner-strategy/goal.service", () => ({
   createGoal: mockCreateGoal,
-  getActiveGoal: mockGetActiveGoal,
+  getGoalsOverview: mockGetActiveGoal,
+  NEW_GOAL_TARGET_TYPES: ["REVENUE", "PROFIT"],
 }));
 
-vi.mock("@/lib/validation", () => ({ parseRequestBody: mockParseRequestBody }));
+vi.mock("@/lib/validation", () => ({ parseRequestBody: mockParseRequestBody, parseOrThrow: mockParseOrThrow }));
 vi.mock("@/lib/canonical-json-response", () => ({ canonicalJson: mockCanonicalJson }));
 
 const capturedDeclarations: Record<string, unknown>[] = [];
@@ -55,6 +58,7 @@ const WS_A = "aaaaaaaa-aaaa-4000-8000-cccccccccccc";
 const WS_B = "bbbbbbbb-bbbb-4000-8000-cccccccccccc";
 const ACTOR_A = "ac000001-0000-4000-8000-000000000001";
 const GOAL_ID = "go000001-0000-4000-8000-000000000001";
+const BIZ_A = "b1000001-0000-4000-8000-000000000001";
 
 const BASE_URL = "https://example.com/api/owner/goals";
 
@@ -76,9 +80,10 @@ const MOCK_GOAL = {
 };
 
 const MOCK_GOAL_INPUT = {
+  businessId: BIZ_A,
   targetType: "PROFIT",
   targetAmount: 500000,
-  targetCurrency: "USD",
+  targetCurrency: "INR",
   targetDate: "2027-01-01T00:00:00Z",
   baselineAmount: null,
   baselineDate: null,
@@ -125,6 +130,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   allowAll();
   mockParseRequestBody.mockResolvedValue(MOCK_GOAL_INPUT);
+  mockParseOrThrow.mockImplementation((_schema: unknown, data: unknown) => data);
   mockCanonicalJson.mockImplementation((data: unknown, opts: { status: number }) => ({ body: data, status: opts?.status ?? 200 }));
   mockCreateGoal.mockResolvedValue(GOAL_ID);
   mockGetActiveGoal.mockResolvedValue(MOCK_GOAL);
@@ -208,7 +214,12 @@ describe("POST /api/owner/goals — non-DB mock tests", () => {
       );
     });
 
-    it("does not call getActiveGoal for POST", async () => {
+    it("passes the explicit businessId from the request to createGoal", async () => {
+      await goalsPost(makeCtx());
+      expect(mockCreateGoal).toHaveBeenCalledWith(expect.objectContaining({ businessId: BIZ_A }));
+    });
+
+    it("does not call getGoalsOverview for POST", async () => {
       await goalsPost(makeCtx());
       expect(mockGetActiveGoal).not.toHaveBeenCalled();
     });
@@ -231,24 +242,29 @@ describe("GET /api/owner/goals — non-DB mock tests", () => {
       expect(result.status).toBe(200);
     });
 
-    it("calls getActiveGoal with workspaceId", async () => {
+    it("calls getGoalsOverview with workspaceId and no business when none is requested", async () => {
       await goalsGet(makeCtx());
-      expect(mockGetActiveGoal).toHaveBeenCalledWith(WS_A);
+      expect(mockGetActiveGoal).toHaveBeenCalledWith(WS_A, null);
     });
 
-    it("returns goal in body", async () => {
-      const result = await goalsGet(makeCtx()) as { body: { goal: unknown } };
-      expect(result.body.goal).toEqual(MOCK_GOAL);
+    it("passes the requested businessId to getGoalsOverview", async () => {
+      await goalsGet(makeCtx({ request: { url: `${BASE_URL}?businessId=${BIZ_A}` } }));
+      expect(mockGetActiveGoal).toHaveBeenCalledWith(WS_A, BIZ_A);
     });
 
-    it("calls getActiveGoal exactly once", async () => {
+    it("returns the overview as the body", async () => {
+      const result = await goalsGet(makeCtx()) as { body: unknown };
+      expect(result.body).toEqual(MOCK_GOAL);
+    });
+
+    it("calls getGoalsOverview exactly once", async () => {
       await goalsGet(makeCtx());
       expect(mockGetActiveGoal).toHaveBeenCalledTimes(1);
     });
 
     it("uses verifiedWorkspaceId for GET (WS_B)", async () => {
       await goalsGet(makeCtx({ verifiedWorkspaceId: WS_B }));
-      expect(mockGetActiveGoal).toHaveBeenCalledWith(WS_B);
+      expect(mockGetActiveGoal).toHaveBeenCalledWith(WS_B, null);
     });
 
     it("does not call createGoal for GET", async () => {

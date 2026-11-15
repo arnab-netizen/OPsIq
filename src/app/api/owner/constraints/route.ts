@@ -11,6 +11,8 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
+import { COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";
+import { assertCommercialCapability } from "@/services/billing/commercial-policy.service";
 import {
   createConstraintRecord,
   updateConstraintStatus,
@@ -50,6 +52,8 @@ export const POST = withCanonicalEnforcement(
     const actorId = ctx.verifiedActorId;
 
     if (input.action === "ACCEPT" || input.action === "RESOLVE") {
+      // Advancing a constraint through the governed loop is paid continuation; CREATE (capture) stays free.
+      await assertCommercialCapability(workspaceId, COMMERCIAL_CAPABILITIES.GOVERNED_EXECUTION);
       if (!input.recordId) {
         return canonicalJson({ error: "recordId required for ACCEPT/RESOLVE" }, { status: 400 });
       }

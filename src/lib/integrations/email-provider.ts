@@ -23,8 +23,22 @@ export interface EmailMessage {
 }
 
 export interface EmailDeliveryResult {
+  /** Provider message id when the provider returned one. Internal/operator use only. */
   id?: string;
+  /** True only means the provider accepted the submission (2xx); it is NOT a delivery confirmation. */
   accepted: boolean;
+  /** HTTP status of the provider's response. */
+  httpStatus?: number;
+}
+
+/** A non-2xx provider response. `status` is the HTTP status; the message keeps the existing "Resend API error <status>: ..." shape. */
+export class EmailProviderError extends Error {
+  readonly status: number;
+  constructor(status: number, detail: string) {
+    super(`Resend API error ${status}: ${detail}`);
+    this.name = "EmailProviderError";
+    this.status = status;
+  }
 }
 
 export interface EmailProvider {
@@ -62,11 +76,11 @@ class ResendEmailProvider implements EmailProvider {
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(`Resend API error ${response.status}: ${body?.message ?? "unknown error"}`);
+      throw new EmailProviderError(response.status, String(body?.message ?? "unknown error"));
     }
 
     const result = await response.json().catch(() => ({}));
-    return { id: result?.id, accepted: true };
+    return { id: typeof result?.id === "string" ? result.id : undefined, accepted: true, httpStatus: response.status };
   }
 }
 

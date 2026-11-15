@@ -18,6 +18,8 @@
 
 import type { ApprovalLevel } from "./process-intelligence";
 
+import { knownFixedCosts, knownVariableCosts, totalCosts } from "@/domain/owner-finance/metrics";
+
 export type CashProfitSignalType =
   | "CASH_SAFETY_RISK"
   | "LOW_MARGIN_WORK_RISK"
@@ -72,7 +74,23 @@ export interface CashProfitInput {
   b2bUnderpricedCount: number;
   overdueReceivableCount: number;
   hasUnitEconomics: boolean;
+  /**
+   * The CURRENT Finance diagnosis's measured "cash on hand ÷ daily total costs" figure (see
+   * deriveFinanceCashMeasure). It is a different metric from `cashRunwayDays` (cash ÷ daily NET burn), so it is
+   * carried separately and never relabelled as runway. Enrichment only: it sharpens the wording of a cash-risk
+   * the arbitrated state already raised; it never raises or clears one on its own.
+   */
+  financeCashDaysOfCosts?: { days: number; threshold: number | null } | null;
+  /**
+   * True when a current Finance diagnosis assessed profit from the submitted figures. This is Finance's own
+   * completeness, not the Cash-flow cycle's — a Finance-only owner has a complete profit picture.
+   */
   financialDataComplete: boolean;
+  /**
+   * The specific figures a current Finance snapshot lacks for a profit assessment (e.g. "revenue"). When
+   * non-empty, the data-gap names exactly these instead of the generic "not enough financial data".
+   */
+  missingFinancialFields?: string[];
   supportingProofIds: string[];
   supportingOperationalEventIds: string[];
   supportingFinancialSnapshotIds: string[];
@@ -141,6 +159,49 @@ const STAFF_INEFFICIENCY = 3;
 const B2B_UNDERPRICED = 1;
 const OVERDUE_RECEIVABLES = 3;
 
+const CASH_STATE_RANK: Record<CashRiskState, number> = { SAFE: 0, WATCH: 1, AT_RISK: 2, CRITICAL: 3, INSOLVENT_RISK: 4 };
+
+/**
+ * The categorical state the CASH_SAFETY_RISK signal may be raised from. The arbitrated survival state
+ * (`gateState`) is an enforcement state: when Finance's own findings say a profit/margin problem drives it
+ * (`gateDriver === "finance_profit"`), it is NOT evidence of a cash danger, and describing it as "cash survival"
+ * / "cashflow signals" would call a margin problem a cash danger (a loss-making business with ample, fully-known cash
+ * would read "cash survival critical"). In that case a cash signal needs a cash fact of its own: Finance's own measured
+ * cash finding (cash cushion / runway), or an independent Cash flow reading (current, not superseded, or in
+ * progress) that is itself unsafe — at that reading's own severity. Every other driver keeps the gate state.
+ * Safety enforcement is unchanged: this only attributes the owner-facing cash signal (see `cashProfitRiskIsActive`).
+ */
+export function cashSignalState(input: {
+  gateState: CashRiskState | null;
+  gateDriver: "cash" | "finance_profit" | "unverified" | null;
+  /** Cash flow's own CURRENT state; null when it is not current or has been superseded by a newer Finance reading. */
+  cashState: CashRiskState | null;
+  provisionalCashState: CashRiskState | null;
+  /** Finance's own findings carry a measured cash cushion / runway figure (a genuine, measured cash fact). */
+  financeMeasuredCash: boolean;
+}): CashRiskState | null {
+  if (input.gateState === null) return null;
+  if (input.gateDriver !== "finance_profit" || input.financeMeasuredCash) return input.gateState;
+  let worst: CashRiskState | null = null;
+  for (const s of [input.cashState, input.provisionalCashState]) {
+    if (s !== null && CASH_RISK_STATES.includes(s) && (worst === null || CASH_STATE_RANK[s] > CASH_STATE_RANK[worst])) worst = s;
+  }
+  return worst;
+}
+
+/**
+ * Whether an active cash/profit risk exists (it blocks scaling capital and forces approval on spend). Any unsafe
+ * arbitrated survival state counts — including a profit-driven one — so attributing the cash SIGNAL correctly
+ * (`cashSignalState`) never relaxes that block.
+ */
+export function cashProfitRiskIsActive(
+  protection: { signals: ReadonlyArray<{ category: string; severity: string }> } | null,
+  gateState: CashRiskState | null
+): boolean {
+  return Boolean(protection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")) ||
+    (gateState !== null && CASH_RISK_STATES.includes(gateState));
+}
+
 /** Categorical states that represent a real cash/margin risk (WATCH is above the floor, so it does not fire). */
 const CASH_RISK_STATES: readonly CashRiskState[] = ["AT_RISK", "CRITICAL", "INSOLVENT_RISK"];
 /** Cash runway severity from a categorical state (no measured figure): CRITICAL/INSOLVENT → CRITICAL, AT_RISK → HIGH. */
@@ -174,6 +235,8 @@ export function buildCashProfitProtection(
     out.push({ ...ev, ...s, workspaceId, evaluatedAt });
   };
 
+  const measuredCostDays = input.financeCashDaysOfCosts ?? null;
+
   // 1. CASH_SAFETY_RISK — the runway is short. Prefer a REAL measured day count (precise). If no measured
   //    figure exists, fall back to the categorical survival state and flag the risk QUALITATIVELY with
   //    metricValue null — never inventing a precise day count from a category (that would be false precision).
@@ -191,12 +254,17 @@ export function buildCashProfitProtection(
     push({
       signalType: "CASH_SAFETY_RISK", category: "CASH",
       severity: cashStateSeverity(input.cashRunwayState),
-      confidence: "MEDIUM", title: `Cash survival state is ${humanState(input.cashRunwayState)}`,
-      ownerExplanation: "The cashflow signals put the business in an at-risk survival state. OpsIQ has no measured runway figure, so it flags the risk qualitatively rather than inventing a day count — confirm the actual runway. Protecting cash now avoids a forced, worse decision later.",
+      confidence: measuredCostDays ? "HIGH" : "MEDIUM", title: `Cash survival state is ${humanState(input.cashRunwayState)}`,
+      ownerExplanation: measuredCostDays
+        ? `Your latest Finance figures show cash on hand covers about ${measuredCostDays.days} days of total costs${measuredCostDays.threshold !== null ? ` (the minimum is ${measuredCostDays.threshold})` : ""}. That is days of costs, not a burn-rate runway, which OpsIQ has not measured separately. Protecting cash now avoids a forced, worse decision later.`
+        : "The cashflow signals put the business in an at-risk survival state. OpsIQ has no measured runway figure, so it flags the risk qualitatively rather than inventing a day count — confirm the actual runway. Protecting cash now avoids a forced, worse decision later.",
       protectiveAction: "PROTECT_CASH_RUNWAY", approvalLevel: "OWNER", requiresOwnerReview: true, riskGuardrail: MATERIAL_GUARDRAIL,
-      observedCount: 1, metricType: "CASH_SURVIVAL_STATE", metricValue: null, metricThreshold: null,
-      thresholdBreached: true, directionOnly: true, relatedProcessFinding: null,
-      missingData: ["measured cash runway (days of cash at current burn rate)"],
+      observedCount: 1,
+      metricType: measuredCostDays ? "CASH_DAYS_OF_COSTS" : "CASH_SURVIVAL_STATE",
+      metricValue: measuredCostDays ? measuredCostDays.days : null,
+      metricThreshold: measuredCostDays ? measuredCostDays.threshold : null,
+      thresholdBreached: true, directionOnly: !measuredCostDays, relatedProcessFinding: null,
+      missingData: measuredCostDays ? [] : ["measured cash runway (days of cash at current burn rate)"],
     });
   }
 
@@ -315,14 +383,20 @@ export function buildCashProfitProtection(
     });
   }
 
-  // 11. PROFIT_DATA_INSUFFICIENT — not enough financial data to assess profit at all.
+  // 11. PROFIT_DATA_INSUFFICIENT — not enough financial data to assess profit. When a current Finance snapshot
+  //     exists but lacks specific figures, name exactly those; the generic wording is only for no Finance reading.
   if (!input.financialDataComplete) {
+    const missingFields = input.missingFinancialFields ?? [];
+    const specific = missingFields.length > 0;
     push({
       signalType: "PROFIT_DATA_INSUFFICIENT", category: "DATA", severity: "LOW", confidence: "NEEDS_DATA",
-      title: "Not enough financial data to assess profit", ownerExplanation: "The financial picture is incomplete, so OpsIQ will not estimate a profit figure it cannot support. Add the missing inputs.",
+      title: specific ? `Profit cannot be assessed without ${missingFields.join(" and ")}` : "Not enough financial data to assess profit",
+      ownerExplanation: specific
+        ? `Your latest Finance snapshot has no ${missingFields.join(" or ")}, so OpsIQ will not estimate a profit figure it cannot support. Add ${missingFields.join(" and ")} to the snapshot.`
+        : "The financial picture is incomplete, so OpsIQ will not estimate a profit figure it cannot support. Add the missing inputs.",
       protectiveAction: "COLLECT_FINANCIAL_DATA", approvalLevel: "MANAGER", requiresOwnerReview: false, riskGuardrail: DATA_GUARDRAIL,
       observedCount: 0, metricType: null, metricValue: null, metricThreshold: null, thresholdBreached: false, directionOnly: false,
-      relatedProcessFinding: null, missingData: ["complete financial snapshot (revenue, costs, cash)"],
+      relatedProcessFinding: null, missingData: specific ? missingFields : ["complete financial snapshot (revenue, costs, cash)"],
     });
   }
 
@@ -334,4 +408,68 @@ export function buildCashProfitProtection(
     ownerReviewRequired: out.filter((s) => s.requiresOwnerReview).length,
   };
   return { workspaceId, signals: out, topSignal: out[0] ?? null, summary, evaluatedAt };
+}
+
+/** The Finance diagnosis facts the cash/profit layer may read (a current cycle's findings and snapshot). */
+export interface FinanceReadingFacts {
+  findings?: ReadonlyArray<{ sourceMetric?: unknown; sourceValue?: unknown; threshold?: unknown }> | null;
+  snapshot?: {
+    revenue?: number | null; costOfGoods?: number | null; fixedCosts?: number | null;
+    variableCosts?: number | null; rent?: number | null; payroll?: number | null; utilities?: number | null;
+    deliveryCost?: number | null; marketingSpend?: number | null; cashOnHand?: number | null;
+  } | null;
+}
+
+export interface FinanceCashProfitFacts {
+  /** Finance's measured cash ÷ daily NET burn (a true runway), or null when Finance did not measure one. */
+  cashRunwayDays: number | null;
+  /** Finance's measured cash ÷ daily TOTAL costs, or null. Never the same metric as runway. */
+  cashDaysOfCosts: { days: number; threshold: number | null } | null;
+  /** The snapshot carries a cash-on-hand figure (the cash position is measured). */
+  cashPositionMeasured: boolean;
+  /** Figures a profit assessment needs that the snapshot lacks; empty when revenue and a cost figure exist. */
+  missingFinancialFields: string[];
+}
+
+function finiteNumber(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+/**
+ * Read the measured cash figures and snapshot gaps from a CURRENT Finance diagnosis. Pure. The caller passes
+ * facts only when the Finance reading is current (not stale/amended/superseded); nothing here is inferred from
+ * a categorical state, and a missing figure stays null rather than becoming zero.
+ */
+export function deriveFinanceCashProfitFacts(fin: FinanceReadingFacts): FinanceCashProfitFacts {
+  let cashRunwayDays: number | null = null;
+  let cashDaysOfCosts: FinanceCashProfitFacts["cashDaysOfCosts"] = null;
+  for (const f of fin.findings ?? []) {
+    const value = finiteNumber(f.sourceValue);
+    if (value === null) continue;
+    if (f.sourceMetric === "cashRunwayDays") cashRunwayDays = value;
+    else if (f.sourceMetric === "cashDaysOfCosts") cashDaysOfCosts = { days: value, threshold: finiteNumber(f.threshold) };
+  }
+  const snap = fin.snapshot ?? null;
+  const missing: string[] = [];
+  if (snap) {
+    if (finiteNumber(snap.revenue) === null) missing.push("revenue");
+    // Finance's own cost model decides whether costs are known — never a second definition of completeness.
+    const costFacts = {
+      periodStart: "", periodEnd: "", currency: "",
+      fixedCosts: snap.fixedCosts ?? undefined, variableCosts: snap.variableCosts ?? undefined,
+      rent: snap.rent ?? undefined, salaryPayroll: snap.payroll ?? undefined, utilities: snap.utilities ?? undefined,
+      costOfGoodsOrServices: snap.costOfGoods ?? undefined, deliveryFulfilmentCost: snap.deliveryCost ?? undefined,
+      marketingSpend: snap.marketingSpend ?? undefined,
+    };
+    // Total costs are known only when every part is (unknown is not zero). If SOME costs are known the gap is the missing
+    // part — "complete cost figures" — rather than a claim that no costs were given.
+    if (totalCosts(costFacts) === null) {
+      missing.push(knownFixedCosts(costFacts) !== null || knownVariableCosts(costFacts) !== null ? "complete cost figures" : "cost figures");
+    }
+  }
+  return {
+    cashRunwayDays, cashDaysOfCosts,
+    cashPositionMeasured: finiteNumber(snap?.cashOnHand) !== null,
+    missingFinancialFields: missing,
+  };
 }

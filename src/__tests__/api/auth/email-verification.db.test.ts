@@ -3,11 +3,15 @@
  * (DB-backed).
  *
  * Proves the full open-beta activation journey against real DB rows and the
- * real, unmodified routes: signup creates an account that cannot sign in;
- * POST /api/auth/verify-email redeems the emailed token, marks the account
- * verified, and issues the first usable session; POST /api/auth/login
- * refuses an unverified account even with the correct password; and
+ * real, unmodified routes: signup creates an account with NO credential that
+ * cannot sign in; POST /api/auth/verify-email redeems the emailed token, marks
+ * the account verified and hands back a one-time password-setup token (it
+ * issues NO session); POST /api/auth/reset-password (setup) then records the
+ * consents, sets the password and issues the first usable session;
+ * POST /api/auth/login refuses an unverified account; and
  * POST /api/auth/resend-verification is enumeration-resistant and rate-limited.
+ * The ownership-before-credential hostile cases live in
+ * email-ownership-before-credential.db.test.ts.
  *
  * Mirrors the established pattern in signup-account-graph.db.test.ts /
  * password-reset-e2e.db.test.ts: real POST calls to the real route handlers,
@@ -61,18 +65,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     });
   }
 
-  async function signup(email: string, password: string) {
+  async function signup(email: string) {
     const { POST } = await import("@/app/api/auth/signup/route");
     return POST(
       jsonRequest("http://localhost/api/auth/signup", {
         email,
-        password,
         workspaceName: "Verify Co",
-        acceptTerms: true,
-        acceptPrivacy: true,
-        acceptBetaNotice: true,
       }) as never
     );
+  }
+
+  async function setPassword(body: Record<string, unknown>, ip: string) {
+    const { POST } = await import("@/app/api/auth/reset-password/route");
+    return POST(jsonRequest("http://localhost/api/auth/reset-password", body, ip) as never);
   }
 
   async function login(email: string, password: string, ip: string) {
@@ -90,19 +95,19 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     return POST(jsonRequest("http://localhost/api/auth/resend-verification", { email }, ip) as never);
   }
 
-  it("[db] UNVERIFIED_OWNER_ACCESS_BLOCKED: a freshly signed-up account cannot log in with the correct password", async () => {
+  it("[db] UNVERIFIED_OWNER_ACCESS_BLOCKED: a freshly signed-up account has no credential and cannot log in with any password", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const email = `verify-blocked-${stamp}@example.com`;
-    const password = "CorrectPassword123";
+    const password = "AnyGuessedPassword123";
     createdEmails.push(email);
 
-    const signupRes = await signup(email, password);
+    const signupRes = await signup(email);
     expect(signupRes.status).toBe(201);
 
     const loginRes = await login(email, password, "203.0.113.40");
-    expect(loginRes.status).toBe(403);
+    expect(loginRes.status).toBe(401);
     const loginJson = await loginRes.json();
-    expect(loginJson.classification).toBe("email_not_verified");
+    expect(loginJson.error).toMatch(/invalid email or password/i);
 
     // No session was created by the blocked login attempt.
     const user = await db.user.findUnique({ where: { email } });
@@ -110,12 +115,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     expect(sessions).toHaveLength(0);
   });
 
-  it("[db] EMAIL_VERIFICATION_TESTED: redeeming the real emailed token activates the account and issues a usable session", async () => {
+  it("[db] EMAIL_VERIFICATION_TESTED: redeeming the token verifies the account and hands back a setup token; setting the password issues the first session", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const email = `verify-redeem-${stamp}@example.com`;
     createdEmails.push(email);
 
-    const signupRes = await signup(email, "SomePassword123");
+    const signupRes = await signup(email);
     expect(signupRes.status).toBe(201);
     const user = await db.user.findUnique({ where: { email } });
 
@@ -141,12 +146,23 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     const verifyRes = await verifyEmail(rawToken, "203.0.113.41");
     expect(verifyRes.status).toBe(200);
 
+    const verifyJson = await verifyRes.json();
+    expect(verifyJson).toMatchObject({ success: true, next: "set-password" });
+
     const verifiedUser = await db.user.findUnique({ where: { email } });
     expect(verifiedUser!.emailVerifiedAt).not.toBeNull();
 
-    // A session was actually created and a cookie set.
-    const sessions = await db.session.findMany({ where: { userId: user!.id } });
-    expect(sessions).toHaveLength(1);
+    // Proving the mailbox signs nobody in.
+    expect(await db.session.count({ where: { userId: user!.id } })).toBe(0);
+    expect(mockCookieSet).not.toHaveBeenCalled();
+
+    // Choosing the password (with consents) is what issues the first session and cookie.
+    const setRes = await setPassword(
+      { token: verifyJson.setupToken, password: "SomePassword123", acceptTerms: true, acceptPrivacy: true, acceptBetaNotice: true },
+      "203.0.113.46"
+    );
+    expect(setRes.status).toBe(200);
+    expect(await db.session.count({ where: { userId: user!.id } })).toBe(1);
     expect(mockCookieSet).toHaveBeenCalledTimes(1);
     const [cookieName] = mockCookieSet.mock.calls[0];
     expect(cookieName).toBe("opsiq_session");
@@ -161,7 +177,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     const email = `verify-replay-${stamp}@example.com`;
     createdEmails.push(email);
 
-    await signup(email, "SomePassword123");
+    await signup(email);
     const user = await db.user.findUnique({ where: { email } });
 
     const rawToken = randomBytes(32).toString("hex");
@@ -179,9 +195,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     const secondJson = await second.json();
     expect(secondJson.error).toMatch(/invalid or has expired/i);
 
-    // Exactly one session exists — redemption replay creates no second one.
+    // Verification issues no session at all — and a replay creates none either.
     const sessions = await db.session.findMany({ where: { userId: user!.id } });
-    expect(sessions).toHaveLength(1);
+    expect(sessions).toHaveLength(0);
+    expect(await db.passwordResetToken.count({ where: { userId: user!.id } })).toBe(1);
   });
 
   it("[db] an expired verification token is rejected even though it was never used", async () => {
@@ -189,7 +206,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     const email = `verify-expired-${stamp}@example.com`;
     createdEmails.push(email);
 
-    await signup(email, "SomePassword123");
+    await signup(email);
     const user = await db.user.findUnique({ where: { email } });
 
     const rawToken = randomBytes(32).toString("hex");
@@ -212,7 +229,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     const fakeEmail = `verify-resend-nonexistent-${stamp}@example.com`;
     createdEmails.push(realEmail);
 
-    await signup(realEmail, "SomePassword123");
+    await signup(realEmail);
 
     const realRes = await resendVerification(realEmail, "203.0.113.50");
     const fakeRes = await resendVerification(fakeEmail, "203.0.113.51");
@@ -227,7 +244,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     const email = `verify-resend-fresh-${stamp}@example.com`;
     createdEmails.push(email);
 
-    await signup(email, "SomePassword123");
+    await signup(email);
     const user = await db.user.findUnique({ where: { email } });
 
     const before = await db.emailVerificationToken.count({ where: { userId: user!.id } });
@@ -244,7 +261,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email verification — real journey"
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const email = `verify-resend-flood-${stamp}@example.com`;
     createdEmails.push(email);
-    await signup(email, "SomePassword123");
+    await signup(email);
 
     const ip = "203.0.113.60";
     let got429 = false;

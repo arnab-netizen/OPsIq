@@ -14,6 +14,9 @@ import {
 } from "@/domain/owner-spine/contracts";
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
+import { num, ruleConsistentValue } from "./metrics";
+import { downsideWhen } from "./decision-format";
+import { RISK_LEVEL_SPREAD } from "./thresholds";
 
 interface OppArgs {
   code: string;
@@ -57,96 +60,90 @@ export function buildStrategyOpportunityFindings(
 ): OwnerFinding[] {
   const findings: OwnerFinding[] = [];
   const conf = clampConfidence(m.dataConfidenceScore / 100);
-  void input;
+  // Thresholds are compared on FULL-PRECISION values only (see risk-rules.ts).
+  const r = m.raw;
 
-  // Strong-ROI option worth pursuing/scaling (only when ROI computable + strong)
-  if (m.roiAnnualPct !== null && m.roiAnnualPct >= t.strongRoiPct) {
+  // Strong ROI (only when ROI computable + strong) — a reason, not a command
+  if (r.roiAnnualPct !== null && r.roiAnnualPct >= t.strongRoiPct) {
+    const shown = ruleConsistentValue(r.roiAnnualPct, m.roiAnnualPct!, (v) => v >= t.strongRoiPct);
     findings.push(
       opportunity({
         code: "STR_OPP_STRONG_RETURN",
-        title: "High-return option — pursue it",
+        title: "Strong return on the investment",
         summary:
-          "The return on capital is strong; this is a high-ROI use of cash. Commit (staged) while the numbers hold.",
+          "The profit it adds is a strong annual return on the money put in.",
         sourceMetric: "roiAnnualPct",
-        sourceValue: m.roiAnnualPct,
+        sourceValue: shown,
         threshold: t.strongRoiPct,
         severity: "low",
         confidence: conf,
-        impactScore: clampScore(Math.min(m.roiAnnualPct / 8, 60)),
+        impactScore: clampScore(Math.min(r.roiAnnualPct / 8, 60)),
         urgencyScore: 40,
-        evidence: [`roiAnnualPct = ${m.roiAnnualPct}% ≥ ${t.strongRoiPct}%`],
+        evidence: [`roiAnnualPct = ${shown}% ≥ ${t.strongRoiPct}%`],
         verificationMetric: "roiAnnualPct",
       })
     );
   }
 
-  // Fast payback (only when payback computable and within the long-payback bar)
-  if (m.paybackMonths !== null && m.paybackMonths <= t.longPaybackMonths && m.baseMonthlyProfitDelta !== null && m.baseMonthlyProfitDelta > 0) {
+  // Fast payback (only when capital is actually at risk, payback is computable and within the
+  // long-payback bar). With zero investment nothing is "paid back": payback 0 is not a finding.
+  const investment = num(input.investmentRequired);
+  if (
+    investment !== null &&
+    investment > 0 &&
+    r.paybackMonths !== null &&
+    r.paybackMonths <= t.longPaybackMonths &&
+    r.baseMonthlyProfitDelta !== null &&
+    r.baseMonthlyProfitDelta > 0
+  ) {
+    const shown = ruleConsistentValue(r.paybackMonths, m.paybackMonths!, (v) => v <= t.longPaybackMonths);
     findings.push(
       opportunity({
         code: "STR_OPP_FAST_PAYBACK",
         title: "Capital comes back quickly",
         summary:
-          "Payback is within the comfortable window, so the cash is not tied up long — a low-regret bet if the downside is survivable.",
+          "It earns back the investment within the target time, so the cash is not tied up for long.",
         sourceMetric: "paybackMonths",
-        sourceValue: m.paybackMonths,
+        sourceValue: shown,
         threshold: t.longPaybackMonths,
         severity: "low",
         confidence: conf,
-        impactScore: clampScore(Math.min((t.longPaybackMonths - m.paybackMonths) * 2 + 20, 50)),
+        impactScore: clampScore(Math.min((t.longPaybackMonths - r.paybackMonths) * 2 + 20, 50)),
         urgencyScore: 35,
-        evidence: [`paybackMonths = ${m.paybackMonths} ≤ ${t.longPaybackMonths}`],
+        evidence: [`paybackMonths = ${shown} ≤ ${t.longPaybackMonths}`],
         verificationMetric: "paybackMonths",
       })
     );
   }
 
   // Safe upside (worst case still profitable) — a robust option
-  if (m.worstMonthlyProfitDelta !== null && m.worstMonthlyProfitDelta > 0) {
+  if (r.worstMonthlyProfitDelta !== null && r.worstMonthlyProfitDelta > 0) {
+    const shown = ruleConsistentValue(r.worstMonthlyProfitDelta, m.worstMonthlyProfitDelta!, (v) => v > 0);
     findings.push(
       opportunity({
         code: "STR_OPP_SAFE_UPSIDE",
         title: "Even the downside is profitable",
-        summary:
-          "The worst case still adds monthly profit — this is a high-safety option; it can be sized up with confidence.",
+        summary: (() => {
+          const when = input.riskLevel ? downsideWhen(num(input.expectedRevenueChange), RISK_LEVEL_SPREAD[input.riskLevel]) : null;
+          return when
+            ? `${when}, the option still adds monthly profit.`
+            : "No revenue change is expected, so the result doesn't depend on sales — it adds monthly profit either way.";
+        })(),
         sourceMetric: "worstMonthlyProfitDelta",
-        sourceValue: m.worstMonthlyProfitDelta,
+        sourceValue: shown,
         threshold: 0,
         severity: "low",
         confidence: conf,
-        impactScore: clampScore(Math.min(m.worstMonthlyProfitDelta / 1000, 50)),
+        impactScore: clampScore(Math.min(r.worstMonthlyProfitDelta / 1000, 50)),
         urgencyScore: 30,
-        evidence: [`worstMonthlyProfitDelta = ${m.worstMonthlyProfitDelta} > 0`],
+        evidence: [`worstMonthlyProfitDelta = ${shown} > 0`],
         verificationMetric: "worstMonthlyProfitDelta",
       })
     );
   }
 
-  // Data quality improvement opportunity (confidence below 100)
-  if (m.dataConfidenceScore < 100) {
-    findings.push(
-      opportunity({
-        code: "STR_OPP_DATA_QUALITY",
-        title: "Improve data completeness for a sharper decision",
-        summary:
-          "Some inputs are missing or stale; supplying them increases the confidence of the recommendation for this option.",
-        sourceMetric: "dataConfidenceScore",
-        sourceValue: m.dataConfidenceScore,
-        threshold: 100,
-        severity: "low",
-        confidence: 1,
-        impactScore: clampScore(100 - m.dataConfidenceScore),
-        urgencyScore: 20,
-        evidence: [
-          `dataConfidenceScore = ${m.dataConfidenceScore} < 100`,
-          m.missingRequiredInputs.length > 0
-            ? `missing: ${m.missingRequiredInputs.join(", ")}`
-            : "some non-critical fields missing",
-        ],
-        verificationMetric: "dataConfidenceScore",
-      })
-    );
-  }
+  // Missing or stale inputs are NOT an opportunity: evidence completeness is reported as its own
+  // decision dimension and missing inputs as explicit risk findings (STR_MISSING_*).
 
   return findings;
 }

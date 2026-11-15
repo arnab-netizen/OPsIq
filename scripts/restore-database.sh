@@ -5,7 +5,21 @@
 # Example: ./restore-database.sh /backups/opsiq/opsiq_backup_2026-05-12_10-30-00.sql.gz verify
 #
 # Restores database from a gzipped SQL dump produced by backup-database.sh.
+#
+# TARGET POLICY (A3 — a restore can drop and recreate a whole database). Safety invariant: TARGET AUTHORIZATION happens
+# right after the backup-file argument check and BEFORE this script inspects DATABASE_URL, and before any database client
+# runs or anything is decompressed or written. `production` is refused on the target alone (DATABASE_URL is not read);
+# DATABASE_URL alone never authorizes a restore. Reuses OPSIQ_DB_TARGET:
+#   OPSIQ_DB_TARGET=local    DATABASE_URL must be a true loopback URL (localhost / 127.0.0.1 / ::1)
+#   OPSIQ_DB_TARGET=staging  DATABASE_URL must pass the canonical approved-staging validator
+#                            (scripts/assert-approved-staging-database.ts; needs OPSIQ_APPROVED_STAGING_ENDPOINT_IDS)
+#   OPSIQ_DB_TARGET=production, ci, test, unknown or missing: REFUSED. A production restore needs a separately governed
+#   production recovery workflow that does not exist yet (GOVERNED_PRODUCTION_RESTORE_WORKFLOW=DEFERRED); the production
+#   migration variables (OPSIQ_ALLOW_PRODUCTION_DB_COMMAND, OPSIQ_PRODUCTION_OPERATION) do NOT authorize it.
+# The intended source is OpsIQ's own trusted backup pipeline: a dump executes SQL on restore, so never restore an
+# untrusted dump.
 # Optional: verify checksum against the accompanying .sha256 file.
+# PORTABILITY: runs on Linux and stock macOS (bash 3.2): SHA-256 via sha256sum or shasum; no grep -P.
 # WARNING: this restores a `pg_dump --create` dump, which embeds
 # `DROP DATABASE IF EXISTS <name>` / `CREATE DATABASE <name>` /
 # `\connect <name>` statements for the SOURCE database's own name. The
@@ -36,22 +50,52 @@ if [ -z "$BACKUP_FILE" ] || [ ! -f "$BACKUP_FILE" ]; then
   exit 1
 fi
 
-# Validate environment
-if [ -z "${DATABASE_URL:-}" ]; then
-  echo "ERROR: DATABASE_URL environment variable not set" | tee -a "$LOG_FILE"
+# Positive target authorization — the FIRST thing done with the environment, before DATABASE_URL is inspected here.
+# assert-restore-target.mjs is the single authoritative validation path: it refuses production on the target alone,
+# requires a loopback URL for local, delegates staging to the canonical validator, and reports a missing/unset DATABASE_URL
+# for the allowed targets. It never prints the connection URL and opens no database connection.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! node "$SCRIPT_DIR/assert-restore-target.mjs"; then
+  echo "ERROR: restore target not verified; nothing was restored." >&2
   exit 1
 fi
 
+# Remaining non-destructive validation, only after the target is authorized (DATABASE_URL is known set by the preflight).
 if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
   echo "ERROR: DATABASE_URL contains a placeholder value - secret not properly configured" | tee -a "$LOG_FILE"
   exit 1
 fi
 
-REDACTED_URL=$(echo "$DATABASE_URL" | sed -E 's#(://[^:/@]+:)[^@]+(@)#\1***\2#')
+# Portability (stock macOS): nothing below may depend on GNU-only tools. macOS ships neither `sha256sum` nor a
+# grep that supports -P, so the SHA-256 and the three extractions (restored database name, query suffix, total
+# row count) use POSIX tools only (shasum / sed / awk / parameter expansion). Linux behavior is unchanged.
+# Defined here, after target authorization, so no helper runs before the restore target is verified.
+#
+# sha256_of FILE -> prints the lowercase hex SHA-256 of FILE, or fails closed (non-zero, prints nothing) when no
+# SHA-256 tool exists or the tool's output is not a 64-hex digest. Never prints an empty value on success.
+sha256_of() {
+  _sha_out=""
+  if command -v sha256sum >/dev/null 2>&1; then
+    _sha_out=$(sha256sum "$1" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    _sha_out=$(shasum -a 256 "$1" | awk '{print $1}')
+  else
+    echo "ERROR: neither sha256sum nor shasum is available; cannot verify the backup checksum" >&2
+    return 1
+  fi
+  case "$_sha_out" in
+    *[!0-9a-f]*|"") echo "ERROR: could not compute a SHA-256 digest for the backup file" >&2; return 1 ;;
+  esac
+  if [ "${#_sha_out}" -ne 64 ]; then
+    echo "ERROR: could not compute a SHA-256 digest for the backup file" >&2
+    return 1
+  fi
+  printf '%s\n' "$_sha_out"
+}
 
 echo "Starting database restore..." | tee "$LOG_FILE"
 echo "Backup file: $BACKUP_FILE" | tee -a "$LOG_FILE"
-echo "Target server: $REDACTED_URL" | tee -a "$LOG_FILE"
+echo "RESTORE_TARGET=${OPSIQ_DB_TARGET}" | tee -a "$LOG_FILE"
 
 # --- Integrity verification before touching any database ---
 if [ "$VERIFY" = "verify" ] || [ -f "${BACKUP_FILE}.sha256" ]; then
@@ -59,7 +103,10 @@ if [ "$VERIFY" = "verify" ] || [ -f "${BACKUP_FILE}.sha256" ]; then
 
   if [ -f "${BACKUP_FILE}.sha256" ]; then
     STORED_CHECKSUM=$(cat "${BACKUP_FILE}.sha256")
-    COMPUTED_CHECKSUM=$(sha256sum "$BACKUP_FILE" | awk '{print $1}')
+    if ! COMPUTED_CHECKSUM=$(sha256_of "$BACKUP_FILE"); then
+      echo "ERROR: checksum verification could not be performed; nothing was restored." | tee -a "$LOG_FILE"
+      exit 1
+    fi
 
     if [ "$STORED_CHECKSUM" = "$COMPUTED_CHECKSUM" ]; then
       echo "Checksum verified: $COMPUTED_CHECKSUM" | tee -a "$LOG_FILE"
@@ -109,7 +156,7 @@ if gunzip -c "$BACKUP_FILE" | psql \
   # header note), so re-derive it from the dump text itself rather than
   # from DATABASE_URL, then connect to it on the same server to inspect
   # what actually landed.
-  RESTORED_DB=$(zgrep -m1 -oP '(?<=\\connect )\S+' "$BACKUP_FILE" || true)
+  RESTORED_DB=$(gzip -dc "$BACKUP_FILE" 2>/dev/null | awk '/^\\connect /{print $2; exit}' || true)
   if [ -z "$RESTORED_DB" ]; then
     echo "WARNING: could not determine restored database name from dump; skipping schema/data verification" | tee -a "$LOG_FILE"
     exit 0
@@ -120,7 +167,10 @@ if gunzip -c "$BACKUP_FILE" | psql \
   # substituting only the path component of DATABASE_URL.
   SERVER_BASE=$(echo "$DATABASE_URL" | sed -E 's#(://[^/]+/)[^?]*(\?.*)?$#\1#')
   RESTORED_DB_URL="${SERVER_BASE}${RESTORED_DB}"
-  QUERY_SUFFIX=$(echo "$DATABASE_URL" | grep -oP '\?.*$' || true)
+  case "$DATABASE_URL" in
+    *\?*) QUERY_SUFFIX="?${DATABASE_URL#*\?}" ;;
+    *) QUERY_SUFFIX="" ;;
+  esac
   RESTORED_DB_URL="${RESTORED_DB_URL}${QUERY_SUFFIX}"
 
   TABLE_COUNT=$(psql "$RESTORED_DB_URL" -t -c \
@@ -153,7 +203,9 @@ if gunzip -c "$BACKUP_FILE" | psql \
       END LOOP;
       RAISE NOTICE 'TOTAL_ROWS=%', total;
     END \$\$;
-  " 2>&1 | grep -oP '(?<=TOTAL_ROWS=)[0-9]+' || echo "0")
+  " 2>&1 | sed -n 's/.*TOTAL_ROWS=\([0-9][0-9]*\).*/\1/p' | head -n 1 || true)
+  # Unparseable / missing count fails safe to 0 (the existing zero-row warning path), exactly as `|| echo "0"` did.
+  TOTAL_ROWS="${TOTAL_ROWS:-0}"
   echo "Total rows across all public-schema tables: $TOTAL_ROWS" | tee -a "$LOG_FILE"
 
   if [ "$TOTAL_ROWS" -eq 0 ]; then
@@ -177,7 +229,7 @@ else
   # the Postgres service container's own separate log). Surface the real
   # PostgreSQL diagnostic lines here instead, so a future failure shows
   # the exact DB error directly. LOG_FILE never contains the dump's SQL
-  # content or DATABASE_URL unredacted (see REDACTED_URL above and the
+  # content or DATABASE_URL unredacted (the connection URL is never printed; see the
   # gzip/psql invocations, which never echo the dump itself into this
   # file), so this extraction cannot leak business data or credentials.
   echo "--- PostgreSQL diagnostic lines from restore log ---" | tee -a "$LOG_FILE"

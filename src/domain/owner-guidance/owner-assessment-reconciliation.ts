@@ -12,12 +12,18 @@
  *
  * UX-02B (owner-facing prose) must consume CanonicalOwnerAssessment rather than
  * re-deriving readiness or health from OwnerNowView/derivedBusinessCondition itself.
+ *
+ * The narrative's "primary concern" is the business class of the ONE canonical owner decision's
+ * main target (owner-spine/owner-decision.ts), copied verbatim — never OwnerNowView's own
+ * operating-signal ranking (`topOwnerActions[0]`), which previously let the Cockpit narrative say
+ * "Cash flow is the first issue" while the owner's actual main target was something else.
  */
 
 import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation-business-impact";
 import type { AreaStatus } from "@/domain/owner-guidance/guidance-orchestrator";
 import type { GuidanceClassification } from "@/domain/owner-guidance/guidance-classification";
 import type { BusinessIssue } from "@/domain/owner-guidance/issue-priority";
+import type { OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
 import type { DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 
 /** How much of the canonical assessment can be trusted, given evidence gaps alone. */
@@ -47,6 +53,8 @@ export interface OwnerAssessmentReconciliationInput {
   growthReadinessStatus: AreaStatus;
   topOwnerActions: BusinessIssue[];
   urgentRisks: BusinessIssue[];
+  /** Business class of the canonical owner decision's main target (null when there is none). */
+  canonicalPrimaryClass: OwnerPriorityClass | null;
   /** Existing 11-field derived-business-condition detail, when available. */
   conditionDimensions?: DerivedBusinessConditionSignals | null;
 }
@@ -72,7 +80,8 @@ export interface CanonicalOwnerAssessment {
   confidenceCapped: boolean;
   guidanceClassification: GuidanceClassification;
   missingData: string[];
-  primaryIssue: BusinessIssue | null;
+  /** Class of the canonical owner decision's main target — the only source of the primary concern. */
+  primaryConcernClass: OwnerPriorityClass | null;
   urgentRisks: BusinessIssue[];
   areaStatus: CanonicalOwnerAssessmentAreaStatus;
   conditionDimensions: DerivedBusinessConditionSignals | null;
@@ -139,7 +148,7 @@ export function reconcileOwnerAssessment(
     confidenceCapped: input.confidenceCapped,
     guidanceClassification: input.classification,
     missingData: input.missingDataRequests,
-    primaryIssue: input.topOwnerActions[0] ?? null,
+    primaryConcernClass: input.canonicalPrimaryClass,
     urgentRisks: input.urgentRisks,
     areaStatus: {
       cash: insufficient ? null : input.cashDangerStatus,

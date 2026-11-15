@@ -40,13 +40,30 @@ export interface StrategySnapshotInput {
   expectedRevenueChange?: number; // monthly revenue delta if pursued (can be negative)
   costChange?: number; // monthly cost delta if pursued (positive = more cost, negative = savings)
   investmentRequired?: number; // upfront one-time cash needed
-  timeToImpactMonths?: number;
+  timeToImpactMonths?: number; // collected but NOT yet used by any metric/rule (known limitation)
   riskLevel?: StrategyRiskLevel;
   cashAvailable?: number;
   capacityImpactPct?: number; // how much spare capacity it consumes (informational)
   staffImpact?: number; // net staff added (informational)
 
   notes?: string;
+}
+
+/**
+ * Decision-precision scenario economics (full precision minus binary floating-point noise; see
+ * toDecisionPrecision in metrics.ts) — the ONLY values business rules (verdict, findings,
+ * composite scores) may compare against thresholds. `null` = not computable. Monthly amounts are
+ * per month in the snapshot currency; ROI is an annual %; payback is in months; affordability is
+ * cash ÷ investment. Invariant: worstMonthlyProfitDelta ≤ baseMonthlyProfitDelta ≤
+ * bestMonthlyProfitDelta whenever all three are computable.
+ */
+export interface StrategyRawMetrics {
+  baseMonthlyProfitDelta: number | null;
+  bestMonthlyProfitDelta: number | null;
+  worstMonthlyProfitDelta: number | null;
+  roiAnnualPct: number | null;
+  paybackMonths: number | null;
+  affordabilityRatio: number | null;
 }
 
 /**
@@ -58,14 +75,17 @@ export interface StrategyDerivedMetrics {
   currency: string;
   currencyValid: boolean;
 
-  baseMonthlyProfitDelta: number | null; // expectedRevenueChange - costChange
-  bestMonthlyProfitDelta: number | null;
-  worstMonthlyProfitDelta: number | null;
+  // Display values (raw values rounded for presentation: money/ROI/payback to 1 dp,
+  // affordability to 2 dp). Never compare these against a threshold — use `raw`.
+  baseMonthlyProfitDelta: number | null; // monthly: expectedRevenueChange - costChange
+  bestMonthlyProfitDelta: number | null; // monthly: higher of the two revenue-spread outcomes
+  worstMonthlyProfitDelta: number | null; // monthly: lower of the two revenue-spread outcomes
   roiAnnualPct: number | null; // (base*12 / investment) * 100; null when no investment
   paybackMonths: number | null; // investment / base; 0 when no investment; null when it never pays back
   cashRequirement: number | null; // investment required
   affordabilityRatio: number | null; // cashAvailable / investment
   breakEvenRevenueDelta: number | null; // monthly revenue rise needed to cover the cost change
+  raw: StrategyRawMetrics; // full-precision decision values (see StrategyRawMetrics)
 
   strategyHealthScore: number; // 0..100 (attractiveness = safe upside)
   strategyRiskScore: number; // 0..100 (financial/execution risk of the option)

@@ -27,5 +27,5 @@ export const POST = withCanonicalEnforcement(
     const { arbitrationRecordId, portfolioDecisions } = await runGoalArbitration(ctx.verifiedWorkspaceId, ctx.verifiedActorId);
     return canonicalJson({ arbitrationRecordId, portfolioDecisions }, { status: 201 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
+  { requireCommercial: "continuation_action", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );

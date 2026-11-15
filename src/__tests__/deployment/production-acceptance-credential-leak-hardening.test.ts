@@ -41,6 +41,11 @@ import {
 } from "../../../tests/production/helpers/evidence";
 import { authenticateProductionOwner } from "../../../tests/production/helpers/production-auth";
 
+// The closed-loop lifecycle now lives in ONE typed helper that can only mutate a bound fixture (Production run #17
+// remediation), so the exact-id properties below are asserted against that implementation.
+const LOOP_SRC = readFileSync(join(process.cwd(), "tests/production/helpers/fixture-domain-loop.ts"), "utf-8");
+const LIFECYCLE_BODY = LOOP_SRC.slice(LOOP_SRC.indexOf("export async function driveFixtureActionLifecycle"));
+
 const CONFIG_SRC = readFileSync(join(process.cwd(), "playwright.production.config.ts"), "utf-8");
 const STARTUP_SPEC_SRC = readFileSync(
   join(process.cwd(), "tests/production/10-startup-mode-acceptance.spec.ts"),
@@ -77,12 +82,15 @@ describe("(g) explicit evidence collection starts only after login succeeds", ()
     expect(collectIdx).toBeGreaterThan(authIdx);
   });
 
-  it("20-existing-business-acceptance.spec.ts: authenticateProductionOwner() precedes startEvidenceCollection() in beforeAll", () => {
-    const authIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf("await authenticateProductionOwner(page)");
+  it("20-existing-business-acceptance.spec.ts: evidence collection starts only after the SHARED login has been opened, and the login itself starts no evidence collection", () => {
+    const openIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf("await newSharedAuthenticatedContext(browser)");
     const collectIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf("await startEvidenceCollection(context, page, SPEC_NAME)");
-    expect(authIdx).toBeGreaterThan(-1);
+    expect(openIdx).toBeGreaterThan(-1);
     expect(collectIdx).toBeGreaterThan(-1);
-    expect(collectIdx).toBeGreaterThan(authIdx);
+    expect(collectIdx).toBeGreaterThan(openIdx);
+    // The one login (global-setup) runs before any context exists, so no trace/HAR can capture the credentials.
+    const shared = readFileSync(join(process.cwd(), "tests/production/helpers/shared-auth.ts"), "utf-8");
+    expect(shared).not.toMatch(/startEvidenceCollection|tracing\./);
   });
 });
 
@@ -128,7 +136,7 @@ describe("(e) 20-existing-business-acceptance.spec.ts — BLOCKED_SETUP when its
   it("resolves the dedicated business inside a try/catch, so a creation failure cannot throw an unrelated exception out of beforeAll", () => {
     const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf("test.beforeAll(async ({ browser })");
     expect(idx).toBeGreaterThan(-1);
-    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 800);
+    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 1800);
     expect(block).toContain("try {");
     expect(block).toContain("resolveOrCreateDomainBusiness(");
     expect(block).toContain("} catch");
@@ -458,27 +466,26 @@ describe("(h) run #6 — page.request.* traffic is captured via recordApiCall()/
 // exact id via a direct API GET.
 // ---------------------------------------------------------------------------
 describe("(i) run #6 — 01-07 verifies action completion by id, not by re-reading a .first() card", () => {
-  it("captures the action's own id from the dashboard before clicking Complete", () => {
+  it("takes the action's own id from the fixture's own diagnosis cycle before any mutation, and the spec drives the lifecycle through the bound helper", () => {
     const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
     expect(idx).toBeGreaterThan(-1);
-    const clickIdx = EXISTING_BUSINESS_SPEC_SRC.indexOf('name: "Complete"', idx);
-    expect(clickIdx).toBeGreaterThan(idx);
-    const setup = EXISTING_BUSINESS_SPEC_SRC.slice(idx, clickIdx);
-    expect(setup).toMatch(/const actionId: string = /);
+    expect(EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 900)).toContain("driveFixtureActionLifecycle(context, page, fx)");
+    const adoptIdx = LIFECYCLE_BODY.indexOf("fx.latestCycleActions");
+    const firstPatchIdx = LIFECYCLE_BODY.indexOf("patchFixtureAction(");
+    expect(adoptIdx).toBeGreaterThan(-1);
+    expect(firstPatchIdx).toBeGreaterThan(adoptIdx);
+    expect(LIFECYCLE_BODY).toMatch(/const actionId = actions\[0\]\.id;/);
   });
 
-  it("polls the action's own id via a direct GET (not the card) to confirm 'completed', using expect(...).toPass for auto-retry instead of a fixed timing window", () => {
-    const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
-    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3400);
-    expect(block).toMatch(/await expect\(async \(\) => \{[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
-    expect(block).toMatch(/\/api\/owner\/finance\/actions\/\$\{actionId\}/);
+  it("polls the action's own id via a direct GET to confirm 'completed', using expect(...).toPass for auto-retry", () => {
+    expect(LIFECYCLE_BODY).toMatch(/await expect\(async \(\) => \{[\s\S]*?readFixtureAction\(context, page, fx, actionId\)\)\.status\)\.toBe\("completed"\);[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
   });
 
-  it("does not assert the completed status via card.toContainText('completed') (only 'assigned'/'in_progress', which are pre-reassessment states, use the card)", () => {
-    const idx = EXISTING_BUSINESS_SPEC_SRC.indexOf('test("01-07');
-    const block = EXISTING_BUSINESS_SPEC_SRC.slice(idx, idx + 3400);
-    expect(block).not.toMatch(/expect\(card\)\.toContainText\(["']completed["']\)/);
-    expect(block).toMatch(/expect\(card\)\.toContainText\(["']assigned["']\)/);
-    expect(block).toMatch(/expect\(card\)\.toContainText\(["']in_progress["']\)/);
+  it("has no action-card UI assertions at all (the Production UI is read-only; every transition is read back by id)", () => {
+    expect(EXISTING_BUSINESS_SPEC_SRC).not.toMatch(/expect\(card\)|\.border\.rounded|locator\("section", \{ hasText/);
+    for (const status of ["assigned", "in_progress", "completed"]) {
+      expect(LIFECYCLE_BODY).toContain(status);
+    }
+    expect(LIFECYCLE_BODY).toMatch(/\(await readFixtureAction\(context, page, fx, actionId\)\)\.status\)\.toBe\(status\)/);
   });
 });

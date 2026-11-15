@@ -13,7 +13,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { teardownOwnerBusiness } from "../test-helpers/owner-business-teardown";
 import { createBusiness } from "@/services/founder-recovery/business.service";
-import { createFinancialSnapshot, getFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
+import { createFinancialSnapshot, getFinancialSnapshot, amendFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import {
   runFinanceDiagnosis,
   listFinanceCycleFindings,
@@ -111,6 +111,12 @@ describe("[db] Owner Finance services", () => {
     const cycle = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
     const action = cycle.actions[0];
 
+    // Outcomes are recordable only once work has started (verification-evidence.ts).
+
+    await updateFinanceAction(action.id, { status: "assigned" }, actor, workspaceId);
+
+    await updateFinanceAction(action.id, { status: "in_progress" }, actor, workspaceId);
+
     const { verification, result } = await recordFinanceVerification(
       action.id,
       { beforeValue: 15, afterValue: 8, targetDirection: "down", targetValue: 10 },
@@ -120,6 +126,48 @@ describe("[db] Owner Finance services", () => {
     expect(verification.id).toBeTruthy();
     expect(["verified_improved", "verified_not_improved", "inconclusive", "disputed"]).toContain(result.status);
 
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] rejects recording an outcome for an action whose work has not started (BIV-09)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createFinancialSnapshot(businessId, leakySnapshot(), actor, workspaceId);
+    const cycle = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle.actions[0];
+    await expect(
+      recordFinanceVerification(action.id, { beforeValue: 1, afterValue: 2, targetDirection: "up" }, actor, workspaceId)
+    ).rejects.toThrow(/Start this action before recording its outcome/);
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] records baseline provenance: blank before uses the measured value; a different owner value is kept as OWNER_REPORTED (BIV-10)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createFinancialSnapshot(businessId, leakySnapshot(), actor, workspaceId);
+    const cycle = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
+    const action = cycle.actions[0];
+    await updateFinanceAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateFinanceAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    const row = await db.ownerFinanceAction.findFirst({ where: { id: action.id }, include: { finding: true } });
+    const measured =
+      row?.finding && row.finding.sourceMetric === row.verificationMetric && row.finding.sourceValue !== null
+        ? row.finding.sourceValue
+        : null;
+    if (measured === null) {
+      await expect(
+        recordFinanceVerification(action.id, { beforeValue: null, afterValue: 2, targetDirection: "up" }, actor, workspaceId)
+      ).rejects.toThrow(/before \(baseline\) value/);
+    } else {
+      const measuredRun = await recordFinanceVerification(action.id, { beforeValue: null, afterValue: measured, targetDirection: "up" }, actor, workspaceId);
+      expect(measuredRun.verification.beforeValue).toBe(measured);
+      expect(measuredRun.verification.baselineSource).toBe("MEASURED");
+    }
+    const reported = (measured ?? 0) + 50;
+    const ownerRun = await recordFinanceVerification(action.id, { beforeValue: reported, afterValue: 1, targetDirection: "up" }, actor, workspaceId);
+    expect(ownerRun.verification.beforeValue).toBe(reported);
+    expect(ownerRun.verification.baselineSource).toBe("OWNER_REPORTED");
+    expect(ownerRun.verification.measuredBeforeValue).toBe(measured);
     await teardownOwnerBusiness(businessId);
   });
 
@@ -202,4 +250,78 @@ describe("[db] Owner Finance services", () => {
 
     await teardownOwnerBusiness(businessId);
   });
+
+  it("[db] finishing an action left on an older cycle re-diagnoses the LATEST cycle's snapshot, never a stale one (round-3 audit P1-A)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const july = await createFinancialSnapshot(businessId, leakySnapshot(), actor, workspaceId);
+    const cycle1 = await runFinanceDiagnosis(businessId, july.id, actor, workspaceId);
+    const action = cycle1.actions[0];
+    await updateFinanceAction(action.id, { status: "assigned" }, actor, workspaceId);
+    await updateFinanceAction(action.id, { status: "in_progress" }, actor, workspaceId);
+    // Pretend a later diagnosis no longer raised this action's finding: it stays on cycle 1
+    // while a newer cycle (from a newer snapshot) becomes the latest.
+    const august = await createFinancialSnapshot(
+      businessId,
+      { ...leakySnapshot(), periodStart: "2026-05-01", periodEnd: "2026-05-31" },
+      actor,
+      workspaceId
+    );
+    const cycle2 = await runFinanceDiagnosis(businessId, august.id, actor, workspaceId);
+    await db.ownerFinanceAction.update({ where: { id: action.id }, data: { cycleId: cycle1.id } });
+
+    await updateFinanceAction(
+      action.id,
+      { status: "completed", completionNotes: "done", completionEvidence: ["ref"] },
+      actor,
+      workspaceId
+    );
+    const latest = await db.ownerFinanceCycle.findFirst({ where: { businessId, workspaceId }, orderBy: { sequenceNumber: "desc" } });
+    expect(latest!.sequenceNumber).toBe(cycle2.sequenceNumber + 1);
+    expect(latest!.snapshotId).toBe(august.id);
+
+    await teardownOwnerBusiness(businessId);
+  });
+
+  it("[db] after a snapshot amendment the measured baseline follows the corrected data, never the retracted value (round-4 audit P1)", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    const snap = await createFinancialSnapshot(businessId, { ...leakySnapshot(), discountAmount: 45000 }, actor, workspaceId);
+    const cycle1 = await runFinanceDiagnosis(businessId, snap.id, actor, workspaceId);
+    const rows = await db.ownerFinanceAction.findMany({ where: { cycleId: cycle1.id }, include: { finding: true } });
+    // The discount-leakage action: its measured value is exactly what the amendment corrects.
+    const action = rows.find(
+      (a) => a.finding && /DISCOUNT/.test(a.finding.code) && a.finding.sourceMetric === a.verificationMetric && a.finding.sourceValue !== null
+    );
+    expect(action).toBeTruthy();
+    const retracted = action!.finding!.sourceValue!;
+    await updateFinanceAction(action!.id, { status: "assigned" }, actor, workspaceId);
+    await updateFinanceAction(action!.id, { status: "in_progress" }, actor, workspaceId);
+
+    // Owner corrects a typo: the snapshot is amended (new version supersedes the old one).
+    const { snapshot: amended } = await amendFinancialSnapshot(
+      snap.id,
+      { amendmentReason: "typo in discount", discountAmount: 20000 } as never,
+      actor,
+      workspaceId
+    );
+
+    // Corrected version not diagnosed yet: the retracted value is NOT offered as measured.
+    await expect(
+      recordFinanceVerification(action!.id, { beforeValue: null, afterValue: 1, targetDirection: "down" }, actor, workspaceId)
+    ).rejects.toThrow(/before \(baseline\) value/);
+
+    // After diagnosing the corrected version, the baseline is the corrected measurement (or none if
+    // the finding is no longer raised) — never the retracted value.
+    const cycle2 = await runFinanceDiagnosis(businessId, amended!.id, actor, workspaceId);
+    const corrected = cycle2.findings.find((f: { code: string }) => f.code === action!.finding!.code) as { sourceValue: number | null } | undefined;
+    const dash = await getFinanceDashboard(workspaceId, businessId);
+    const listed = dash.latestCycle!.actions.find((a: { id: string }) => a.id === action!.id) as { measuredBaseline: number | null } | undefined;
+    expect(listed).toBeTruthy();
+    expect(listed!.measuredBaseline).not.toBe(retracted);
+    expect(listed!.measuredBaseline).toBe(corrected?.sourceValue ?? null);
+
+    await teardownOwnerBusiness(businessId);
+  });
 });
+

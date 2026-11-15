@@ -15,6 +15,36 @@ Measurement model (owner-approved):
   Plus (API returned `402 payment_required`, 2026-09-24) — not purchased; UTM
   attribution is read from `beta_requests` instead.
 
+## 0. Experiment ledger (authoritative, from 2026-10-02)
+
+One row per acquisition action. Nothing is published unless it can be reconciled to a row here.
+`UNKNOWN` means the value could not be established from current evidence; it is never a guess.
+Rows describing earlier work (2026-09-24 and before) were reconstructed from the sections that follow and keep their original provenance there.
+
+| ID | Date | Asset | Channel | Audience/problem | Query/problem targeted | Destination | UTM source | UTM medium | UTM campaign | Published | Indexed | Impressions | Visits/clicks | Beta requests | Attribution verified | Result | Next action |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| RES1-PAGE-001 | 2026-09-24 | Resource #1 article | Owned site / organic search | Owner profitable but short on cash | profit vs cash (VOLUME UNKNOWN) | `/resources/profitable-but-short-on-cash` | n/a | n/a | n/a | YES (ledger §1; live state not re-verified 2026-10-02, container egress blocked) | NO as of 2026-09-24 (request queued); current state UNKNOWN | UNKNOWN (no GSC read yet) | 13 visitors / 24 views, 2026-09-04 to 10-02, includes QA (Vercel) | UNKNOWN | NO (no `beta_requests` read yet) | INSUFFICIENT DATA | GSC URL Inspection (BROWSER_HANDOFF H1/H2) |
+| RES1-INDEX-001 | 2026-09-24 | `/resources` index | Owned site | Browsers of resources | n/a | `/resources` | n/a | n/a | n/a | YES (same caveat) | NO as of 2026-09-24; current UNKNOWN | UNKNOWN | 10 visitors / 37 views, same window, includes QA | UNKNOWN | NO | INSUFFICIENT DATA | GSC URL Inspection |
+| CALC-PAGE-001 | 2026-09 | Profit margin calculator | Owned site / organic search | Owner wanting margin, markup, target price, profit-vs-cash check | margin / markup / target-margin queries (VOLUME UNKNOWN) | `/tools/profit-margin-calculator` | n/a | n/a | n/a | YES. PR #566 (on-page SEO: title, description, FAQ, FAQPage + BreadcrumbList JSON-LD) merged 2026-10-02 07:00:45Z as `331c94b73b09f350f8aede9355e9e4b3864b47ce`; Vercel production deployment `dpl_3Xf2TVYKnLutuqmGjpxPVmfQkTFt` READY, aliased to opsiq.solutions. Live page content NOT verified (egress blocked, H8) | "Discovered - currently not indexed" per PR #566 body, 2026-10-01; not re-verified. Re-inspect in Search Console 3-7 days after 2026-10-02 07:02Z (H2) | UNKNOWN | **UNKNOWN / NOT MEASURED** before 2026-10-02T07:36:37Z (see §2a). From that instant views are measurable; none observed yet (**NOT YET OBSERVED** as of 2026-10-02 08:14Z, which is not zero) | UNKNOWN | NO | NOT MEASURED | PR #572 merged and live (measurement started 2026-10-02T07:36:37Z); H8 live check including a Vercel Analytics page-view row for the path; GSC re-inspection 3-7 days after 2026-10-02 07:02Z |
+| INTLINK-RES1-CALC-001 | 2026-10-02 | Contextual internal link, Resource #1 to calculator | Owned site (internal link) | Readers of the profit-vs-cash guide | profit vs cash self-check | `/tools/profit-margin-calculator` | n/a (internal link, no UTM by design) | n/a | n/a | YES in the repo: PR #573 merged 2026-10-02T08:08:03Z as `3953e0828ddc53f537531778de217eff45ed37bd`; production deployment `dpl_cLXmVQ6nsBmVdekxfjJf4UkF4pQ7` READY at 2026-10-02T08:09:21Z, aliased to opsiq.solutions. Live link NOT verified (H8) | n/a | n/a | Calculator views NOT MEASURED before 2026-10-02T07:36:37Z (dropped by the analytics allowlist); NOT YET OBSERVED since (as of 2026-10-02 08:14Z, not zero) | UNKNOWN | n/a | INSUFFICIENT DATA | #572 (READY 07:36:37Z) and #573 (READY 08:09:21Z) are both deployed. Once real visits exist, compare calculator views with referrer = guide path; no ranking or indexing effect is claimed |
+| HOME-001 | 2026-09 | Homepage | Owned site | General | n/a | `/` | n/a | n/a | n/a | YES | UNKNOWN | UNKNOWN | 23 visitors / 34 views, same window, includes QA | UNKNOWN | NO | INSUFFICIENT DATA | none |
+| RES1-LI-001 | UNKNOWN (before 2026-09-24) | Company LinkedIn post, Resource #1 | LinkedIn company page | Owners | profit vs cash | Resource #1 (tagged or untagged: UNKNOWN) | UNKNOWN | UNKNOWN | UNKNOWN | YES (`urn:li:share:7508916807861383168`) | n/a | 2 (2026-09-24, LinkedIn-side) | 0 clicks (LinkedIn-side) | 0 | NO | NO EXPOSURE (provisional: 2 impressions) | Do not repost same copy; change the experiment |
+| RES1-MD-001 | UNKNOWN (before 2026-09-24) | Medium article, worked example | Medium | Owners | profit vs cash | Resource #1 (tagged or untagged: UNKNOWN) | UNKNOWN | UNKNOWN | UNKNOWN | YES (URL in §3) | n/a | UNKNOWN | UNKNOWN | 0 attributed (2026-09-24) | NO | INSUFFICIENT DATA | Medium stats read (BROWSER_HANDOFF H6) |
+| RES1-FB-001 | 2026-09-24 | Facebook Page post, Resource #1 | Facebook Page | Owners | profit vs cash | Resource #1 tagged link | facebook (planned) | social (planned) | resource_1_launch (planned) | UNKNOWN: ledger said PREPARED, not sent; Vercel shows facebook.com / m.facebook.com referrers (2 visitors, 3 views) which are NOT attributable to a known post | n/a | UNKNOWN | 2 visitors with a facebook referrer (Vercel, 2026-09-04 to 10-02; could be owner/QA) | UNKNOWN | NO | INSUFFICIENT DATA | Verify page state (H4) |
+| CALC-FB-001 | UNKNOWN | Facebook post, calculator | Facebook Page | Owners | margin / profit vs cash | `/tools/profit-margin-calculator` | facebook | social | UNKNOWN | UNKNOWN (previous session described it as prepared, unpublished) | n/a | UNKNOWN | UNKNOWN | UNKNOWN | NO | NOT MEASURED | Verify then publish (H4) |
+| REF-GOOGLE-001 | 2026-09-04 to 10-02 | Referral observation | Google | UNKNOWN | UNKNOWN | UNKNOWN (path breakdown not pulled) | n/a | n/a | n/a | n/a | n/a | n/a | 3 visitors / 3 views with `google.com` referrer (Vercel) | UNKNOWN | NO | INSUFFICIENT DATA. Not classified as qualified users | Pull path + GSC query for these visits |
+
+### 0a. Result classifications
+
+| Class | Meaning | Response |
+|---|---|---|
+| NO EXPOSURE | The asset was not shown to anyone measurable (impressions or reach near zero) | Distribution problem. Change the channel or experiment; do not rewrite the landing page |
+| EXPOSURE / NO TRAFFIC | It was shown but produced no visits | Message, title or intent mismatch. Compare against the real SERP or channel presentation |
+| TRAFFIC / NO CONVERSION | Visits arrived, no beta request | Audit proposition, audience, CTA, trust and friction |
+| CONVERSION | At least one attributed beta request | Find the cause; replicate cautiously |
+| INSUFFICIENT DATA | Too little time, volume or evidence to classify | Gather more; declare neither success nor failure |
+| NOT MEASURED | The measurement system could not have recorded the outcome | Fix measurement first; no inference allowed from absent records |
+
 ## 1. Owned surface — published state
 
 | Item | Status | Evidence (2026-09-24, ~16:10 UTC) |
@@ -88,7 +118,25 @@ browsers, `noreferrer`), so "no referrer" is not proof the posts produced no
 visits — it is proof no *attributed* visit or lead exists yet. Tagged links
 make future clicks attributable at the lead level.
 
+### 2a. Baseline correction — calculator page views are NOT MEASURED (recorded 2026-10-02)
+
+**`/tools/profit-margin-calculator` page views = UNKNOWN / NOT MEASURED. Not zero.**
+
+- **Observed fact:** the public-page analytics allowlist (`src/lib/analytics/public-page-analytics.ts`) did not include `/tools/profit-margin-calculator`, so its `beforeSend` filter dropped every calculator page view before it left the browser. Vercel Web Analytics (queried 2026-10-02 ~06:00 UTC, window 2026-09-04 to 2026-10-02) lists no row for that path.
+- **Inference:** the absence of a Vercel record cannot distinguish zero visits from dropped events. No traffic conclusion for this path is valid for the affected period.
+- **Affected period:** from the first production deploy that contained the calculator page up to the production deploy of PR #572. Exact start date: UNKNOWN (not established from available evidence; the first-deploy date of the calculator page was not looked up). **End: 2026-10-02T07:36:37Z**, when the production deployment containing the allowlist fix (PR #572, `b9ab7c8ac4cec2b44397930264dcb823c9f0cb1a`) became READY. The whole period before that stays `NOT MEASURED`, not zero.
+- **Measurable paths** (Vercel, 2026-09-04 to 2026-10-02, include QA/verification visits that cannot be separated): `/` 23 visitors / 34 views; `/resources` 10 / 37; `/resources/profitable-but-short-on-cash` 13 / 24. Referrers: direct 31 visitors / 108 views; google.com 3 / 3; vercel.com 3 / 4 (consistent with owner/QA); facebook.com 1 / 1 and m.facebook.com 1 / 2. A country/device split showed India with 10 visitors but 81 views, which looks like owner/QA browsing; this is inference, not fact.
+- **Not claimed:** google.com and facebook.com referrals are not classified as qualified users or potential customers. There is no evidence of who they were.
+
+### 2b. Internal-link audit (repository, 2026-10-02)
+
+- **Observed:** the only inbound links to `/tools/profit-margin-calculator` are the site-wide header "Calculators" link (`PublicSiteHeader.tsx`) and the sitemap entry. Resource #1 (`content/resources/profitable-but-short-on-cash.md`) contains no link to the calculator. `/resources` and the homepage have no contextual link either.
+- **Inference:** Resource #1 is the page with the most external views, and it sends no reader to the free tool. A contextual link from the guide is the highest-value internal link available. It is its own PR: #573 (not mixed with #566 or #572).
+- PR #566 adds links from the calculator back to the guide and `/resources`.
+
 ## 3. Distribution — channel status
+
+State as recorded on 2026-09-24. The current classification per experiment is in §0.
 
 | Channel | Status | Cost | Notes / blocker |
 |---|---|---|---|
@@ -105,6 +153,8 @@ make future clicks attributable at the lead level.
 | Paid promotion | NOT PLANNED | — | Out of scope by owner instruction |
 
 ## 4. Open items / next steps
+
+This list reflects the 2026-09-24 pass and is kept for provenance. Current open work is the BROWSER_HANDOFF in §6.
 
 Constraints held this pass: no beta request submitted, no spend (no paid
 promotion, add-on, or Web Analytics Plus), no production change or redeploy.
@@ -134,3 +184,48 @@ promotion, add-on, or Web Analytics Plus), no production change or redeploy.
 | 2026-09-24 | Ledger created; Resource #1 live verification recorded | this file, sources in §1–§2 |
 | 2026-09-24 | Prior-run LinkedIn + Medium posts recorded as owner-reported/unverified; second measurement row | PR #537 merged (`96271ce8`); Vercel referrer breakdown; `beta_requests` read-only counts |
 | 2026-09-24 | Production gate PASS recorded from the Claude in Chrome run (§1a); third measurement row + reconciliation (9 → 10 views incl. QA); LinkedIn post analytics; Search Console requests/sitemap; LinkedIn + Medium posts moved from owner-reported to published; Facebook post prepared, not sent | Claude in Chrome production run; Vercel Web Analytics Sep 24 aggregate; `beta_requests` count; PR #538 merged (`6feb2931`) |
+| 2026-10-02 | Ledger restructured to the experiment format (§0, §0a); calculator baseline corrected to NOT MEASURED (§2a); internal-link audit (§2b); BROWSER_HANDOFF added (§6); PR #566 and PR #572 gate evidence recorded in §7 | Vercel Web Analytics (2026-10-02 ~06:00 UTC); repo audit; GitHub check runs |
+| 2026-10-02 | Merge train recorded: #566 `331c94b` (live 07:02:17Z), #572 `b9ab7c8` (READY 07:36:37Z = analytics measurement start), #573 `3953e08` (READY 08:09:21Z); calculator analytics NOT YET OBSERVED at 08:14Z; stale statements corrected before the docs PR | GitHub merge records; Vercel deployment API; Vercel `aggregate_pageviews` |
+
+## 6. BROWSER_HANDOFF
+
+Only tasks that need the owner's authenticated browser. Repository work is not repeated here. The container cannot reach `opsiq.solutions` (egress proxy returns 403) and has no login to any of these services.
+
+| # | Service / URL | Data or action required | Why Code cannot do it | Evidence to return | Read-only? |
+|---|---|---|---|---|---|
+| H1 | Google Search Console, property for opsiq.solutions, Performance | Last 7 and 28 days: clicks, impressions, CTR, avg position; query table, page table, country table (export CSV) | No Google login in the container | Screenshots or CSV exports with the date range visible | Read-only |
+| H2 | Search Console, URL Inspection, for `/`, `/resources`, `/resources/profitable-but-short-on-cash`, `/tools/profit-margin-calculator`; Sitemaps page | Indexing state per URL, last crawl, canonical chosen by Google; sitemap status and discovered-URL count. Do NOT press Request Indexing again | Same | Verbatim state text per URL | Read-only |
+| H3 | Bing Webmaster Tools | Sign in, add or import the site from Search Console, submit `https://opsiq.solutions/sitemap.xml`, inspect the 3 content URLs | Needs the owner's Microsoft account and site verification | Verification status, sitemap status, URL Inspection result | Mutating (adds site, submits sitemap) |
+| H4 | Facebook Page (OpsIQ) | Check whether the calculator post and the Resource #1 post exist, are public, and have the tagged link; if the calculator post is unpublished, publish the prepared copy once with its tagged link; confirm no boost | Needs Page admin session; publishing is an external communication | Permalink, screenshot of public view, confirmation of no paid boost | Read for verification; mutating for publishing |
+| H5 | LinkedIn company page analytics (page `urn:li:share:7508916807861383168` and page-level analytics) | Impressions, link clicks, reactions, followers, page visitors, search appearances | Needs admin session | Screenshot with date range | Read-only |
+| H6 | Medium stats for the worked-example article | Views, reads, referrers; whether the link in the article is the tagged one | Needs the author login | Screenshot; the exact outbound link href | Read-only |
+| H7 | `https://opsiq.solutions/admin/beta-requests` | Aggregated counts only: total, per day, first-touch source, landing path, referrer host, UTM fields. No personal data in the report | Needs the owner's authenticated session and production DB | Aggregated table | Read-only |
+| H8 | Production browser verification (until container egress allows `opsiq.solutions`) | After merge: load `/tools/profit-margin-calculator` on desktop and a 375 px mobile window; check title, canonical, one H1, FAQ visible, no console errors; check a Vercel Analytics page view appears for the path | No egress to production | Screenshots, console log, Vercel Analytics path row | Read-only |
+| H9 | Production merge decisions (COMPLETED 2026-10-02: #566, #572 and #573 each authorized in writing at an exact SHA and merged) | Owner written authorization at the exact SHA | Policy: owner authorization required | The SHA, in writing | Mutating (merge) |
+| H10 | Public owner problem threads (Reddit r/smallbusiness and similar, Quora, small-business forums) | Read-only: collect up to ~20 recent public threads where an owner describes profit-but-no-cash, late-paying customers, pricing or margin confusion. Per thread record: URL, date, problem expressed, business type and geography only if stated publicly, subreddit rule on links. Do not post, DM or scrape private data | Container fetch of reddit.com is refused ("unable to fetch"); web search returns advice articles, not owner threads | A table of thread URLs and the stated problems, plus each community's self-promotion rule | Read-only |
+| H11 | First-party submission pages: betalist.com, uneed.best, peerpush.net, saashub.com | Read each directory's own eligibility and cost rules; state whether an invite-only free beta qualifies. Do not submit | Container egress blocks all four hosts (EGRESS_BLOCKED) | Quoted eligibility text and current wait time or fee per directory | Read-only (submission itself would be mutating and needs owner approval) |
+| H12 | Curator and resource pages: smithtonpl.org business and financial information page, merchantsbank.com business resources, and any similar library, development-centre or accountant resource lists | Read-only: for each, confirm the page lists third-party (non-owned) tools, shows a recent update date, and has a contact or suggestion route; record URL and the evidence. Do not contact anyone | Container egress blocks these hosts | Per page: URL, exists, last-updated date, lists external tools (yes/no), calculator relevance, suggestion/contact route; all five must hold to leave `UNVERIFIED_CANDIDATE` | Read-only |
+
+## 7. Gate evidence (2026-10-02)
+
+**PR #566** first-gate head `66c3464d355ba1d7a97b81ec846821fb119ad595` (branch merged forward from `main` `4cec36a`, no conflicts; later merged forward again from `main` `3d0bb1b`, giving the final merged head `85c57f963ca8ed4487fd3aa0fce9d2f6ed814267` with the same two-file diff, all checks green, local 183/183, eslint and `tsc` clean): build-and-test (20.x) success, branch-protection success, Classify change risk success, actionlint success, Vercel Preview Comments success, DB Verification skipped (expected, no DB-touching change). Local on the same head: `vitest run` on the resources, tools and analytics suites 183/183 pass; eslint and `tsc --noEmit` clean; local `next dev` render checked at 1280, 390 and 375 px: one H1, no horizontal overflow, FAQ text equals FAQPage JSON-LD (7 of 7), valid breadcrumb, canonical query-free, internal links all 200, 39 keyboard stops all with a visible focus indicator, no failed requests, no non-local requests, no POSTs, no console errors apart from the dev-server HMR websocket. Production-only checks remain pending (H8).
+
+**PR #572** first head `9378a008153eafc36cb4b96dfd3fabc40c26beef` (CI green, but behind `main`). After merging forward from `main` `331c94b` the final head was `21de8e81271639babad7795de2eed5008f959aea`: build-and-test (20.x), branch-protection, actionlint, Classify change risk and Vercel Preview Comments success, DB Verification skipped; diff 2 files (`src/lib/analytics/public-page-analytics.ts` and its test), 13 insertions, 2 deletions; only new allowlisted path `/tools/profit-margin-calculator`; local 140/140 tests, eslint and `tsc --noEmit` clean; merged as `b9ab7c8`.
+
+**PR #566 merged (2026-10-02).** Merge commit `331c94b73b09f350f8aede9355e9e4b3864b47ce` on `main`. Vercel production deployment `dpl_3Xf2TVYKnLutuqmGjpxPVmfQkTFt`: `PR566_PRODUCTION_DEPLOYMENT=READY`, aliases include `opsiq.solutions` and `www.opsiq.solutions`, no alias error (Vercel API, ~07:03Z). READY means the build is live and aliased. It does not show that the page content is as intended.
+
+**H8 live verification: still PENDING (container cannot reach opsiq.solutions).** Not yet verified on production: HTTP 200; new title ("Profit Margin Calculator for Small Business | OpsIQ", 51 chars); new meta description (139 chars); canonical exactly `https://opsiq.solutions/tools/profit-margin-calculator`; FAQ renders (7 questions); FAQPage, BreadcrumbList and WebApplication JSON-LD present; no `noindex`; internal links resolve; 375/390 px mobile; no new console or network errors. The same checks passed on a local render of the merged page content (PR #566 gate, section 7 above), which is not a production verification.
+
+**PR #572 merged (2026-10-02).** Merge commit `b9ab7c8ac4cec2b44397930264dcb823c9f0cb1a` at 07:35:08Z. Vercel production deployment `dpl_H1bAPantvLLJqGTS2outrE3yB98R` became READY at **2026-10-02T07:36:37Z** (Vercel `ready` field 1790926597295, state READY), aliases include `opsiq.solutions` and `www.opsiq.solutions`, `aliasError` null.
+
+**ANALYTICS_MEASUREMENT_START = 2026-10-02T07:36:37Z.** From this instant calculator page views can be recorded by Vercel Web Analytics. Not yet confirmed: no view for `/tools/profit-margin-calculator` has been observed in the Vercel data (H8). Production timeline: #566 content live from 2026-10-02T07:02:17Z (deployment READY); the analytics fix live from 07:36:37Z. Any calculator view between 07:02:17Z and 07:36:37Z was also not recorded.
+
+**PR #573 (Resource #1 contextual link), state at 07:41Z (superseded by the merge entry below):** updated against `main` `b9ab7c8`; head `700918e5591e6f4e399cd0506078d05fee455f53`; CI was running. Final gate before merge: all checks green, diff 2 files (+33), frontmatter unchanged, one link, no UTM.
+
+**PR #573 merged (2026-10-02).** Merge commit `3953e0828ddc53f537531778de217eff45ed37bd` at 08:08:03Z; `main` is now `3953e0828ddc53f537531778de217eff45ed37bd`. Contextual link from Resource #1 to `/tools/profit-margin-calculator` is on `main` (1 occurrence, no UTM, frontmatter unchanged). Production deployment `dpl_cLXmVQ6nsBmVdekxfjJf4UkF4pQ7` was INITIALIZING at 08:08Z (superseded: READY at 08:09:21Z, see below). The live link is not verified (H8). Effect on calculator discovery or traffic: NOT MEASURED; the link has been live since 08:09:21Z and calculator views are measurable only from 2026-10-02T07:36:37Z.
+
+**Merge train complete (2026-10-02):** #566 `331c94b`, #572 `b9ab7c8`, #573 `3953e08`, all squash-merged with exact-SHA owner authorization. No further acquisition-engineering PRs are open. Next: H8, H10, H11, H12, Search Console re-inspection (3-7 days after 2026-10-02T07:02Z, i.e. 2026-10-05 to 2026-10-09), and confirming a Vercel Analytics row for `/tools/profit-margin-calculator` after 07:36:37Z.
+
+**PR #573 production deployment: READY** at 2026-10-02T08:09:21Z (`dpl_cLXmVQ6nsBmVdekxfjJf4UkF4pQ7`, main `3953e0828ddc53f537531778de217eff45ed37bd`; aliases include `opsiq.solutions`, `aliasError` null). READY is a build state; the live Resource #1 link is still unverified (H8).
+
+**Analytics check (2026-10-02 08:14Z):** Vercel `aggregate_pageviews` by `requestPath` for 2026-10-02 07:00Z to 09:00Z (the API rounds the window to whole hours, so it starts before the 07:36:37Z measurement start) returned no rows for any path. `/tools/profit-margin-calculator` is `NOT YET OBSERVED`. This is not evidence of zero traffic or of a broken allowlist: the window is about 38 minutes after the fix went live and no path at all recorded a view. Re-check after real visits exist (H8 includes loading the page once in a browser, then re-querying; note that a QA visit counts as QA, not as traffic).

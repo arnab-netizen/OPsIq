@@ -13,16 +13,22 @@
  * adopt the spine DomainScore. (Recovery does not yet emit a spine DomainScore;
  * integrating it is a future slice and must not modify Module 1.)
  */
+import { OWNER_DECISION_STALE_EVIDENCE_DAYS } from "@/services/owner-home/owner-decision-candidates";
 import { db } from "@/lib/db";
+import { coherentStrategyActions } from "@/services/owner-strategy/decision-view";
 import { getBusiness, listBusinesses } from "@/services/founder-recovery/business.service";
 import {
   buildBusinessConditionProfile,
   clampScore,
+  rankOwnerFindingsBySeverity,
   type DomainScore,
   type OwnerAction,
   type BusinessConditionProfile,
 } from "@/domain/owner-spine/contracts";
 import { computeMissingInputsWithPriority, type MissingInput } from "@/domain/owner-finance/data-confidence";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_RECOVERY_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
 
 /**
  * Deterministic total order for a domain's per-cycle actions. priorityScore
@@ -50,7 +56,7 @@ export function financeCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.survivalRiskScore),
     opportunityScore: clampScore(cycle.growthOpportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -96,7 +102,7 @@ export function recoveryCycleToDomainScore(cycle: any, snapshot: any): DomainSco
     riskScore: clampScore(RECOVERY_HEALTH_STATUS_RISK[cycle.healthStatus] ?? (100 - clampScore(cycle.healthScore))),
     opportunityScore: 0, // recovery does not score opportunity (honest 0, not invented)
     dataConfidenceScore: clampScore(100 - missingCritical.length * 30), // from real snapshot completeness
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.finding?.code ?? a.metricToMove),
     generatedAt: cycle.createdAt instanceof Date ? cycle.createdAt : new Date(cycle.createdAt),
   };
@@ -110,7 +116,7 @@ export function cashflowCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.dangerScore),
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -145,7 +151,7 @@ export function salesCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore),
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -180,7 +186,7 @@ export function operationsCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // operations ∈ EXECUTION_DOMAINS → routes into executionRiskScore
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -215,7 +221,7 @@ export function sopCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // sop ∈ EXECUTION_DOMAINS → routes into executionRiskScore
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -250,7 +256,7 @@ export function marketingCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // marketing is growth: risk does not raise survival/execution rollup
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
     topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
@@ -285,8 +291,10 @@ export function strategyCycleToDomainScore(cycle: any): DomainScore {
     riskScore: clampScore(cycle.riskScore), // strategy is decision-support: risk scores the option, not survival/execution
     opportunityScore: clampScore(cycle.opportunityScore),
     dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
-    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
-    topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
+    // Canonical severity order: the persisted string column sorts alphabetically in the DB.
+    topFindingCodes: rankOwnerFindingsBySeverity(cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    // Only steps that fit the current decision (never an on-hold legacy "Pursue").
+    topActionCodes: coherentStrategyActions(cycle, cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
   };
 }
@@ -355,15 +363,33 @@ export interface BusinessConditionResult {
  * the existing risk-badge semantics used across the owner UI (>=70 critical, >=40 elevated). Pure.
  */
 export function computeReassessmentCadence(
-  survivalRiskScore: number,
-  executionRiskScore: number
+  survivalRiskScore: number | null,
+  executionRiskScore: number | null,
+  dataSufficiency?: "sufficient" | "caution" | "insufficient"
 ): { days: number; reason: string } {
-  const risk = Math.max(survivalRiskScore, executionRiskScore);
+  // null = NOT MEASURED (no applicable domain supplied evidence). It contributes no risk, but it is also
+  // never evidence of safety: only a business with BOTH categories measured can earn the relaxed cadence.
+  const measured = [survivalRiskScore, executionRiskScore].filter((v): v is number => v !== null);
+  const risk = measured.length > 0 ? Math.max(...measured) : 0;
+  const fullyMeasured = measured.length === 2;
   if (risk >= 70) {
     return { days: 7, reason: "High survival/execution risk — weekly cash, complaint and capacity review until the condition stabilises." };
   }
+  // Missing ≠ zero: a low risk score computed from insufficient data is not evidence of stability
+  // (e.g. Finance with costs and cash missing persists risk 0), so it must never earn the relaxed
+  // "stable, monthly" cadence.
+  if (dataSufficiency === "insufficient") {
+    return { days: 7, reason: "Key business data is missing, so OpsIQ cannot confirm the business is stable — review weekly until it is entered." };
+  }
+  // Partial or out-of-date data can show low risk without proving stability either.
+  if (dataSufficiency === "caution" && risk < 40) {
+    return { days: 14, reason: "Some data is incomplete or out of date, so stability is not yet confirmed — fortnightly review until it is refreshed." };
+  }
   if (risk >= 40) {
     return { days: 14, reason: "Elevated risk — fortnightly review while the condition recovers." };
+  }
+  if (!fullyMeasured) {
+    return { days: 14, reason: "Survival or execution risk has not been measured yet, so stability is not confirmed — fortnightly review until it is." };
   }
   return { days: 30, reason: "Stable condition — monthly review cadence." };
 }
@@ -388,7 +414,7 @@ export async function getBusinessCondition(
     if (owned) selectedBusinessId = owned.id;
   }
   // Unambiguous only when exactly one real business exists — see hasExactlyOneRealBusiness()
-  // and cockpit-finance-priority.service.ts for the same rule. With 0 businesses this falls
+  // and owner-home/home.service.ts for the same rule. With 0 businesses this falls
   // through to the existing empty-state return below; with 2+, it now also falls through
   // (selectedBusinessId stays null) rather than silently guessing businesses[0] — the exact
   // server-side "wrong business" mechanism the controlled-beta launch-blocker audit flagged.
@@ -399,79 +425,86 @@ export async function getBusinessCondition(
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
+  // Current evidence is judged relative to the same `now` the profile is built with (future periods excluded).
+  const evidenceNow = opts.now ?? new Date();
 
-  const [financeCycle, latestFinanceSnapshot, recoveryCycle, cashflowCycle, salesCycle, operationsCycle, sopCycle, marketingCycle, strategyCycle] = await Promise.all([
+  const [financeCycle, latestFinanceSnapshot, recoveryCycle, cashflowCycleRow, salesCycle, operationsCycle, sopCycle, marketingCycle, strategyCycle] = await Promise.all([
     db.ownerFinanceCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        // Ranked after read (see *CycleToDomainScore): severity is a plain string, so
+        // a DB orderBy sorts it alphabetically (critical, high, low, medium).
+        findings: true,
         // Deterministic total order: priorityScore is clamped to [0,100], so
         // ties at the ceiling are a real, expected occurrence. Same fix/
         // rationale as dashboard.service.ts (PR #361).
         actions: { orderBy: TOP_ACTION_ORDER_BY },
+        // The exact snapshot the current Finance diagnosis was run on (never "latest period").
+        snapshot: true,
       },
     }),
-    db.ownerFinancialSnapshot.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
-    }),
+    // Only used when there is NO Finance diagnosis yet (pre-diagnosis input guidance).
+    db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId: selectedBusinessId }, undefined, evidenceNow)),
     // Read-only read of the proven Module 1 recovery cycle (no recovery mutation).
     db.recoveryCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { cycleNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+      orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
       include: {
         snapshot: true,
-        findings: { select: { code: true } },
+        findings: { select: { code: true, severity: true, confidence: true } },
         actions: { include: { finding: { select: { code: true } } }, orderBy: { createdAt: "asc" } },
       },
     }),
     db.ownerCashflowCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
+        // The whole snapshot: a cycle whose snapshot cannot establish total cash is read through the read-time projection.
+        snapshot: true,
       },
     }),
     db.ownerSalesCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerOperationsCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerSopCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerMarketingCycle.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      where: { businessId: selectedBusinessId, workspaceId, ...currentEvidenceWhere(evidenceNow) },
+      orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER,
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
       },
     }),
     db.ownerStrategyCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      orderBy: CURRENT_STRATEGY_CYCLE_ORDER,
       include: {
-        findings: { orderBy: { severity: "asc" } },
+        findings: true,
         actions: { orderBy: TOP_ACTION_ORDER_BY },
+        snapshot: true, // actions are arbitrated against the current decision (decision-view.ts)
       },
     }),
   ]);
@@ -486,6 +519,8 @@ export async function getBusinessCondition(
     domainScores.push(recoveryCycleToDomainScore(recoveryCycle, recoveryCycle.snapshot));
     for (const a of recoveryCycle.actions) topActions.push(recoveryActionRowToOwnerAction(a));
   }
+  // Read-time projection (cycle-projection.ts): a persisted partial-cash conclusion never becomes current survival truth.
+  const cashflowCycle = cashflowCycleRow ? projectCashflowCycleRow(cashflowCycleRow) : null;
   if (cashflowCycle) {
     domainScores.push(cashflowCycleToDomainScore(cashflowCycle));
     for (const a of cashflowCycle.actions) topActions.push(cashflowActionRowToOwnerAction(a));
@@ -508,30 +543,35 @@ export async function getBusinessCondition(
   }
   if (strategyCycle) {
     domainScores.push(strategyCycleToDomainScore(strategyCycle));
-    for (const a of strategyCycle.actions) topActions.push(strategyActionRowToOwnerAction(a));
+    for (const a of coherentStrategyActions(strategyCycle, strategyCycle.actions)) topActions.push(strategyActionRowToOwnerAction(a));
   }
 
+  // The snapshot behind the CURRENT Finance diagnosis (its cycle's own snapshot). A later-period
+  // snapshot that has not been diagnosed does not describe the diagnosis shown alongside it. Only when
+  // no Finance diagnosis exists yet does the latest snapshot guide what to enter.
+  const financeEvidenceSnapshot: any = financeCycle ? financeCycle.snapshot : latestFinanceSnapshot;
   const missingCriticalData =
-    latestFinanceSnapshot && Array.isArray(latestFinanceSnapshot.missingCriticalData)
-      ? (latestFinanceSnapshot.missingCriticalData as string[])
+    financeEvidenceSnapshot && Array.isArray(financeEvidenceSnapshot.missingCriticalData)
+      ? (financeEvidenceSnapshot.missingCriticalData as string[])
       : [];
 
-  // Compute data staleness from the latest finance snapshot's periodEnd (honest: 0 when no snapshot).
-  const STALE_DAYS = 45;
+  // Data staleness uses the SAME rule as the canonical owner decision (owner-home service): the
+  // evidence period ended more than OWNER_DECISION_STALE_EVIDENCE_DAYS ago, or the diagnosed snapshot
+  // has since been amended (honest: not stale, age null, when there is no snapshot).
   const now = opts.now ?? new Date();
   let isStaleData = false;
   let dataAgeDays: number | null = null;
-  if (latestFinanceSnapshot?.periodEnd) {
-    const periodEnd = latestFinanceSnapshot.periodEnd instanceof Date
-      ? latestFinanceSnapshot.periodEnd
-      : new Date(latestFinanceSnapshot.periodEnd as string);
-    const ageDays = Math.floor((now.getTime() - periodEnd.getTime()) / 86_400_000);
-    dataAgeDays = ageDays;
-    isStaleData = ageDays > STALE_DAYS;
+  if (financeEvidenceSnapshot?.periodEnd) {
+    const periodEnd = financeEvidenceSnapshot.periodEnd instanceof Date
+      ? financeEvidenceSnapshot.periodEnd
+      : new Date(financeEvidenceSnapshot.periodEnd as string);
+    dataAgeDays = Math.floor((now.getTime() - periodEnd.getTime()) / 86_400_000);
+    isStaleData = periodEnd.getTime() < now.getTime() - OWNER_DECISION_STALE_EVIDENCE_DAYS * 86_400_000
+      || Boolean(financeEvidenceSnapshot.supersededById);
   }
 
-  const missingInputsWithPriority = latestFinanceSnapshot
-    ? computeMissingInputsWithPriority(latestFinanceSnapshot as Record<string, unknown>)
+  const missingInputsWithPriority = financeEvidenceSnapshot
+    ? computeMissingInputsWithPriority(financeEvidenceSnapshot as Record<string, unknown>)
     : [];
 
   // Most-recent domain diagnosis date (cadence is applied below, once the profile risk is known).
@@ -574,7 +614,11 @@ export async function getBusinessCondition(
   });
 
   // Adaptive review cadence driven by the diagnosed condition (not a fixed 30 days).
-  const cadence = computeReassessmentCadence(profile.survivalRiskScore, profile.executionRiskScore);
+  const cadence = computeReassessmentCadence(
+    profile.survivalRiskScore,
+    profile.executionRiskScore,
+    profile.dataSufficiencyStatus === "sufficient" && isStaleData ? "caution" : profile.dataSufficiencyStatus
+  );
   const nextReassessmentDue = lastDate
     ? new Date(lastDate.getTime() + cadence.days * 86_400_000).toISOString()
     : null;

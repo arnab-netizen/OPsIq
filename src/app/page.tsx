@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession, getPolicyContext } from "@/services/auth";
-import { isSelfServeOwnerContext } from "@/policies/capability-check";
+import { resolveAuthenticatedRootDecision } from "@/services/root-redirect.service";
+import { presentationForAdmissionMode } from "@/domain/beta/public-presentation";
+import { getPublicAdmissionMode } from "@/services/beta/public-presentation.service";
 import LandingPage from "@/components/landing/LandingPage";
 
 export const dynamic = "force-dynamic";
@@ -37,24 +38,26 @@ export const metadata: Metadata = {
   },
 };
 
-const softwareApplicationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "@id": `${SITE_URL}/#software`,
-  name: "OpsIQ",
-  url: `${SITE_URL}/`,
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  description:
-    "OpsIQ reads a business's day-to-day numbers and returns one prioritized, explained action at a time.",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "USD",
-    description: "Free invite-only beta, no credit card required",
-  },
-  publisher: { "@id": `${SITE_URL}/#organization` },
-};
+function softwareApplicationJsonLd(offerDescription: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "@id": `${SITE_URL}/#software`,
+    name: "OpsIQ",
+    url: `${SITE_URL}/`,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "OpsIQ reads a business's day-to-day numbers and returns one prioritized, explained action at a time.",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: offerDescription,
+    },
+    publisher: { "@id": `${SITE_URL}/#organization` },
+  };
+}
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -72,36 +75,33 @@ const organizationJsonLd = {
 };
 
 export default async function HomePage() {
-  const session = await getSession();
-
-  if (session) {
-    // F4: a self-serve owner's canonical first-run/Home surface is /owner/cockpit (labeled "Home" in
-    // the persona-sectioned nav — see sidebar-nav.tsx), not the consultant-oriented /dashboard
-    // (engagements/findings/actions — concepts a self-serve owner never has). Resolved from the SAME
-    // centralized policy check used everywhere else (isSelfServeOwnerContext); consultants, admins,
-    // and any actor this check cannot positively resolve keep the existing /dashboard redirect
-    // unchanged (fail closed to prior behavior on any error).
-    let ownerHome = false;
-    try {
-      const policy = await getPolicyContext();
-      ownerHome = policy ? isSelfServeOwnerContext(policy) : false;
-    } catch {
-      ownerHome = false;
-    }
-    redirect(ownerHome ? "/owner/cockpit" : "/dashboard");
+  // F4/F-AUTH-ROOT-SINGLE-TX: the session validation, policy check, owner-login-href resolution, and
+  // the fail-closed/bounded decision logic all live in resolveAuthenticatedRootDecision() -- this
+  // page only renders the decision, it makes none of it. A self-serve owner's canonical
+  // first-run/Home surface is /owner/cockpit (labeled "Home" in the persona-sectioned nav — see
+  // sidebar-nav.tsx), not the consultant-oriented /dashboard (engagements/findings/actions —
+  // concepts a self-serve owner never has); which one a given redirect resolves to is the service's
+  // decision, never this page's.
+  const decision = await resolveAuthenticatedRootDecision();
+  if (decision.kind === "redirect") {
+    redirect(decision.href);
   }
+  // decision.kind === "anonymous": no positively-proven session (missing/invalid/revoked/expired
+  // cookie, or an inactive user) -- render the same public landing experience as any logged-out
+  // visitor, never a redirect.
+  const settingsMode = await getPublicAdmissionMode();
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd(presentationForAdmissionMode(settingsMode).offerDescription)) }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <LandingPage />
+      <LandingPage admissionMode={settingsMode ?? "INVITE_ONLY"} />
     </>
   );
 }

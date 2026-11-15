@@ -62,7 +62,7 @@ describe("previously-broken card surfaces use the theme-aware bg-card class, not
   const targets = [
     "src/app/(authenticated)/owner/finance/page.tsx",
     "src/app/(authenticated)/owner/onboarding/page.tsx",
-    "src/app/(authenticated)/owner/first-value/page.tsx",
+    // owner/first-value was retired to a redirect (owner-decision consolidation): it renders no card.
   ];
 
   for (const relPath of targets) {
@@ -147,18 +147,13 @@ describe("MinimumOwnerCockpit uses theme-aware CSS custom properties instead of 
     expect(source).not.toMatch(/#e5e7eb/);
   });
 
-  it("the FinanceTopPriorityCard (both primary and secondary render paths) resolves its surface and text via CSS variables", () => {
-    // The premium-redesign pass replaced this component's bordered/filled box (background:
-    // "var(--card)") with an editorial left-rule/divider treatment -- still fully theme-tracking
-    // (a CSS var for the primary rule color, Tailwind's border-border utility -- itself backed by
-    // var(--border) -- for the secondary divider), just no longer a filled card. The guard that
-    // matters is still enforced: no hardcoded hex reappears on this component's own surface.
-    const cardSection = source.slice(source.indexOf("function FinanceTopPriorityCard"), source.indexOf("const RECOVERY_STATUS_LABEL"));
-    expect(cardSection).toMatch(/borderColor:\s*"var\(--accent-ink\)"/);
-    expect(cardSection).not.toMatch(/#[0-9a-fA-F]{3,6}/);
-    // This is the exact description paragraph the audit measured at 1.73:1 in dark mode
-    // ("Postpone all discretionary spend...") -- untouched by the redesign.
-    expect(source).toMatch(/<p style=\{\{ margin: 0, fontSize: 13, color: "var\(--muted-foreground\)" \}\}>\{priority\.topAction\.description\}<\/p>/);
+  it("the OwnerDecisionCard (which replaced the retired FinanceTopPriorityCard as the Cockpit's primary slot) resolves its surface and text via CSS variables", () => {
+    // The canonical owner decision card keeps the same editorial left-rule treatment the Finance
+    // card had: a CSS-var rule color, no hardcoded hex on its own surface.
+    const cardSource = readFileSync(join(process.cwd(), "src/components/owner/OwnerDecisionCard.tsx"), "utf8");
+    expect(cardSource).toMatch(/borderColor:\s*"var\(--accent-ink\)"/);
+    expect(cardSource).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
+    expect(source).not.toMatch(/function FinanceTopPriorityCard/);
   });
 
   it("no theme-tracking text node uses the previously-broken bare #6b7280 or #374151 literal colors", () => {
@@ -201,11 +196,12 @@ describe("MinimumOwnerCockpit uses theme-aware CSS custom properties instead of 
     expect(bareFormInputBorders.length).toBe(0);
   });
 
-  it("does not change PRIORITY_LOGIC — the finance-priority precedence contract (bridge.topRoute wins; financeTopPriority is primary only when isMonitorOnly) is unchanged", () => {
-    // Pure visual/token migration: the precedence wiring must still read
-    // exactly as it did before this pass.
-    expect(source).toMatch(/financeTopPriority && <FinanceTopPriorityCard priority=\{financeTopPriority\} primary=\{isMonitorOnly\} \/>/);
+  it("PRIORITY_LOGIC — the canonical owner decision owns the Cockpit's primary slot; the governed route stays subordinate", () => {
+    expect(source).toMatch(/const decisionCard = ownerDecision \? <OwnerDecisionCard decision=\{ownerDecision\} \/> : null;/);
     expect(source).toMatch(/const top = bridge\?\.topRoute \?\? null;/);
+    // The decision renders before the governed-work block, and no second elector remains.
+    expect(source.indexOf("{decisionCard}")).toBeLessThan(source.indexOf('data-testid="cockpit-top-action"'));
+    expect(source).not.toMatch(/financeTopPriority|FinanceTopPriorityCard|domainTopPriority/);
   });
 });
 
@@ -228,7 +224,6 @@ describe("the 22 (+2) page-level loading states migrated to the skeleton family"
   const migrated: Array<{ relPath: string; variant: string }> = [
     { relPath: "src/app/(authenticated)/owner/now/page.tsx", variant: "CardDashboardSkeleton" },
     { relPath: "src/app/(authenticated)/owner/wealth/page.tsx", variant: "CardDashboardSkeleton" },
-    { relPath: "src/app/(authenticated)/owner/first-value/page.tsx", variant: "CardDashboardSkeleton" },
     { relPath: "src/app/(authenticated)/owner/adjudication/page.tsx", variant: "TableListSkeleton" },
     { relPath: "src/app/(authenticated)/owner/process-intelligence/page.tsx", variant: "CardDashboardSkeleton" },
     { relPath: "src/app/(authenticated)/owner/compliance/page.tsx", variant: "TableListSkeleton" },
@@ -252,8 +247,8 @@ describe("the 22 (+2) page-level loading states migrated to the skeleton family"
     { relPath: "src/app/(authenticated)/dashboard/inbox/inbox-client.tsx", variant: "TableListSkeleton" },
   ];
 
-  it("covers exactly the 24 files enumerated by the residual audit (22 page-level + 2 decision-inbox overlap)", () => {
-    expect(migrated.length).toBe(24);
+  it("covers exactly the 23 files still rendering a page: the residual audit's 24 minus owner/first-value (retired to a redirect)", () => {
+    expect(migrated.length).toBe(23);
   });
 
   for (const { relPath, variant } of migrated) {

@@ -26,7 +26,11 @@ const VALIDATION_LABEL: Record<string, string> = {
 
 const TARGET_DOMAINS = ["finance", "sales", "operations", "sop", "marketing"];
 const SOURCES = [
-  { value: "csv_upload", label: "CSV upload" },
+  // Label corrected to match the actual mechanism: there is no file upload anywhere on this
+  // page, only a pasted-CSV-text textarea. The stored value ("csv_upload") is preserved
+  // unchanged -- it is persisted on existing intake records and read by intake history/audit
+  // consumers -- only its human-facing label changed.
+  { value: "csv_upload", label: "Pasted CSV" },
   { value: "manual_form", label: "Manual form" },
   { value: "google_sheets", label: "Google Sheets export" },
   { value: "email_import", label: "Email import" },
@@ -183,15 +187,15 @@ export default function OwnerIntakePage() {
     <PageContainer>
       <div className="mb-6">
         <PageHeader
-          title="Data Intake & Connectors"
-          description="Upload a CSV (or paste rows) for a domain. We validate and normalize it, show every error, and nothing feeds a diagnosis until you confirm it."
+          title="Add business data"
+          description="Already have your numbers in a spreadsheet? Paste them here. We check every row, show any problems, and nothing is added to your analysis until you confirm it. You do not need this to get your first read — start with your basic numbers on the Money page."
           actions={
             <Button
               onClick={() => setShowUpload((s) => !s)}
               disabled={businesses.length === 0}
               aria-describedby={businesses.length === 0 ? "upload-blocked-reason" : undefined}
             >
-              + Upload data
+              + Paste spreadsheet data
             </Button>
           }
         />
@@ -203,10 +207,10 @@ export default function OwnerIntakePage() {
           data-testid="intake-upload-blocked"
           className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
         >
-          <p className="font-medium">You need a business profile before you can upload.</p>
+          <p className="font-medium">You need a business profile before you can add data.</p>
           <p className="mt-1">
-            Uploads are stored against a business, so OpsIQ needs to know which business the rows
-            belong to. Adding one takes about a minute.
+            Data you add here is stored against a business, so OpsIQ needs to know which business
+            the rows belong to. Adding one takes about a minute.
           </p>
           <Link
             href="/owner/data"
@@ -244,7 +248,7 @@ export default function OwnerIntakePage() {
 
       {businesses.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
-          <p>No business profile yet, so there is nowhere to put uploaded data.</p>
+          <p>No business profile yet, so there is nowhere to put the data you add.</p>
           <Link href="/owner/data" className="mt-2 inline-block font-medium text-[var(--primary-text)] underline hover:no-underline">
             Add your business profile →
           </Link>
@@ -261,10 +265,10 @@ export default function OwnerIntakePage() {
 
           {showUpload && (
             <form onSubmit={upload} className="mb-6 border rounded-lg p-4 bg-card space-y-3">
-              <h2 className="font-semibold">Upload data</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Select name="targetDomain" label="Target domain" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: DOMAIN_LABEL[d] ?? d }))} />
-                <Select name="source" label="Source" required options={SOURCES} />
+              <h2 className="font-semibold">Paste spreadsheet data</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Select name="targetDomain" label="What kind of data is this?" required options={TARGET_DOMAINS.map((d) => ({ value: d, label: DOMAIN_LABEL[d] ?? d }))} />
+                <Select name="source" label="Where did this data come from?" required options={SOURCES} />
               </div>
               <label htmlFor="intake-csv-text" className="block text-sm font-medium">CSV content (first row = headers)</label>
               <textarea
@@ -272,22 +276,22 @@ export default function OwnerIntakePage() {
                 name="csvText"
                 required
                 rows={6}
-                className="w-full border rounded-md p-2 font-mono text-xs"
+                className="w-full rounded-md border p-3 font-mono text-base sm:p-2 sm:text-xs"
                 placeholder={"periodStart,periodEnd,currency,revenue,fixedCosts\n2026-05-01,2026-05-31,INR,100000,40000"}
               />
               <Input name="notes" label="Notes (optional)" />
               <p className="text-xs text-muted-foreground">
                 Columns are matched to the domain&apos;s fields by name. Missing/invalid values are reported, never invented.
               </p>
-              <Button type="submit" disabled={busy}>{busy ? "Validating…" : "Validate + normalize"}</Button>
+              <Button type="submit" disabled={busy}>{busy ? "Validating…" : "Check and review"}</Button>
             </form>
           )}
 
           {preview && <IntakeCandidate intake={preview} busy={busy} onConfirm={confirm} />}
 
           <section className="border rounded-lg p-4 bg-card">
-            <h2 className="font-bold mb-3">Intake history ({intakes.length})</h2>
-            {intakes.length === 0 && <p className="text-sm text-muted-foreground">No uploads yet.</p>}
+            <h2 className="font-bold mb-3">Previously added data ({intakes.length})</h2>
+            {intakes.length === 0 && <p className="text-sm text-muted-foreground">No data added yet.</p>}
             <div className="space-y-2">
               {intakes.map((it: any) => (
                 <div key={it.id} className="flex flex-wrap justify-between items-center gap-2 border-b py-2 text-sm">
@@ -322,11 +326,11 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
   return (
     <section className="border-2 border-foreground/10 rounded-lg p-4 bg-card mb-6 space-y-3">
       <div className="flex items-center justify-between">
-        <div className="text-xs uppercase text-muted-foreground">Candidate — review before confirming</div>
+        <div className="text-xs uppercase text-muted-foreground">Review before adding</div>
         <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted-accessible"}>{VALIDATION_LABEL[intake.validationStatus] ?? intake.validationStatus}</Badge>
       </div>
       <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
-        <span>{DOMAIN_LABEL[intake.targetDomain] ?? intake.targetDomain} · {SOURCE_LABEL[intake.source] ?? intake.source} · {intake.rowCount} row(s) · normalization {NORMALIZATION_LABEL[intake.normalizationStatus] ?? intake.normalizationStatus}</span>
+        <span>{DOMAIN_LABEL[intake.targetDomain] ?? intake.targetDomain} · {SOURCE_LABEL[intake.source] ?? intake.source} · {intake.rowCount} row(s) · checked: {NORMALIZATION_LABEL[intake.normalizationStatus] ?? intake.normalizationStatus}</span>
         {intake.source && (
           <Badge variant="muted-accessible">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
         )}
@@ -369,7 +373,7 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
         {intake.validationStatus !== "invalid" ? (
           <Button onClick={() => onConfirm(intake.id)} disabled={busy}>Confirm this intake</Button>
         ) : (
-          <span className="text-xs text-destructive">Fix the source data and re-upload — an invalid intake cannot be confirmed.</span>
+          <span className="text-xs text-destructive">Fix the source data and paste it in again — an invalid intake cannot be confirmed.</span>
         )}
       </div>
     </section>

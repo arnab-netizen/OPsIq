@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { parseRequestBody, identityEmailSchema } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ValidationError } from "@/infra/errors";
 import { requirePgRateLimit, RateLimitError, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { v4 as uuidv4 } from "uuid";
@@ -13,6 +13,9 @@ import * as bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+/** Valid bcrypt hash (cost 10) of an unrelated constant; used only to equalise timing for accounts with no usable credential. */
+const DUMMY_PASSWORD_HASH = "$2b$10$pEpGbgwOTelKQJ1f52v3u.9PSFUq6Itb1SJPwyI936l8v1uGG9D6G";
 
 const loginSchema = z.object({
   email: identityEmailSchema,
@@ -60,6 +63,10 @@ export const POST = async (request: NextRequest) => {
 
     if (!user || !user.isActive || !user.hashedPassword) {
       console.log("[LOGIN] USER_VALIDATION_FAILED", { found: !!user, active: user?.isActive, hasPassword: !!user?.hashedPassword });
+      // A missing, inactive or credential-less (pending / setup-not-done) account must cost the same bcrypt work as a
+      // wrong password, so response timing never separates "wrong password" from "no usable credential". bcrypt is
+      // never called with a null hash: the comparison is against a fixed, valid, unrelated dummy hash.
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
         payload: { email, reason: "user_not_found_or_inactive" },
@@ -246,11 +253,20 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
+    // Malformed input (bad JSON, missing/empty password, invalid email, unknown field) is the caller's mistake, not a
+    // server failure: a controlled 400 with fixed wording, never an unexplained 500.
+    if (error instanceof ValidationError) {
+      return Response.json(
+        { error: "Enter your email address and password.", classification: "validation_failed" },
+        { status: 400 }
+      );
+    }
+
+    // The pipeline stage stays in the server log ([LOGIN_FAILED] above); the client gets only the classification.
     return Response.json(
       {
         error: "Login failed",
         classification,
-        stage
       },
       { status: 500 }
     );

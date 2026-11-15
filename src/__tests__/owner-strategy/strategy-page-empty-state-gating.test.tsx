@@ -63,6 +63,9 @@ function populatedFixture(label: string) {
     selectedBusinessId: BIZ_A.id,
     hasData: true,
     latestSnapshot: { id: `snap-${label}` },
+    scenarios: [
+      { id: `snap-${label}`, optionName: `Option ${label}`, periodStart: "2026-09-01T00:00:00.000Z", periodEnd: "2026-09-30T00:00:00.000Z", createdAt: "2026-09-01T00:00:00.000Z", lastEvaluationSequence: 1, isCurrentDecision: true },
+    ],
     missingCriticalData: [],
     domainScore: null,
     recommendedNextAction: {
@@ -175,9 +178,9 @@ describe("Owner Strategy page — initial-load empty-state gating", () => {
     // With a single business, BusinessContextSelector renders a static display, not a switcher.
     expect(screen.getByTestId("business-context-single")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "+ Add scenario" })).toBeInTheDocument();
-    // "Evaluate scenario" legitimately depends on dashboard.latestSnapshot (unknown while the
-    // dashboard request has never succeeded) -- correctly disabled, not hidden.
-    expect(screen.getByRole("button", { name: "Evaluate scenario" })).toBeDisabled();
+    // Evaluation is offered per saved scenario, and the saved scenarios are unknown while the
+    // dashboard request has never succeeded -- so no evaluate control is offered at all.
+    expect(screen.queryByRole("button", { name: /Evaluate this scenario/ })).not.toBeInTheDocument();
   });
 
   it("3. successful zero-business context: existing outer no-business guidance remains correct", async () => {
@@ -201,7 +204,8 @@ describe("Owner Strategy page — initial-load empty-state gating", () => {
     await screen.findByText(/No scenario yet/);
     expect(getErrorBanner(container)).toBeNull();
     expect(screen.getByRole("button", { name: "+ Add scenario" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Evaluate scenario" })).toBeDisabled();
+    // No saved scenario → nothing to evaluate.
+    expect(screen.queryByRole("button", { name: /Evaluate this scenario/ })).not.toBeInTheDocument();
   });
 
   it("5. a successful populated load followed by a failed reload preserves the prior content and shows the error", async () => {
@@ -217,7 +221,7 @@ describe("Owner Strategy page — initial-load empty-state gating", () => {
 
     // A successful mutation (runDiagnosis -> POST diagnoses, no failure configured) triggers this
     // page's own authoritative reload -- that reload's dashboard GET is the one that fails.
-    fireEvent.click(screen.getByRole("button", { name: "Evaluate scenario" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Evaluate this scenario: Option A/ }));
 
     await waitFor(() => expect(getErrorBanner(container)).not.toBeNull());
     expect(screen.getByText("STRATEGY_A_ACTION")).toBeInTheDocument();

@@ -20,7 +20,8 @@ vi.mock("@/hooks/useOperatorMutation", () => ({
 import { AppHeader } from "@/ui/shell/app-header";
 import { ActiveBusinessProvider } from "@/context/active-business-context";
 import FirstDiagnosisCta from "@/components/dashboard/FirstDiagnosisCta";
-import DiagnosisEvidenceScopeNotice from "@/components/diagnosis/DiagnosisEvidenceScopeNotice";
+import { DiagnosisAnswerView } from "@/components/diagnosis/DiagnosisAnswerView";
+import { buildGenericDiagnosisAnswer } from "@/domain/generic-diagnosis/answer";
 import { metadata as rootMetadata } from "@/app/layout";
 
 beforeEach(() => {
@@ -80,16 +81,21 @@ describe("rendered product name", () => {
 });
 
 describe("diagnosis honesty is rendered, not merely present in source", () => {
-  it("tells the owner the assessment ignores stored records and routes them to the fix", () => {
-    const { container, getByTestId } = render(<DiagnosisEvidenceScopeNotice placement="result" />);
+  it("labels reported figures as not independently verified and claims no AI involvement", () => {
+    const answer = buildGenericDiagnosisAnswer({
+      businessName: "ZZ-TEST-SANDBOX",
+      businessType: "bakery",
+      problemStatement: "Costs keep rising.",
+      mainIssue: "high_costs",
+      monthlyRevenue: 200000,
+      monthlyCosts: 260000,
+    });
+    const { container } = render(<DiagnosisAnswerView answer={answer} engagementCode="ZZT-001" interventionMode="recovery" />);
     const text = container.textContent ?? "";
-    // It must not claim to have used stored intake data.
-    expect(text).toMatch(/only what you typed above/i);
-    expect(text).toMatch(/does not yet read the revenue, costs, uploads or records/i);
+    expect(text).toMatch(/Reported figure — not independently verified/);
+    expect(text).toMatch(/Medium — one month of reported figures/);
     // It must not claim AI involvement, which does not happen on this path.
     expect(text).not.toMatch(/\bAI\b|model|GPT|Claude/i);
-    expect(getByTestId("diagnosis-evidence-scope-notice").querySelector("a")!.getAttribute("href")).toBe(
-      "/owner/data",
-    );
   });
 });
+

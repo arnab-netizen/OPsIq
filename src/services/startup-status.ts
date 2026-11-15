@@ -11,7 +11,7 @@
 import { createHash, randomUUID } from "crypto";
 
 import { Prisma } from "@/generated/prisma/client";
-import { db, withRawStatementTimeout, getRawPool } from "@/lib/db";
+import { db, withRawStatementTimeout, getRawPool, type RawQueryClient } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
 /**
@@ -55,8 +55,10 @@ const CLAIM_STATEMENT_TIMEOUT_MS = 5000;
  * OWNER_ACTION_REQUIRED: this repository's actual configured Vercel function
  * execution ceiling (maxDuration) is not independently verified this round
  * (see the F-PROD-STARTUP-COLDSTART second-mechanism forensic report) — a
- * genuinely slow connection could in principle run this call up to the
- * pool's full ~90s+5s bound, which may or may not fit within the platform's
+ * genuinely slow connection could in principle run this call up to
+ * withRawStatementTimeoutWorstCaseMs()'s full bound (currently ~105s, after
+ * F-PGBOUNCER-TXN-SAFETY added the SAVEPOINT-wrapped INSERT and the
+ * ROLLBACK-cleanup backstop), which may or may not fit within the platform's
  * actual limit. A SAFE shorter bound (one that does not risk the orphaned-
  * write bug above) would require either confirming that limit, or a more
  * involved abandonment-safe design (tracking cancellation and having a
@@ -179,6 +181,94 @@ export type StartupClaimResult =
 /** Stable 32-hex digest used to derive bounded, non-reversible instance keys. */
 function digest(raw: string): string {
   return createHash("sha256").update(raw, "utf8").digest("hex").slice(0, 32);
+}
+
+/** Bounded SQLSTATE only — never the server's raw error message, which can echo a hostname on some drivers. */
+const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
+function sqlStateOf(err: unknown): string | null {
+  const code = err && typeof err === "object" && "code" in err ? String((err as { code?: unknown }).code) : null;
+  return code && SQLSTATE_PATTERN.test(code) ? code : null;
+}
+
+/** Sanitized, non-secret fields captured when the startup-claim INSERT fails. See captureStartupClaimDiagnostic(). */
+export interface StartupClaimDiagnostic {
+  currentUser: string | null;
+  sessionUser: string | null;
+  transactionReadOnly: string | null;
+  defaultTransactionReadOnly: string | null;
+  neonBranchId: string | null;
+  neonEndpointId: string | null;
+  insertSqlState: string | null;
+  diagnosticUnavailable?: true;
+}
+
+/**
+ * Best-effort, READ-ONLY diagnostic captured on the SAME checked-out client that just failed its startup
+ * claim INSERT, before withRawStatementTimeout() releases or discards it.
+ *
+ * This closes the exact assurance gap behind the historical Production `opsiq_app` cutover incident
+ * ("cannot execute INSERT in a read-only transaction"): forensics required a second, separately-authorized
+ * probe after the fact because the original failure carried no session-state context. Capturing it inline,
+ * on the first occurrence, means a future recurrence is attributable immediately from this log line alone.
+ *
+ * Only bounded, non-secret fields are ever returned: never DATABASE_URL, a hostname, a password, the
+ * connection string, query parameters, a token, or the original error's raw message (which can itself carry
+ * connection details on some drivers) — only its SQLSTATE, validated against the 5-character Postgres
+ * pattern.
+ *
+ * F-PGBOUNCER-TXN-SAFETY: this read no longer runs as an implicit, standalone statement. The INSERT it
+ * follows is wrapped in its own `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` by the caller specifically so this
+ * diagnostic can run validly on the SAME pinned transaction/backend after the INSERT's own failure — `ROLLBACK
+ * TO SAVEPOINT` clears the aborted state locally without ending the outer transaction withRawStatementTimeout()
+ * itself owns. If that `ROLLBACK TO SAVEPOINT` itself fails, this read fails too (with SQLSTATE 25P02), which
+ * is caught and swallowed the same as any other failure here.
+ *
+ * Deliberately swallows its OWN failure: a diagnostic that cannot run must never replace, mask, or delay the
+ * original claim failure the caller already needs to propagate — the caller rethrows `insertError` unchanged
+ * regardless of what this function returns.
+ */
+async function captureStartupClaimDiagnostic(client: RawQueryClient, insertError: unknown): Promise<StartupClaimDiagnostic> {
+  const insertSqlState = sqlStateOf(insertError);
+  try {
+    const row = (
+      await client.query<{
+        current_user: string | null;
+        session_user: string | null;
+        transaction_read_only: string | null;
+        default_transaction_read_only: string | null;
+        neon_branch_id: string | null;
+        neon_endpoint_id: string | null;
+      }>(
+        `SELECT current_user AS current_user, session_user AS session_user,
+                current_setting('transaction_read_only') AS transaction_read_only,
+                current_setting('default_transaction_read_only') AS default_transaction_read_only,
+                current_setting('neon.branch_id', true) AS neon_branch_id,
+                current_setting('neon.endpoint_id', true) AS neon_endpoint_id`,
+      )
+    ).rows[0];
+    return {
+      currentUser: row?.current_user ?? null,
+      sessionUser: row?.session_user ?? null,
+      transactionReadOnly: row?.transaction_read_only ?? null,
+      defaultTransactionReadOnly: row?.default_transaction_read_only ?? null,
+      neonBranchId: row?.neon_branch_id ?? null,
+      neonEndpointId: row?.neon_endpoint_id ?? null,
+      insertSqlState,
+    };
+  } catch {
+    // The diagnostic itself is unavailable (e.g. the session is already unusable). A bounded marker is
+    // reported instead of the original error's message, which this function never reads or forwards.
+    return {
+      currentUser: null,
+      sessionUser: null,
+      transactionReadOnly: null,
+      defaultTransactionReadOnly: null,
+      neonBranchId: null,
+      neonEndpointId: null,
+      insertSqlState,
+      diagnosticUnavailable: true,
+    };
+  }
 }
 
 /**
@@ -483,31 +573,80 @@ export async function claimStartup(): Promise<StartupClaimResult> {
     const claimResult = await withRawStatementTimeout(
       pool,
       CLAIM_STATEMENT_TIMEOUT_MS,
-      (client) => client.query<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>(
-        `
-        WITH "previous" AS (
-          SELECT "status" FROM "startup_status" WHERE "instance_id" = $1
-        )
-        INSERT INTO "startup_status"
-          ("id", "status", "started_at", "completed_at", "error", "version", "instance_id", "claim_token", "updated_at")
-        VALUES
-          (gen_random_uuid(), 'STARTING', $2, NULL, NULL, $3, $1, $4, $2)
-        ON CONFLICT ("instance_id") DO UPDATE SET
-          "status"       = 'STARTING',
-          "started_at"   = $2,
-          "completed_at" = NULL,
-          "error"        = NULL,
-          "version"      = EXCLUDED."version",
-          "claim_token"  = EXCLUDED."claim_token",
-          "updated_at"   = $2
-        WHERE
-          "startup_status"."status" = 'NOT_STARTED'
-          OR "startup_status"."status" = 'FAILED'
-          OR ("startup_status"."status" = 'STARTING' AND "startup_status"."started_at" < $5)
-        RETURNING "id", "claim_token", "started_at", (SELECT "status" FROM "previous") AS "previous_status"
-        `,
-        [instanceId, now, version, claimToken, staleThreshold],
-      ),
+      async (client) => {
+        // F-PGBOUNCER-TXN-SAFETY: withRawStatementTimeout() now runs this
+        // whole `fn` inside its own explicit transaction (BEGIN/SET LOCAL/
+        // COMMIT-or-ROLLBACK -- see src/lib/db.ts), so the INSERT failing
+        // (including a 57014 statement_timeout cancellation) aborts the
+        // ambient transaction: Postgres fails ANY further statement on it,
+        // including this diagnostic read, with SQLSTATE 25P02 until a
+        // ROLLBACK is issued. A SAVEPOINT isolates just the INSERT attempt
+        // so a failure there can be undone with `ROLLBACK TO SAVEPOINT`
+        // without ending the outer transaction -- keeping the diagnostic
+        // read on the SAME pinned transaction/backend, exactly as before
+        // this fix, rather than losing it or needing a second connection.
+        // Verified against a real local PgBouncer (transaction pool mode):
+        // ROLLBACK TO SAVEPOINT un-aborts the transaction and the
+        // diagnostic read succeeds immediately afterward on the same
+        // client.
+        await client.query("SAVEPOINT claim_attempt");
+        // RELEASE SAVEPOINT deliberately sits OUTSIDE this try/catch: it is
+        // not part of what the catch below means by "claim INSERT failed" --
+        // a database/fresh-context review finding noted that nesting it
+        // inside the try would mislabel a RELEASE SAVEPOINT failure as an
+        // INSERT failure and attach an insertError diagnostic to the wrong
+        // statement.
+        let result: {
+          rows: { id: string; claim_token: string; started_at: Date; previous_status: string | null }[];
+        };
+        try {
+          result = await client.query<{ id: string; claim_token: string; started_at: Date; previous_status: string | null }>(
+            `
+            WITH "previous" AS (
+              SELECT "status" FROM "startup_status" WHERE "instance_id" = $1
+            )
+            INSERT INTO "startup_status"
+              ("id", "status", "started_at", "completed_at", "error", "version", "instance_id", "claim_token", "updated_at")
+            VALUES
+              (gen_random_uuid(), 'STARTING', $2, NULL, NULL, $3, $1, $4, $2)
+            ON CONFLICT ("instance_id") DO UPDATE SET
+              "status"       = 'STARTING',
+              "started_at"   = $2,
+              "completed_at" = NULL,
+              "error"        = NULL,
+              "version"      = EXCLUDED."version",
+              "claim_token"  = EXCLUDED."claim_token",
+              "updated_at"   = $2
+            WHERE
+              "startup_status"."status" = 'NOT_STARTED'
+              OR "startup_status"."status" = 'FAILED'
+              OR ("startup_status"."status" = 'STARTING' AND "startup_status"."started_at" < $5)
+            RETURNING "id", "claim_token", "started_at", (SELECT "status" FROM "previous") AS "previous_status"
+            `,
+            [instanceId, now, version, claimToken, staleThreshold],
+          );
+        } catch (insertError) {
+          // Undo just the failed INSERT's abort, keeping the OUTER
+          // transaction/backend pinning intact, so the diagnostic read
+          // below runs on the SAME transaction rather than one Postgres
+          // has already marked aborted. If even this fails, the diagnostic
+          // read's own try/catch (inside captureStartupClaimDiagnostic)
+          // returns a bounded diagnosticUnavailable marker instead of
+          // throwing a second, different error.
+          await client.query("ROLLBACK TO SAVEPOINT claim_attempt").catch(() => undefined);
+          // Best-effort, read-only, sanitized diagnostic — captured on THIS same client before
+          // withRawStatementTimeout()'s own catch rolls back/releases or discards it. Never masks
+          // insertError: it is always rethrown unchanged immediately after.
+          const diagnostic = await captureStartupClaimDiagnostic(client, insertError);
+          logger.error("[STARTUP-STATUS] claim INSERT failed — sanitized diagnostic captured", undefined, {
+            instance: instanceId,
+            diagnostic,
+          });
+          throw insertError;
+        }
+        await client.query("RELEASE SAVEPOINT claim_attempt");
+        return result;
+      },
       "claimStartup",
     );
     const claimed = claimResult.rows;

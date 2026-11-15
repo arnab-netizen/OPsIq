@@ -42,8 +42,14 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 
+/** Campaign money in the active business's currency (campaigns carry no currency of their own). */
+function formatCampaignMoney(amount: number, currency: string | undefined): string {
+  return `${currency ? currency + " " : ""}${amount.toLocaleString()}`;
+}
+
 export default function CampaignsPage() {
   const { businesses, activeBusinessId, needsBusinessRecovery, setActiveBusinessId, loading: contextLoading } = useActiveBusiness();
+  const campaignCurrency = businesses.find((b) => b.id === activeBusinessId)?.currency;
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Presentation-only: prevents rendering EmptyState before the business
@@ -215,9 +221,9 @@ export default function CampaignsPage() {
                       {STATUS_LABEL[c.status] ?? c.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-right">{c.spend != null ? `$${Number(c.spend).toLocaleString()}` : "—"}</td>
+                  <td className="px-4 py-2 text-right">{c.spend != null ? formatCampaignMoney(Number(c.spend), campaignCurrency) : "—"}</td>
                   <td className="px-4 py-2 text-right">{c.leads ?? "—"}</td>
-                  <td className="px-4 py-2 text-right">{c.revenue != null ? `$${Number(c.revenue).toLocaleString()}` : "—"}</td>
+                  <td className="px-4 py-2 text-right">{c.revenue != null ? formatCampaignMoney(Number(c.revenue), campaignCurrency) : "—"}</td>
                   <td className="px-4 py-2 text-right">{roi(c)}</td>
                   <td className="px-4 py-2">
                     <button
@@ -239,50 +245,50 @@ export default function CampaignsPage() {
           <Input
             label="Campaign name"
             value={form.name ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, name: typedValue })); }}
           />
           <Select
             label="Channel"
             options={CHANNELS.map((ch) => ({ value: ch, label: ch }))}
             value={form.channel ?? CHANNELS[0]}
-            onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, channel: typedValue })); }}
           />
           <Select
             label="Status"
             options={STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s]! }))}
             value={form.status ?? "DRAFT"}
-            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, status: typedValue })); }}
           />
           <Input
             type="number"
             label="Budget"
             hint="Optional"
             value={form.budget ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, budget: typedValue })); }}
           />
           <Input
             type="number"
             label="Spend"
             value={form.spend ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, spend: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, spend: typedValue })); }}
           />
           <Input
             type="number"
             label="Leads"
             value={form.leads ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, leads: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, leads: typedValue })); }}
           />
           <Input
             type="number"
             label="Conversions"
             value={form.conversions ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, conversions: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, conversions: typedValue })); }}
           />
           <Input
             type="number"
             label="Revenue"
             value={form.revenue ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, revenue: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, revenue: typedValue })); }}
           />
         </div>
         <div className="flex justify-end gap-2 mt-4">

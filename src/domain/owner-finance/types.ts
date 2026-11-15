@@ -7,6 +7,8 @@
  * value. `null` on a derived metric means "not computable from provided data".
  */
 
+import type { EvidenceQuality } from "./evidence-quality";
+
 export const FINANCIAL_BUSINESS_MODELS = ["service", "inventory", "hybrid"] as const;
 export type FinancialBusinessModel = (typeof FINANCIAL_BUSINESS_MODELS)[number];
 
@@ -23,6 +25,8 @@ export interface FinancialSnapshotInput {
   periodStart: string; // ISO date
   periodEnd: string; // ISO date
   currency: string;
+  /** Provenance of the numbers (ACTUAL / GOOD_ESTIMATE / ROUGH_ESTIMATE). Absent = legacy/unspecified. */
+  evidenceQuality?: EvidenceQuality | null;
   businessModel?: FinancialBusinessModel;
   industryTemplate?: string;
 
@@ -47,6 +51,14 @@ export interface FinancialSnapshotInput {
   refundAmount?: number;
   reworkCost?: number;
   complaintCost?: number;
+  /**
+   * LEGACY ONLY. A refund + rework + complaint figure recorded as ONE combined number before the three were stored
+   * separately. Which components it contains was never recorded, so it is an AMBIGUOUS lower-bound contribution: it adds
+   * its known amount to the leakage total but can never make the leakage group complete, and it is never attributed to
+   * refundAmount / reworkCost / complaintCost. When present it takes precedence over those three fields (a record is
+   * either legacy or component-aware, never both).
+   */
+  legacyCombinedLeakage?: number;
 
   // Debt / cash
   loanEmiDebtPayments?: number;
@@ -58,6 +70,11 @@ export interface FinancialSnapshotInput {
    * compatible cashflow snapshot exists (fail-closed, not zero).
    */
   bankBalance?: number;
+  /**
+   * What `cashOnHand` meant when this snapshot was entered (liquidity.ts). Set by the service layer from
+   * the row's creation time; absent means the current meaning (physical cash only).
+   */
+  cashSemantics?: "PHYSICAL_ONLY" | "LEGACY_AMBIGUOUS";
   receivables?: number;
   receivablesOverdue?: number;
   payables?: number;
@@ -90,10 +107,20 @@ export interface FinancialDerivedMetrics {
   dailyBreakEvenRevenue: number | null;
   cashRunwayDays: number | null;
   cashDaysOfCosts: number | null; // cash / daily cost — valid even when profitable
+  /** Physical + bank cash — ONLY when both are known (liquidity.ts); `null` otherwise, never a partial sum. */
+  totalLiquidFunds: number | null;
+  /** Whether total liquidity is a fact: COMPLETE | BANK_UNKNOWN | PHYSICAL_UNKNOWN | UNKNOWN. */
+  liquidityStatus: "COMPLETE" | "BANK_UNKNOWN" | "PHYSICAL_UNKNOWN" | "UNKNOWN";
   debtServicePressurePct: number | null;
   receivablesPressurePct: number | null;
   payablesPressurePct: number | null;
+  /**
+   * Discounts + refunds + redone work + complaint costs as a % of sales, over the components the owner ENTERED.
+   * When `costLeakageComplete` is false it is a LOWER BOUND ("at least"), never the total: an UNKNOWN component is not zero.
+   */
   costLeakageRatioPct: number | null;
+  /** All four leakage components are known (an explicit 0 counts). Absent on older stored metrics = unknown completeness. */
+  costLeakageComplete?: boolean;
   discountLeakagePct: number | null;
   refundReworkLeakagePct: number | null;
   revenueQualityScore: number | null;

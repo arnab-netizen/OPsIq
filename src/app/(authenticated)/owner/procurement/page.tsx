@@ -261,37 +261,37 @@ export default function ProcurementPage() {
             label="PO number"
             hint="e.g. PO-2026-001"
             value={form.poNumber ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, poNumber: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, poNumber: typedValue })); }}
           />
           <Input
             label="Vendor name"
             hint="Optional"
             value={form.vendorName ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, vendorName: typedValue })); }}
           />
           <Input
             label="Item description"
             value={form.description ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, description: typedValue })); }}
           />
           <Input
             type="number"
             label="Quantity"
             value={form.qty ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, qty: typedValue })); }}
           />
           <Input
             type="number"
             label="Unit price"
             hint="Optional"
             value={form.unitPrice ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, unitPrice: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, unitPrice: typedValue })); }}
           />
           <Input
             label="Notes"
             hint="Optional"
             value={form.notes ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+            onChange={(e) => { const typedValue = e.target.value; setForm((f) => ({ ...f, notes: typedValue })); }}
           />
         </div>
         <div className="flex justify-end gap-2 mt-4">

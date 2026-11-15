@@ -31,6 +31,7 @@ import {
   type SignalRoute,
   type SignalTargetDomain,
 } from "@/domain/owner-budget/signal-routing";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 export interface RouteSignalsParams {
   businessId: string;
@@ -129,11 +130,9 @@ async function triggerFinanceReDiagnosis(params: {
 }): Promise<boolean> {
   const { businessId, workspaceId, actorId, reassessmentId, triggeringSignals } = params;
   try {
-    const latestSnapshot = await db.ownerFinancialSnapshot.findFirst({
-      where: { businessId, workspaceId },
-      orderBy: { periodEnd: "desc" },
-      select: { id: true },
-    });
+    const latestSnapshot = await db.ownerFinancialSnapshot.findFirst(
+      currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }, { id: true })
+    );
     if (!latestSnapshot) return false; // no finance snapshot → gap-safe, signal already audited
 
     const { runFinanceDiagnosis } = await import("@/services/owner-finance/diagnosis.service");

@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
+import { assertCommercialAccess } from "@/services/billing/commercial-access.service";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseRequestBody } from "@/lib/validation";
 import { APPROVAL_RISK_CLASSES, hashApprovalContent } from "@/domain/owner-mode/approval-memory";
@@ -35,6 +36,9 @@ const resolveSchema = z
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
+    // Paywall point: governed execution continues only with an active subscription (no-op unless
+    // BILLING_PAYWALL_ENFORCEMENT=on). First diagnosis/first-value surfaces remain free.
+    await assertCommercialAccess(ctx.verifiedWorkspaceId);
     const input = await parseRequestBody(ctx.request!, resolveSchema);
     const contentHash = input.contentHash ?? hashApprovalContent(input.content);
     const resolution = await resolveOwnerApproval({

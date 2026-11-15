@@ -16,10 +16,14 @@ import { retryEmailAlert } from "@/services/alerts/alert-email-retry.service";
 import { reconcileMissingFinanceLearningSignals } from "@/services/owner-finance/learning-bridge.service";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
+import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/business-risk.service";
+import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler } from "@/services/quickbooks/qbo-sync-scheduling";
+import { TASK_NAME_FIRST_DIAGNOSIS, firstDiagnosisTaskHandler } from "@/services/owner-first-run/first-diagnosis-scheduling";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
 export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
+export const TASK_NAME_RISK_REVIEW_SCAN = "risk-review-scan";
 
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
@@ -130,11 +134,43 @@ const reassessmentScanHandler: TaskHandler = async (_payload, context): Promise<
   return { status: "SUCCESS", counts: { scanned: result.scanned, reassessed: result.reassessed } };
 };
 
+/**
+ * Overdue risk reviews: raise/resolve "Risk review overdue" alerts for one workspace. A risk becomes
+ * overdue by time passing, so this is the explicit process for it (never a read path — the owner Now
+ * View GET writes nothing). Alerts go to the workspace's active owner; resolutions are system events.
+ */
+function scanCounts(r: { attempted: number; created: number; reactivated: number; alreadyActive: number; resolved: number }): string {
+  return `${r.attempted} overdue risk(s) checked: ${r.created} alert(s) created, ${r.reactivated} reactivated, ${r.alreadyActive} already active; ${r.resolved} resolved`;
+}
+
+const riskReviewScanHandler: TaskHandler = async (_payload, context): Promise<HandlerResult> => {
+  if (!context.workspaceId) {
+    throw new Error("risk-review-scan task missing workspaceId — cannot enforce workspace isolation");
+  }
+  const result = await scanOverdueRiskAlertsForWorkspace(context.workspaceId, new Date());
+  if (!result.recipientFound) {
+    return { status: "PARTIAL_FAILURE", summary: "No active workspace owner to receive overdue risk review alerts." };
+  }
+  // A failed alert is never reported as a successful scan.
+  if (result.failed > 0) {
+    return {
+      status: "PARTIAL_FAILURE",
+      summary: `${result.failed} risk alert(s) could not be raised or resolved (${scanCounts(result)}).`,
+    };
+  }
+  return { status: "SUCCESS", summary: scanCounts(result) };
+};
+
 /** The one production handler registry — pass to processDue() unmodified. */
 export function getProductionTaskHandlers(): Map<string, TaskHandler> {
   return new Map<string, TaskHandler>([
     [TASK_NAME_ALERT_EMAIL_RETRY, alertEmailRetryHandler],
     [TASK_NAME_FINANCE_LEARNING_BRIDGE, financeLearningBridgeHandler],
     [TASK_NAME_REASSESSMENT_SCAN, reassessmentScanHandler],
+    [TASK_NAME_RISK_REVIEW_SCAN, riskReviewScanHandler],
+    // QuickBooks Online V1 read-only synchronisation (see src/services/quickbooks/qbo-sync-scheduling.ts).
+    [TASK_NAME_QBO_SYNC, createQboSyncTaskHandler(() => ({ env: process.env }))],
+    // Unattended first read once canonical evidence is sufficient (see src/services/owner-first-run/first-diagnosis-scheduling.ts).
+    [TASK_NAME_FIRST_DIAGNOSIS, firstDiagnosisTaskHandler],
   ]);
 }

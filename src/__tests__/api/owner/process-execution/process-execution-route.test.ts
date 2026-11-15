@@ -14,6 +14,7 @@ const {
   mockApplyProcessExecutionAction,
   mockGetPersistedProcessTasks,
   mockPersistProcessExecutionRoutes,
+  mockRetireResolvedDataGapTasks,
   mockGetOwnerNowView,
   mockIsBusinessInWorkspace,
   mockParseRequestBody,
@@ -23,6 +24,7 @@ const {
   mockApplyProcessExecutionAction: vi.fn(),
   mockGetPersistedProcessTasks: vi.fn(),
   mockPersistProcessExecutionRoutes: vi.fn(),
+  mockRetireResolvedDataGapTasks: vi.fn(),
   mockGetOwnerNowView: vi.fn(),
   mockIsBusinessInWorkspace: vi.fn(),
   mockParseRequestBody: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock("@/services/owner-mode/process-execution-bridge.service", () => ({
   applyProcessExecutionAction: mockApplyProcessExecutionAction,
   getPersistedProcessTasks: mockGetPersistedProcessTasks,
   persistProcessExecutionRoutes: mockPersistProcessExecutionRoutes,
+  retireResolvedDataGapTasks: mockRetireResolvedDataGapTasks,
   isBusinessInWorkspace: mockIsBusinessInWorkspace,
 }));
 
@@ -151,6 +154,7 @@ beforeEach(() => {
   mockGetOwnerNowView.mockResolvedValue({ processExecution: null });
   mockApplyProcessExecutionAction.mockResolvedValue(MOCK_ACTION_RESULT);
   mockPersistProcessExecutionRoutes.mockResolvedValue(undefined);
+  mockRetireResolvedDataGapTasks.mockResolvedValue({ cancelled: 0 });
   mockIsBusinessInWorkspace.mockResolvedValue(true);
 });
 
@@ -376,6 +380,21 @@ describe("POST /api/owner/process-execution — non-DB mock tests", () => {
       mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "START" });
       await processExecutionPost(makeCtx());
       expect(mockGetOwnerNowView).toHaveBeenCalledWith(WS_A, BIZ_A);
+    });
+
+    it("retires resolved data-gap tasks for the materialised business from the same authoritative view", async () => {
+      const processExecution = { routes: [] };
+      mockGetOwnerNowView.mockResolvedValue({ processExecution, cashProfitProtection: { signals: [] } });
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockRetireResolvedDataGapTasks).toHaveBeenCalledWith(WS_A, BIZ_A, processExecution, expect.objectContaining({ cashProfitEvaluated: true }));
+    });
+
+    it("does not treat an unevaluated cash/profit layer as proof a data gap is resolved", async () => {
+      mockGetOwnerNowView.mockResolvedValue({ processExecution: { routes: [] }, cashProfitProtection: null });
+      mockParseRequestBody.mockResolvedValue({ taskKey: `cp:${BIZ_A}:CASH_SAFETY_RISK`, action: "START" });
+      await processExecutionPost(makeCtx());
+      expect(mockRetireResolvedDataGapTasks).toHaveBeenCalledWith(WS_A, BIZ_A, expect.anything(), expect.objectContaining({ cashProfitEvaluated: false }));
     });
 
     it("2. pc:A + no input.businessId -> materialises A", async () => {

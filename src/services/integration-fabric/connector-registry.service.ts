@@ -19,6 +19,8 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import {
   CONNECTOR_PROVIDERS,
+  RETIRED_CONNECTOR_MESSAGE,
+  isRetiredConnectorProvider,
   CONNECTOR_STATUSES,
   deriveConnectorHealthSeverity,
   buildConnectorHealthIssues,
@@ -71,6 +73,11 @@ function assertProvider(p: string): asserts p is ConnectorProvider {
   }
 }
 
+/** New registrations and activations are closed for providers that have a dedicated governed integration (QuickBooks). */
+function assertRegistrable(p: string): void {
+  if (isRetiredConnectorProvider(p)) throw new ConflictError(RETIRED_CONNECTOR_MESSAGE);
+}
+
 export function assertConnectorStatus(s: string): asserts s is ConnectorStatus {
   if (!(CONNECTOR_STATUSES as readonly string[]).includes(s)) {
     throw new ConflictError(`Invalid status: ${s}. Must be one of: ${CONNECTOR_STATUSES.join(" | ")}`);
@@ -112,6 +119,7 @@ export async function registerConnector(
 ): Promise<ConnectorPublicDTO> {
   const { workspaceId, actorId, provider, businessId, tokenExpiresAt } = input;
   assertProvider(provider);
+  assertRegistrable(provider);
 
   // Idempotent: return existing active connector for same workspace+provider
   const existing = await db.ownerConnector.findFirst({
@@ -300,6 +308,8 @@ export async function activateConnector(
     select: { id: true, provider: true },
   });
   if (!existing) throw new NotFoundError("OwnerConnector", connectorId);
+  // A legacy QuickBooks row can never be marked ACTIVE here: only the OAuth flow produces a QuickBooks connection.
+  assertRegistrable(existing.provider);
 
   const row = await db.ownerConnector.update({
     where: { id: connectorId, workspaceId },

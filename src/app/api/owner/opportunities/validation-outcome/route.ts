@@ -55,5 +55,5 @@ export const POST = withCanonicalEnforcement(
     if (!r.ok) return canonicalJson({ error: r.reason }, { status: 400 });
     return canonicalJson({ outcomeId: r.outcomeId, result: r.result, nextRecommendedDecision: r.nextRecommendedDecision, deduped: r.deduped, updated: r.updated }, { status: 200 });
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
+  { requireCommercial: "approval_resolution", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );

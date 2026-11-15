@@ -43,5 +43,5 @@ export const POST = withCanonicalEnforcement(
       throw err;
     }
   },
-  { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
+  { requireCommercial: "continuation_action", requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
 );

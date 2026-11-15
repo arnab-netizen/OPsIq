@@ -16,6 +16,11 @@ import { deriveOwnerContext } from "./owner-context-derivation";
 import { runOwnerAdvice } from "./owner-advice-runtime.service";
 import { PrismaLearningStore } from "@/behavioral-validation/learning-store";
 import type { Constraint } from "@/behavioral-validation/whole-business/arbitration";
+import { scoreCollectivePlan } from "@/behavioral-validation/whole-business/collective-scorer";
+import { evaluateCanonicalScaleGate, type CanonicalScaleGate } from "@/domain/owner-mode/canonical-scale-gate";
+import { loadOwnerGateConstraints } from "./owner-action-gate.service";
+import { applyCanonicalScaleGate } from "./owner-scale-gate-adapter";
+import { logger } from "@/infra/logger";
 import { buildSupervisorSummary, type SupervisorSummary, type SupervisorInput } from "@/domain/owner-mode/supervisor-summary";
 
 export interface OwnerWholeBusinessPlanDeps {
@@ -74,7 +79,11 @@ export interface OwnerWholeBusinessPlanView {
   proofRequired: string[];
   reassessmentTriggers: string[];
   arbitration: { dominantConstraint: Constraint; ownerApprovalNeeded: boolean; requiredProofToReconsider: string; rejectedCount: number };
-  growth: { scaleAllowed: boolean; blockedBy: string[] };
+  /**
+   * Legacy gates AND the canonical owner scale gate (the same GROW evaluation Home / the action gate use).
+   * `scaleAllowed` is true only when BOTH permit; `canonicalGate` names why the canonical side holds it.
+   */
+  growth: { scaleAllowed: boolean; blockedBy: string[]; canonicalGate: { allowed: boolean; reasons: string[] } };
   stage: string;
   plan: { businessHealthSummary: string; plan7Day: string; plan30Day: string; plan90Day: string };
   learning: { applied: boolean; artifactIds: string[]; notes: string[] };
@@ -114,13 +123,24 @@ function notFound(workspaceId: string, businessId: string): OwnerWholeBusinessPl
     ownerWorkload: { offload: "—", delegatedWork: [], approvalRequired: false },
     proofRequired: [], reassessmentTriggers: [],
     arbitration: { dominantConstraint: "profitable_growth", ownerApprovalNeeded: false, requiredProofToReconsider: "—", rejectedCount: 0 },
-    growth: { scaleAllowed: false, blockedBy: [] }, stage: "unknown",
+    growth: { scaleAllowed: false, blockedBy: [], canonicalGate: { allowed: false, reasons: [] } }, stage: "unknown",
     plan: { businessHealthSummary: "No persisted business data.", plan7Day: "", plan30Day: "", plan90Day: "" },
     learning: { applied: false, artifactIds: [], notes: [] },
     data: { criticalDomainsRealProviderBacked: false, criticalDomainsAllReal: false, overallConfidence: "none", dataSourceMissing: [], realProviderDomains: [] },
     collectiveScore: 0, unsafeCount: 0,
     supervisor: buildSupervisorSummary(EMPTY_SUPERVISOR_INPUT),
   };
+}
+
+/** The canonical scale gate for this business; an unloadable safety state fails closed (never permissive). */
+async function resolveCanonicalScaleGate(db: PrismaClient, workspaceId: string, businessId: string, now: Date): Promise<CanonicalScaleGate> {
+  try {
+    const constraints = await loadOwnerGateConstraints(workspaceId, businessId, { db: db as never, now: () => now });
+    return evaluateCanonicalScaleGate(constraints);
+  } catch (err) {
+    logger.warn("owner whole-business plan: canonical safety state unavailable; scale not affirmed", { workspaceId }, { errorName: err instanceof Error ? err.name : "UnknownError" });
+    return evaluateCanonicalScaleGate(null);
+  }
 }
 
 /**
@@ -137,7 +157,14 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
   const store = new PrismaLearningStore(db as unknown as ConstructorParameters<typeof PrismaLearningStore>[0]);
 
   const result = await runOwnerAdvice({ workspaceId, context }, { store, providers });
-  const { plan, arbitration, ingestion } = result;
+  const { ingestion } = result;
+  // ONE canonical safety source: the legacy planner derives its own cash/risk flags from raw rows (it cannot see
+  // a Finance profit-driven AT_RISK, an unverified reading, etc.), so its growth permission and spend
+  // recommendation are adapted from the canonical GROW gate — tightened only, never lifted.
+  const scaleGate = await resolveCanonicalScaleGate(db, workspaceId, businessId, now);
+  const plan = applyCanonicalScaleGate(result.plan, scaleGate);
+  const arbitration = plan.arbitration;
+  const collective = scaleGate.allowed ? result.collective : scoreCollectivePlan(plan);
   const dominant = plan.arbitration.dominantConstraint;
 
   const realProviderDomains = (Object.keys(ingestion.byDomain) as Array<keyof typeof ingestion.byDomain>)
@@ -172,12 +199,17 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
   });
   const withinApprovedSOP = sopApproval !== null;
   const lowRiskApproved = sopApproval?.riskClass === "low";
+  // The safe-action claim asserts cash/capacity/margin safety (`cashImpactSafe`, `staffCapacityOk`, …): a canonical
+  // DANGER (unsafe cash/finance state, unsafe capacity, margin below floor, expired compliance) withdraws it. The mere
+  // ABSENCE of a diagnosed reading is not danger and is already covered by `criticalDomainsAllReal` above.
+  const canonicalDanger = scaleGate.blocks.some((b) => b.code !== "cash_finance_reading_missing" && b.code !== "safety_state_unavailable");
   const safeEligible =
     result.unsafeCount === 0 &&
     ingestion.criticalDomainsAllReal &&
     SAFE_DOMINANTS.has(String(dominant)) &&
     !hardRiskRed &&
     withinApprovedSOP &&
+    !canonicalDanger &&
     ingestion.overallConfidence !== "low" &&
     ingestion.overallConfidence !== "none" &&
     plan.proofRequired.length > 0 &&
@@ -274,7 +306,7 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
       requiredProofToReconsider: arbitration.requiredProofToReconsider,
       rejectedCount: arbitration.rejectedAlternatives.length,
     },
-    growth: { scaleAllowed: plan.growth.scaleAllowed, blockedBy: plan.growth.blockedBy },
+    growth: { scaleAllowed: plan.growth.scaleAllowed, blockedBy: plan.growth.blockedBy, canonicalGate: { allowed: scaleGate.allowed, reasons: scaleGate.blocks.map((b) => b.reason) } },
     stage: plan.stage,
     plan: { businessHealthSummary: plan.businessHealthSummary, plan7Day: plan.plan7Day, plan30Day: plan.plan30Day, plan90Day: plan.plan90Day },
     learning: { applied: result.learningApplied, artifactIds: result.learningArtifactIds, notes: plan.learningUsed },
@@ -285,7 +317,7 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
       dataSourceMissing: ingestion.dataSourceMissing.map((d) => String(d)),
       realProviderDomains,
     },
-    collectiveScore: result.collective.total,
+    collectiveScore: collective.total,
     unsafeCount: result.unsafeCount,
     supervisor,
   };

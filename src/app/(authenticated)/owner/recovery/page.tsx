@@ -1,14 +1,17 @@
 "use client";
 
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
 import { BusinessContextSelector } from "@/components/owner/BusinessContextSelector";
 import { useActiveBusiness } from "@/context/active-business-context";
 
-import { humanizeMetricKey } from "@/lib/metric-label";
+import { humanizeMetricKey, ownerValueText } from "@/lib/metric-label";
 import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const SEVERITY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -293,7 +296,7 @@ export default function OwnerRecoveryPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -316,8 +319,8 @@ export default function OwnerRecoveryPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!activeBusinessId}>
               + Add metric snapshot
             </Button>
-            <Button onClick={runCycle} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy}>
-              Run diagnosis cycle
+            <Button onClick={runCycle} disabled={!activeBusinessId || !dashboard?.latestSnapshot || busy} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Re-run if something changed." : undefined}>
+              {dashboard?.latestSnapshotDiagnosis?.current ? "Re-run diagnosis cycle" : "Run diagnosis cycle"}
             </Button>
           </div>
 
@@ -348,9 +351,12 @@ export default function OwnerRecoveryPage() {
               load must never render "No metric snapshot yet." next to the error banner above:
               that would present unverified emptiness as a fact. A failure AFTER a prior success
               leaves dashboard (and this whole section) exactly as it was -- unaffected. */}
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
           {dashboard === null ? null : !dashboard.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              {dashboard.latestSnapshot
+              {dashboard.latestSnapshotDiagnosis?.current
+                ? "These figures were already diagnosed. Their period is still in progress, so the result is provisional (see the note above) and there is no completed reading yet — it appears here once a completed period is diagnosed."
+                : dashboard.latestSnapshot
                 ? "Snapshot recorded. Click “Run diagnosis cycle” to generate findings and a recovery plan."
                 : "No metric snapshot yet. Add a snapshot, then run a diagnosis cycle."}
             </div>
@@ -413,7 +419,7 @@ function RecoveryCycleView({
                 <Badge variant={SEVERITY_VARIANT[f.severity]}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {String(f.currentValue)} (threshold {String(f.threshold)})
+                <strong>Metric:</strong> {humanizeMetricKey(f.sourceMetric)} = {ownerValueText(f.currentValue)}{f.threshold !== null && f.threshold !== undefined ? <> (threshold {ownerValueText(f.threshold)})</> : null}
               </p>
               <p className="text-xs text-muted-foreground"><strong>Evidence:</strong> {f.evidence}</p>
               <p className="text-xs text-muted-foreground"><strong>Why:</strong> {f.whyItMatters}</p>
@@ -438,6 +444,12 @@ function RecoveryCycleView({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {a.carriedFromCycleSequence != null && (
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
+                        {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {a.assignedToRole} · due {a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "—"} · {PRIORITY_LABEL[a.priority] ?? a.priority}
                     </div>
@@ -445,14 +457,14 @@ function RecoveryCycleView({
                   <Badge variant="muted-accessible">{ACTION_STATUS_LABEL[a.status] ?? a.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Move <strong>{humanizeMetricKey(a.metricToMove)}</strong> {a.direction} — baseline {String(a.baselineValue)} → target {String(a.targetValue)} (within {a.verificationWindowDays}d)
+                  Move <strong>{humanizeMetricKey(a.metricToMove)}</strong> {a.direction} — baseline {ownerValueText(a.baselineValue)} → target {ownerValueText(a.targetValue)} (within {a.verificationWindowDays}d)
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {a.status === "proposed" && <Button onClick={() => onUpdateAction(a, "assigned")} disabled={busy}>Assign</Button>}
                   {a.status === "assigned" && <Button onClick={() => onUpdateAction(a, "in_progress")} disabled={busy}>Start</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "completed")} disabled={busy}>Complete</Button>}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
-                  <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>
+                  {canRecordOutcome(a.status) && <Button onClick={() => onVerifyAction(a)} disabled={busy}>Verify outcome</Button>}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
@@ -460,7 +472,7 @@ function RecoveryCycleView({
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
                     <span className="text-muted-foreground">
-                      after {String(latestVerification.afterValue)} · movement {String(latestVerification.actualMovement)}
+                      after {latestVerification.afterValue ?? "not recorded"} · movement {latestVerification.actualMovement ?? "not recorded"} · baseline measured by diagnosis
                     </span>
                   </div>
                 )}

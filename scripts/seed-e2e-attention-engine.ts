@@ -12,6 +12,8 @@
  *  5. OperatingPolicy × 2 — default policies for E2E workspace (growth_before_capacity, high_cost_low_payback)
  *  6. Escalation (E2E_ESCALATION_ID) — OPEN severity=CRITICAL for spec 53
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import {
   E2E_OWNER,
   E2E_WORKSPACE_ID,

@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "description": "Canonical classification of EVERY tests/production/*.spec.ts and the single source of the LIVE Production acceptance lane. Only entries with safeLane=true run in .github/workflows/production-owner-acceptance.yml; Playwright discovery of *.spec.ts is NOT used. Validated fail-closed by scripts/production-safe-specs.cjs (used by playwright.production.config.ts and the workflow) and by src/__tests__/deployment/production-acceptance-mutation-classification.test.ts. A spec absent from this file, classified UNKNOWN, or classified NON_FIXTURE_PERSISTENT_MUTATION can never reach the live lane. Production run #17 remediation: the live lane's browser UI is read-only against ordinary businesses; every mutation is a fixtureMutate() call bound to a verified fixture id (tests/production/helpers/fixture-target.ts), enforced statically by src/__tests__/deployment/production-acceptance-fixture-target-binding.test.ts and at runtime by src/__tests__/production/fixture-target-binding.test.ts.",
+  "classifications": [
+    "READ_ONLY_REAL_DATA",
+    "FIXTURE_ISOLATED_MUTATION",
+    "REVERSIBLE_REAL_DATA_MUTATION",
+    "NON_FIXTURE_PERSISTENT_MUTATION",
+    "UNKNOWN"
+  ],
+  "universalSideEffects": "Every spec authenticates as the Production acceptance account (a session row is created, and revoked on logout in spec 10) and every governed mutation appends audit events. Audit events are append-only by design and are not part of the per-spec classification.",
+  "specs": [
+    {
+      "file": "10-startup-mode-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-startup-session",
+      "mutations": [
+        "POST /api/admin/acceptance-fixtures/startup-sessions (fixture-only route)",
+        "PATCH/POST /api/owner/startup/sessions/<fixture session>[/analysis|/decision|/activate] and POST /api/admin/acceptance-fixtures/startup-sessions/<fixture session>/blueprint, all through fixtureMutate() bound to the one fixture session",
+        "UI click 'Activate as Business' on /owner/startup/<fixture session> (the route segment is consumed by the page; the hand-off creates a fixture business)"
+      ],
+      "fixtureMechanism": "Dedicated /api/admin/acceptance-fixtures/* routes behind ACCEPTANCE_FIXTURE_WRITE with the fixture flag hard-wired server-side; assertFixtureCreationCapable() preflight before any creation; bindVerifiedFixtureStartupSession() proves the session is absent from the ordinary list and binds every later mutation to it. The hand-off business is asserted to be a fixture and absent from the ordinary owner lists (positive isolation).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are isolated and retained; no deletion API exists or is added.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every governed mutation is confined to a fixture startup session and the fixture business it hands off to; nothing is created in an ordinary owner list.",
+      "exclusionReason": null
+    },
+    {
+      "file": "20-existing-business-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-business",
+      "mutations": [
+        "Governed API only, every call through fixtureMutate() bound to the verified finance fixture: POST .../finance/businesses/<fixture>/snapshots, POST .../finance/businesses/<fixture>/diagnoses, PATCH/POST .../finance/actions/<action adopted from the fixture's own dashboard>[/verify]. The browser UI is read-only (Trinity discovery and a positive isolation check)."
+      ],
+      "readOnlyRealData": "Trinity Services: GET and page loads only; the spec never sends a mutating request carrying trinityBusinessId.",
+      "fixtureMechanism": "resolveOrCreateDomainBusiness(context, page, \"finance\") creates the fixture via POST /api/admin/acceptance-fixtures/businesses after the capability preflight; bindFixtureTarget() then proves it is absent from /api/owner/businesses and the recovery list and addressable by its own id (its snapshot list answers; fixtures are hidden from dashboards by design), and fixtureMutate() refuses any request whose ids are not that fixture or one of its proven actions (helpers/fixture-target.ts).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are retained and hidden from ordinary owners.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every mutation is a governed API call bound to the verified finance fixture; no ordinary-UI mutation exists, so no ordinary business can receive a write.",
+      "exclusionReason": null
+    },
+    {
+      "file": "21-sales-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-business",
+      "mutations": [
+        "Governed API only, every call through fixtureMutate() bound to the verified sales fixture: POST .../sales/businesses/<fixture>/snapshots, POST .../sales/businesses/<fixture>/diagnoses, PATCH/POST .../sales/actions/<action adopted from the fixture's own dashboard>[/verify]. The browser UI is read-only (Trinity discovery and a positive isolation check)."
+      ],
+      "readOnlyRealData": "Trinity Services: GET and page loads only.",
+      "fixtureMechanism": "resolveOrCreateDomainBusiness(context, page, \"sales\") creates the fixture via POST /api/admin/acceptance-fixtures/businesses after the capability preflight; bindFixtureTarget() then proves it is absent from /api/owner/businesses and the recovery list and addressable by its own id (its snapshot list answers; fixtures are hidden from dashboards by design), and fixtureMutate() refuses any request whose ids are not that fixture or one of its proven actions (helpers/fixture-target.ts).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are retained and hidden from ordinary owners.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every mutation is a governed API call bound to the verified sales fixture; no ordinary-UI mutation exists, so no ordinary business can receive a write.",
+      "exclusionReason": null
+    },
+    {
+      "file": "22-operations-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-business",
+      "mutations": [
+        "Governed API only, every call through fixtureMutate() bound to the verified operations fixture: POST .../operations/businesses/<fixture>/snapshots, POST .../operations/businesses/<fixture>/diagnoses, PATCH/POST .../operations/actions/<action adopted from the fixture's own dashboard>[/verify]. The browser UI is read-only (Trinity discovery and a positive isolation check)."
+      ],
+      "readOnlyRealData": "Trinity Services: GET and page loads only.",
+      "fixtureMechanism": "resolveOrCreateDomainBusiness(context, page, \"operations\") creates the fixture via POST /api/admin/acceptance-fixtures/businesses after the capability preflight; bindFixtureTarget() then proves it is absent from /api/owner/businesses and the recovery list and addressable by its own id (its snapshot list answers; fixtures are hidden from dashboards by design), and fixtureMutate() refuses any request whose ids are not that fixture or one of its proven actions (helpers/fixture-target.ts).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are retained and hidden from ordinary owners.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every mutation is a governed API call bound to the verified operations fixture; no ordinary-UI mutation exists, so no ordinary business can receive a write.",
+      "exclusionReason": null
+    },
+    {
+      "file": "23-strategy-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-business",
+      "mutations": [
+        "Governed API only, every call through fixtureMutate() bound to the verified strategy fixture: POST .../strategy/businesses/<fixture>/snapshots (a scenario), POST .../strategy/businesses/<fixture>/diagnoses, PATCH/POST .../strategy/actions/<action adopted from the fixture's own dashboard>[/verify]. The browser UI is read-only (Trinity discovery and a positive isolation check)."
+      ],
+      "readOnlyRealData": "Trinity Services: GET and page loads only.",
+      "fixtureMechanism": "resolveOrCreateDomainBusiness(context, page, \"strategy\") creates the fixture via POST /api/admin/acceptance-fixtures/businesses after the capability preflight; bindFixtureTarget() then proves it is absent from /api/owner/businesses and the recovery list and addressable by its own id (its snapshot list answers; fixtures are hidden from dashboards by design), and fixtureMutate() refuses any request whose ids are not that fixture or one of its proven actions (helpers/fixture-target.ts).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are retained and hidden from ordinary owners.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every mutation is a governed API call bound to the verified strategy fixture; no ordinary-UI mutation exists, so no ordinary business can receive a write.",
+      "exclusionReason": null
+    },
+    {
+      "file": "24-cashflow-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-business",
+      "mutations": [
+        "Governed API only, every call through fixtureMutate() bound to the verified cashflow fixture: POST .../cashflow/businesses/<fixture>/snapshots, a governed 200-or-409 gate-outcome PATCH sequence and a second snapshot, POST .../cashflow/businesses/<fixture>/diagnoses, PATCH/POST .../cashflow/actions/<action adopted from the fixture's own dashboard>[/verify]. The browser UI is read-only (Trinity discovery and a positive isolation check)."
+      ],
+      "readOnlyRealData": "Trinity Services: GET and page loads only; GET /api/owner/control-center is scoped to the fixture business id.",
+      "fixtureMechanism": "resolveOrCreateDomainBusiness(context, page, \"cashflow\") creates the fixture via POST /api/admin/acceptance-fixtures/businesses after the capability preflight; bindFixtureTarget() then proves it is absent from /api/owner/businesses and the recovery list and addressable by its own id (its snapshot list answers; fixtures are hidden from dashboards by design), and fixtureMutate() refuses any request whose ids are not that fixture or one of its proven actions (helpers/fixture-target.ts).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are retained and hidden from ordinary owners.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every mutation is a governed API call bound to the verified cashflow fixture; no ordinary-UI mutation exists, so no ordinary business can receive a write.",
+      "exclusionReason": null
+    },
+    {
+      "file": "25-marketing-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-business",
+      "mutations": [
+        "Governed API only, every call through fixtureMutate() bound to the verified marketing fixture: POST .../marketing/businesses/<fixture>/snapshots, POST .../marketing/businesses/<fixture>/diagnoses, PATCH/POST .../marketing/actions/<action adopted from the fixture's own dashboard>[/verify]. The browser UI is read-only (Trinity discovery and a positive isolation check)."
+      ],
+      "readOnlyRealData": "Trinity Services: GET and page loads only.",
+      "fixtureMechanism": "resolveOrCreateDomainBusiness(context, page, \"marketing\") creates the fixture via POST /api/admin/acceptance-fixtures/businesses after the capability preflight; bindFixtureTarget() then proves it is absent from /api/owner/businesses and the recovery list and addressable by its own id (its snapshot list answers; fixtures are hidden from dashboards by design), and fixtureMutate() refuses any request whose ids are not that fixture or one of its proven actions (helpers/fixture-target.ts).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are retained and hidden from ordinary owners.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every mutation is a governed API call bound to the verified marketing fixture; no ordinary-UI mutation exists, so no ordinary business can receive a write.",
+      "exclusionReason": null
+    },
+    {
+      "file": "26-recovery-acceptance.spec.ts",
+      "classification": "FIXTURE_ISOLATED_MUTATION",
+      "scope": "fixture-business",
+      "mutations": [
+        "Governed API only, every call through fixtureMutate() bound to the verified recovery fixture: POST .../recovery/businesses/<fixture>/snapshots (cycles instead of diagnoses), POST .../recovery/businesses/<fixture>/cycles, PATCH/POST .../recovery/actions/<action adopted from the fixture's own dashboard>[/verify]. The browser UI is read-only (Trinity discovery and a positive isolation check)."
+      ],
+      "readOnlyRealData": "Trinity Services: GET and page loads only.",
+      "fixtureMechanism": "resolveOrCreateDomainBusiness(context, page, \"recovery\") creates the fixture via POST /api/admin/acceptance-fixtures/businesses after the capability preflight; bindFixtureTarget() then proves it is absent from /api/owner/businesses and the recovery list and addressable by its own id (its snapshot list answers; fixtures are hidden from dashboards by design), and fixtureMutate() refuses any request whose ids are not that fixture or one of its proven actions (helpers/fixture-target.ts).",
+      "rollback": null,
+      "rollbackNote": "None by design: fixture rows are retained and hidden from ordinary owners.",
+      "ownerVisible": false,
+      "survivesRun": true,
+      "safeLane": true,
+      "safeReason": "Every mutation is a governed API call bound to the verified recovery fixture; no ordinary-UI mutation exists, so no ordinary business can receive a write.",
+      "exclusionReason": null
+    },
+    {
+      "file": "27-growth-pricing-acceptance.spec.ts",
+      "classification": "NON_FIXTURE_PERSISTENT_MUTATION",
+      "scope": "workspace",
+      "mutations": [
+        "POST /api/growth/pricing-tiers (creates a real workspace price tier)",
+        "UI Approve on that tier",
+        "POST /api/growth/pricing-tiers/:id/supersede (archives the original tier, creates a new version)"
+      ],
+      "fixtureMechanism": null,
+      "rollback": null,
+      "rollbackNote": "None. The spec never restores, archives-back or deletes what it creates, and no governed cleanup exists.",
+      "ownerVisible": true,
+      "survivesRun": true,
+      "safeLane": false,
+      "safeReason": null,
+      "exclusionReason": "Growth Pricing is workspace-scoped (PricingEngine keys every tier by workspaceId only), so there is no fixture business to isolate it in. The spec creates a real price tier, approves it, supersedes it (archiving the original and creating a new version) and leaves all of it behind; the tiers are visible to ordinary owners at /owner/growth-pricing and feed the workspace pricing analysis. No fixture semantics and no rollback exist. GROWTH_PRICING_LIVE_MUTATION_SAFETY=OPEN; see docs/opsiq-governance/PRODUCTION_ACCEPTANCE_SAFE_LANE.md."
+    }
+  ]
+}

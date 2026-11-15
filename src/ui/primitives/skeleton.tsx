@@ -48,10 +48,10 @@ export function CardDashboardSkeleton({
 }) {
   return (
     <div className="mx-auto max-w-5xl py-8 px-4" role="status" aria-label={label}>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-56" />
-          <Skeleton className="h-4 w-80" />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-8 w-full max-w-56" />
+          <Skeleton className="h-4 w-full max-w-80" />
         </div>
         <Skeleton className="h-9 w-32 rounded-md" />
       </div>

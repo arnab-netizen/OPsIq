@@ -19,4 +19,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
   const submission = body.command?.submission ?? body.submission ?? {};
 
   return intakeProofSubmission({ workspaceId, actorId, taskId, submission });
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT] });
+}, { requireCommercial: "governed_execution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT] });

@@ -114,14 +114,26 @@ describe("[db] Owner Home service", () => {
     expect(home.domainsWired).toContain("finance");
     const s = home.summary!;
     expect(typeof s.businessHealthScore).toBe("number");
-    // finance has no cashflow/sales/operations diagnosis → those dangers are unknown.
-    expect(s.cashDanger.level).toBe("unknown");
+    // Only Finance is diagnosed: its overall (margin/profit-driven) risk is the Financial danger card with
+    // provenance; the cash card never borrows Finance's score — it shows Finance's own cash-survival
+    // findings by severity when there are any, otherwise it is unknown.
+    // The fixture's period (May) is outside the freshness window: the reading is last-known — its level
+    // is shown, its score is not, and the card names the data to update.
+    expect(s.financialDanger).toMatchObject({ key: "financial", sourceDomains: ["finance"], status: "last_known", riskScore: null, updateDataLabel: "Finance" });
+    expect(s.financialDanger.level).not.toBe("unknown");
+    // The cash card never borrows Finance's score: this fixture has no Cash flow diagnosis and no Finance
+    // cash-survival finding, so it is unknown.
+    expect(s.cashDanger).toMatchObject({ status: "unknown", riskScore: null, sourceDomains: [] });
     expect(s.salesDanger.level).toBe("unknown");
     // a leaky finance snapshot produces at least one risk + at least one required action.
     expect(s.top3Risks.length).toBeGreaterThan(0);
     expect(s.top3Risks.length).toBeLessThanOrEqual(3);
-    expect(s.requiredActions.length).toBeGreaterThan(0);
-    expect(s.requiredActions.length).toBeLessThanOrEqual(5);
+    // Today's open work is the canonical decision's attention order (open work only, main target first).
+    const d = home.currentOwnerDecision!;
+    expect(d.attention.length).toBeGreaterThan(0);
+    expect(d.attention[0].candidateId).toBe(d.primaryCandidateId);
+    expect(d.attention.every((a) => ["proposed", "assigned", "in_progress", "blocked"].includes(a.status))).toBe(true);
+    expect(s).not.toHaveProperty("requiredActions");
     expect(s.lastVerifiedImprovement).toBeNull();
 
     await teardownOwnerBusiness(businessId);

@@ -16,6 +16,7 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createBudgetPeriod, reassessBudget } from "@/services/owner-budget/budget.service";
 import { updateBudgetAction } from "@/services/owner-budget/action-link.service";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { seedKnownBank } from "../../test-helpers/seed-known-bank";
 
 const actor = randomUUID();
 const businessIds: string[] = [];
@@ -36,6 +37,7 @@ async function seedHealthyFinance(workspaceId: string, businessId: string) {
       dataConfidenceScore: 80, missingCriticalData: [], updatedAt: new Date(),
     },
   });
+  await seedKnownBank(workspaceId, businessId);
 }
 
 async function seedPeriod(workspaceId: string, businessId: string) {

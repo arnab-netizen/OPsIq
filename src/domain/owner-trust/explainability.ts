@@ -115,6 +115,23 @@ export function buildExplanations(
   return findings.map((f) => buildExplanation(f, actionByCode.get(f.code) ?? null, opts));
 }
 
+/**
+ * De-duplicated union of the finding-scoped gaps already carried by the cards -- the
+ * diagnosis-cycle view of what is still missing (the data-completeness finding carries these).
+ */
+export function cycleDataGapUnion(cards: ReadonlyArray<{ dataGaps?: readonly string[] | null }>): string[] {
+  const out: string[] = [];
+  for (const c of cards) for (const g of c.dataGaps ?? []) if (!out.includes(g)) out.push(g);
+  return out;
+}
+
+/** Card-level statement, explicit that it covers this finding only (not the whole diagnosis). */
+export function findingGapStatement(dataGaps: readonly string[] | null | undefined, label: (k: string) => string = (k) => k): string {
+  return dataGaps && dataGaps.length > 0
+    ? `Missing inputs for this finding: ${dataGaps.map(label).join(", ")}.`
+    : "No missing inputs for this finding.";
+}
+
 /** Categories the system must never invent (anti-hallucination allowlist, §18). */
 export const NEVER_INVENT = [
   "revenue",

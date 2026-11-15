@@ -19,10 +19,15 @@ export interface StrategyThresholds {
   // Affordability (cashAvailable / investment)
   minAffordabilityRatio: number;
   criticalAffordabilityRatio: number;
+  // Cash left after the investment, as a share of the investment, below which the option
+  // "uses (nearly) all the cash" and a reserve becomes a condition of going ahead.
+  lowReserveRatio: number;
   // Data freshness
   staleSnapshotDays: number;
 }
 
+// Provenance: INTERNAL_HEURISTIC (generic defaults); template overrides below are INDUSTRY_TEMPLATE with no recorded
+// source for the exact numbers — see docs/opsiq/architecture/OWNER_THRESHOLD_PROVENANCE.md. Values are unchanged.
 export const GENERIC_STRATEGY_THRESHOLDS: StrategyThresholds = {
   strongRoiPct: 100,
   lowRoiPct: 20,
@@ -31,6 +36,7 @@ export const GENERIC_STRATEGY_THRESHOLDS: StrategyThresholds = {
   criticalPaybackMonths: 36,
   minAffordabilityRatio: 1.0,
   criticalAffordabilityRatio: 0.5,
+  lowReserveRatio: 0.1,
   staleSnapshotDays: 60,
 };
 

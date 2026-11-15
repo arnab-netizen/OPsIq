@@ -129,7 +129,7 @@ describe("owner-cashflow detector — risk findings", () => {
     const missing = findings.find((f) => f.code === "CF_MISSING_CRITICAL_DATA");
     expect(missing?.confidence).toBe(1); // certain about absence
     expect(missing?.missingData).toEqual(
-      expect.arrayContaining(["cash", "nearTermObligations", "dailyCollections"])
+      expect.arrayContaining(["cashInHand", "bankBalance", "nearTermObligations", "dailyCollections"])
     );
   });
 

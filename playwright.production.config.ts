@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { resolveSafeSpecs } from './scripts/production-safe-specs.cjs';
 
 // LIVE PRODUCTION acceptance lane -- distinct from playwright.config.ts,
 // which targets a locally-built app or a CI throwaway environment. This
@@ -7,8 +8,15 @@ import { defineConfig, devices } from '@playwright/test';
 // production deployment. globalSetup fails closed if BASE_URL or the
 // acceptance credentials are absent; the dispatching workflow independently
 // verifies BASE_URL serves the exact expected commit before this ever runs.
+//
+// SAFE LANE: only the specs tests/production/production-spec-manifest.json marks
+// safeLane=true are matched. Playwright never auto-discovers the rest of the
+// directory, and resolveSafeSpecs() throws (so the run cannot start) if any
+// *.spec.ts is unclassified or the manifest is invalid. Growth Pricing (27) is
+// excluded because it persists real workspace price tiers with no cleanup.
 export default defineConfig({
   testDir: './tests/production',
+  testMatch: resolveSafeSpecs().map((file: string) => `**/${file}`),
   globalSetup: './tests/production/global-setup.ts',
   fullyParallel: false,
   forbidOnly: true,

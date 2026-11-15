@@ -28,8 +28,9 @@
  */
 
 export {};
+import { createDiagnosticClient } from "../src/lib/security/diagnostic-destination";
 
-const baseUrl = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
+const baseUrlInput = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
 
 // Production write guard: abort if pointing at known production URLs without explicit opt-in.
 const PRODUCTION_URL_PATTERNS = [
@@ -37,7 +38,7 @@ const PRODUCTION_URL_PATTERNS = [
   /opsiq\.app/i,
   /opsiq\.com/i,
 ];
-const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrl));
+const isProductionUrl = PRODUCTION_URL_PATTERNS.some((p) => p.test(baseUrlInput));
 if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
   console.error("ERROR: BASE_URL matches a production pattern.");
   console.error("This script creates permanent user/workspace/diagnosis records.");
@@ -45,6 +46,15 @@ if (isProductionUrl && process.env.SMOKE_ALLOW_PRODUCTION_WRITES !== "true") {
   console.error("Ensure you have a cleanup plan before proceeding.");
   process.exit(1);
 }
+
+// Destination guard: the diagnostic key is only ever sent to an approved origin, as a header, and redirects are
+// never followed (see src/lib/security/diagnostic-destination.ts).
+const __client = createDiagnosticClient(baseUrlInput, process.env.OPSIQ_DIAGNOSTIC_KEY);
+const baseUrl = __client.origin;
+const safeFetch = (url: string, init?: RequestInit & { headers?: Record<string, string> }) => {
+  if (!url.startsWith(`${__client.origin}/`)) throw new Error("refusing request outside the approved origin");
+  return __client.fetch(url.slice(__client.origin.length), init);
+};
 
 const timestamp = Date.now();
 const testEmail = `opsiq-smoke+${timestamp}@example.com`;
@@ -64,11 +74,37 @@ interface SignupResponse {
 }
 
 interface DiagnosisResponse {
-  id: string;
   engagementId: string;
-  diagnosisSummary?: string;
-  recommendations?: Array<{ id: string; title: string; priority: string }>;
-  actionPlan?: Array<{ title: string; priority: string }>;
+  engagementCode?: string;
+  answer?: {
+    status: "concluded" | "insufficient_evidence";
+    mainProblem: { code: string; headline: string };
+    firstStep: { title: string };
+  };
+}
+
+/** Error body fields this smoke prints when POST /api/diagnosis fails (all optional; absent → not printed). */
+type FlagMap = Record<string, string | boolean | undefined>;
+interface DiagnosisFailureBody {
+  error?: string;
+  correlationId?: string;
+  classification?: string;
+  stage?: string;
+  errorName?: string;
+  failingOperation?: string;
+  prismaCode?: string;
+  prismaClientVersion?: string;
+  safeMessage?: string;
+  prismaMeta?: unknown;
+  diagnostics?: {
+    routeWrapper?: string;
+    requireWorkspaceConfigured?: boolean;
+    ctxKeys?: FlagMap;
+    actorIdSource?: FlagMap;
+    workspaceIdSource?: FlagMap;
+    diagnosisServiceInputContext?: FlagMap;
+    errorDetails?: { errorName?: string; safeErrorMessage?: string; prismaCode?: string; prismaClientVersion?: string; prismaMeta?: unknown };
+  };
 }
 
 interface DashboardResponse {
@@ -105,7 +141,7 @@ async function smokeTest(): Promise<void> {
   try {
     // STEP 0: Verify deployment
     console.log("0️⃣  GET /api/internal/build-info (verify deployment)");
-    const buildInfoResponse = await fetch(`${baseUrl}/api/internal/build-info`);
+    const buildInfoResponse = await safeFetch(`${baseUrl}/api/internal/build-info`);
     console.log(`   Status: ${buildInfoResponse.status}`);
 
     if (buildInfoResponse.status !== 200) {
@@ -156,7 +192,7 @@ async function smokeTest(): Promise<void> {
 
     // STEP 1: Signup
     console.log("1️⃣  POST /api/auth/signup");
-    const signupResponse = await fetch(`${baseUrl}/api/auth/signup`, {
+    const signupResponse = await safeFetch(`${baseUrl}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -209,7 +245,7 @@ async function smokeTest(): Promise<void> {
       console.log("   ⚠️  No diagnostic key in request");
     }
 
-    const diagnosisResponse = await fetch(`${baseUrl}/api/diagnosis`, {
+    const diagnosisResponse = await safeFetch(`${baseUrl}/api/diagnosis`, {
       method: "POST",
       headers: diagnosisHeaders,
       body: JSON.stringify({
@@ -244,7 +280,7 @@ async function smokeTest(): Promise<void> {
       }
 
       // Try to parse as JSON and extract diagnostic fields
-      let diagnosisDiagnostic: any = null;
+      let diagnosisDiagnostic: DiagnosisFailureBody | null = null;
       if (responseText) {
         try {
           diagnosisDiagnostic = JSON.parse(responseText);
@@ -338,12 +374,16 @@ async function smokeTest(): Promise<void> {
 
     console.log(`   ✓ Diagnosis created`);
     console.log(`   ✓ Engagement created: ${maskId(diagnosisData.engagementId)}`);
-    console.log(`   ✓ Recommendations: ${diagnosisData.recommendations?.length || 0}`);
-    console.log(`   ✓ Action plan: ${diagnosisData.actionPlan?.length || 0}\n`);
+    if (!diagnosisData.answer?.mainProblem?.headline || !diagnosisData.answer?.firstStep?.title) {
+      console.log("❌ DIAGNOSIS_ANSWER_MISSING");
+      process.exit(1);
+    }
+    console.log(`   ✓ Answer: ${diagnosisData.answer.status} (${diagnosisData.answer.mainProblem.code})`);
+    console.log(`   ✓ First step present\n`);
 
     // STEP 3: Get engagements
     console.log("3️⃣  GET /api/engagements (verify engagement)");
-    const engagementsResponse = await fetch(`${baseUrl}/api/engagements`, {
+    const engagementsResponse = await safeFetch(`${baseUrl}/api/engagements`, {
       method: "GET",
       headers: { Cookie: sessionCookie },
     });
@@ -360,7 +400,7 @@ async function smokeTest(): Promise<void> {
 
     // STEP 4: Get owner dashboard
     console.log("4️⃣  GET /api/owner/dashboard (real recommendations)");
-    const dashboardResponse = await fetch(`${baseUrl}/api/owner/dashboard`, {
+    const dashboardResponse = await safeFetch(`${baseUrl}/api/owner/dashboard`, {
       method: "GET",
       headers: { Cookie: sessionCookie },
     });
@@ -410,7 +450,7 @@ async function smokeTest(): Promise<void> {
 
     // Verify recommendations have source field indicating diagnosis
     const diagnosisRecommendations = recommendedActions.filter(
-      (r: any) => r.source === "diagnosis"
+      (r) => r.source === "diagnosis"
     );
 
     if (diagnosisRecommendations.length === 0) {

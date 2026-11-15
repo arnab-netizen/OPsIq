@@ -4,6 +4,7 @@
  * is no runtime summary. Advanced reasoning (assumption ledger, full cadence) is collapsed by default.
  */
 import { Badge } from "@/ui/primitives";
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 
 export interface SupervisorSummaryView {
   found: boolean;
@@ -12,6 +13,8 @@ export interface SupervisorSummaryView {
   whyItMatters: string;
   doNow: string;
   doNotDo: string[];
+  /** true when `doNotDo` was reconciled with the canonical decision (constraints, not orders). */
+  stopItemsAreConstraints?: boolean;
   ownerDecisionRequired: string | null;
   delegateToStaff: string[];
   opsiqPreparedWork: string[];
@@ -52,6 +55,10 @@ const CONFIDENCE_VARIANT: Record<string, "success" | "warning" | "destructive" |
   high: "success", medium: "warning", low: "destructive", none: "muted",
 };
 
+/**
+ * Beside the canonical owner decision the page passes a summary already reconciled with it
+ * (reconcilePlanSummary): its stop items read as constraints on the main target, never as orders.
+ */
 export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView | null }) {
   if (!summary || !summary.found) return null;
   const relevantImpact = summary.impact.filter((i) => i.relevant);
@@ -60,13 +67,13 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
   return (
     <section className="border-2 border-foreground/20 rounded-lg p-4 bg-card mb-6" data-testid="owner-supervisor-summary">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <div className="text-xs uppercase text-muted-foreground">OpsIQ supervisor summary</div>
+        <div className="text-xs uppercase text-muted-foreground">OpsIQ plan analysis (supports your main target)</div>
         <div className="flex flex-wrap gap-2">
           <span data-testid="supervisor-action-status">
             <Badge variant={STATUS_VARIANT[summary.actionStatus] ?? "muted"}>{STATUS_LABEL[summary.actionStatus] ?? summary.actionStatus}</Badge>
           </span>
           <span data-testid="supervisor-confidence">
-            <Badge variant={CONFIDENCE_VARIANT[summary.confidence] ?? "muted"}>Confidence: {summary.confidence}</Badge>
+            <Badge variant={CONFIDENCE_VARIANT[summary.confidence] ?? "muted"}>Plan analysis confidence: {summary.confidence}</Badge>
           </span>
           {summary.emergency && <Badge variant="destructive">Emergency</Badge>}
         </div>
@@ -77,11 +84,11 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
 
       <div className="grid gap-2 sm:grid-cols-2 mt-3">
         <div className="rounded-md border p-2 text-sm" data-testid="supervisor-do-now">
-          <strong>Do now:</strong> {summary.doNow}
+          <strong>Plan analysis suggests:</strong> {summary.doNow}
         </div>
         {summary.doNotDo.length > 0 && (
           <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-sm" data-testid="supervisor-do-not-do">
-            <strong>Do not:</strong> {summary.doNotDo[0]}
+            {summary.stopItemsAreConstraints ? summary.doNotDo[0] : <><strong>Do not:</strong> {summary.doNotDo[0]}</>}
           </div>
         )}
         <div className="rounded-md border p-2 text-sm" data-testid="supervisor-owner-delegate">
@@ -137,7 +144,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
       <div className="rounded-md border p-2 text-sm mt-2" data-testid="supervisor-missing-assumptions">
         <strong>Missing data / assumptions:</strong>{" "}
         {summary.ledger.missingData.length > 0
-          ? <span className="text-muted-foreground">missing: {summary.ledger.missingData.slice(0, 3).join(", ")}.</span>
+          ? <span className="text-muted-foreground">missing: {ownerMissingItems(summary.ledger.missingData).slice(0, 3).join(", ")}.</span>
           : summary.ledger.assumptions.length > 0
             ? <span className="text-muted-foreground">{summary.ledger.assumptions.length} owner-estimate(s) in play.</span>
             : <span className="text-muted-foreground">none material.</span>}
@@ -151,7 +158,7 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
 
       {summary.topPriorities.length > 0 && (
         <div className="mt-2" data-testid="supervisor-priorities">
-          <div className="text-xs uppercase text-muted-foreground mb-1">Top priorities</div>
+          <div className="text-xs uppercase text-muted-foreground mb-1">Plan checkpoints</div>
           <ol className="space-y-1">
             {summary.topPriorities.map((p, i) => (
               <li key={i} className="text-sm" data-testid={`supervisor-priority-${i}`}>

@@ -3,6 +3,8 @@ import { Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { PublicPageAnalytics } from "@/components/analytics/PublicPageAnalytics";
 import { shouldMountPageAnalytics } from "@/lib/analytics/public-page-analytics";
+import { ClarityConsent } from "@/components/analytics/ClarityConsent";
+import { resolveClarityProjectId } from "@/lib/analytics/clarity-policy";
 
 // The editorial display face for headlines and the top-priority finding on Home — a deliberate
 // departure from the generic sans-on-sans look of a default Tailwind/shadcn starter. Body copy,
@@ -29,11 +31,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Microsoft Clarity: configured only on the Vercel production deployment with a well-formed project id (otherwise
+  // null and nothing is mounted). The component itself still requires an allowlisted public route AND explicit
+  // visitor consent before it loads anything. See src/lib/analytics/clarity-policy.ts.
+  const clarityProjectId = resolveClarityProjectId();
   return (
     <html lang="en" className={`h-full antialiased ${sourceSerif.variable}`}>
       <body className="min-h-full flex flex-col font-sans">
         {children}
         {shouldMountPageAnalytics() && <PublicPageAnalytics />}
+        {clarityProjectId && <ClarityConsent projectId={clarityProjectId} />}
       </body>
     </html>
   );

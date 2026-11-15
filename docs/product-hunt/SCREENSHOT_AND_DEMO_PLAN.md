@@ -1,3 +1,5 @@
+> **LEGACY — DO NOT USE FOR CURRENT OPSIQ LAUNCH.** This Rebilix-era material is stale. See `docs/opsiq/marketing/PRODUCT_DEMO_CAPTURE.md` for the current plan.
+
 # Rebilix — Screenshot & Demo Plan
 
 > Planning only — **do not generate images/video here.** This is the exact shot list and script to

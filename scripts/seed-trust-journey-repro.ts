@@ -14,6 +14,8 @@
  *
  * Used by tests/browser/trust-journey.spec.ts. Nothing here tunes or improves OpsIQ's output.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import {
@@ -67,6 +69,8 @@ async function main() {
   // than accumulating duplicates across repeated runs.
   const priorBusinessIds = (await prisma.ownerBusiness.findMany({ where: { workspaceId: WORKSPACE_ID }, select: { id: true } })).map((b: any) => b.id);
   if (priorBusinessIds.length > 0) {
+    // owner_goals.business_id is ON DELETE RESTRICT: remove those businesses' goals first.
+    await prisma.ownerGoal.deleteMany({ where: { businessId: { in: priorBusinessIds } } });
     await prisma.ownerBusiness.deleteMany({ where: { id: { in: priorBusinessIds } } });
     console.log(`[trust-journey] cleared ${priorBusinessIds.length} business(es) from a prior seed run`);
   }

@@ -52,6 +52,14 @@ jobs:
           fi
           echo "✓ STAGING_DATABASE_URL secret is configured"
 
+      # The seed writes to the database through the app's Prisma client, not the Prisma CLI, so the CLI datasource
+      # guard never sees it: prove the target positively (same shared validator, same secret) before any write.
+      - name: Verify staging target (approved endpoint allowlist — before any write)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: ${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}
+        run: npx tsx scripts/assert-approved-staging-database.ts DATABASE_URL
+
       - name: Remove local environment files
         run: |
           rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak

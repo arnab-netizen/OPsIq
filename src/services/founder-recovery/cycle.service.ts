@@ -7,8 +7,12 @@
  * build recovery actions, and persist cycle + findings + actions atomically.
  * Cycles are linked (previousCycleId) so the loop is repeatable and comparable.
  */
+import { assertDiagnosisAllowance } from "@/services/billing/commercial-policy.service";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { rankOwnerFindingsBySeverity } from "@/domain/owner-spine/contracts";
+import { ENGAGED_ACTION_STATUSES, periodEndOf, completedEvidencePeriod, planWithContinuity } from "@/domain/founder-recovery/action-continuity";
+import { CURRENT_RECOVERY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -41,15 +45,25 @@ export async function runCycle(
     throw new NotFoundError("OwnerMetricSnapshot", snapshotId);
   }
 
-  // Prior cycle (most recent) for trend context and linkage.
+  // Numbering and linkage: the most recently run cycle (cycle numbers record run order).
   const previousCycle = await db.recoveryCycle.findFirst({
     where: { businessId, workspaceId },
     orderBy: { cycleNumber: "desc" },
+    select: { id: true, cycleNumber: true },
+  });
+  // Trend baseline: the PREVIOUS VALID EVIDENCE PERIOD — the latest cycle whose snapshot period ended
+  // before this snapshot's period (and has ended at all). Never the largest run number: a back-filled
+  // older period, or a newer period entered first, must not be compared against the wrong side and
+  // raise a false critical transition.
+  const snapshotPeriodEnd = snapshotRow.periodEnd instanceof Date ? snapshotRow.periodEnd : new Date(snapshotRow.periodEnd as unknown as string);
+  const baselineCycle = await db.recoveryCycle.findFirst({
+    where: { businessId, workspaceId, snapshot: { periodEnd: { ...currentEvidenceWhere(new Date()).snapshot.periodEnd, lt: snapshotPeriodEnd } } },
+    orderBy: CURRENT_RECOVERY_CYCLE_ORDER,
     include: { snapshot: true },
   });
 
   const current = toMetricInput(snapshotRow);
-  const prior = previousCycle?.snapshot ? toMetricInput(previousCycle.snapshot) : undefined;
+  const prior = baselineCycle?.snapshot ? toMetricInput(baselineCycle.snapshot) : undefined;
 
   const derived: DerivedMetrics = calculateMetrics(current, prior);
   const priorDerived = prior ? calculateMetrics(prior) : undefined;
@@ -65,7 +79,11 @@ export async function runCycle(
       : `Cycle ${cycleNumber}: ${findings.length} finding(s); top issue ${findings[0].title} (${findings[0].severity}).`;
 
   // Persist atomically.
+  let carriedForwardIds: string[] = [];
+  let createdActionCount = 0;
   await db.$transaction(async (tx: any) => {
+    // Commercial gate: first diagnosis free; later cycles need entitlement. Same tx + advisory lock => race-safe.
+    await assertDiagnosisAllowance(tx, workspaceId);
     await tx.recoveryCycle.create({
       data: {
         id: cycleId,
@@ -110,8 +128,61 @@ export async function runCycle(
       });
     }
 
+    // Continuity: an action the owner has taken on for the same finding is carried forward
+    // (re-attached to this cycle and re-prioritised, audited), not duplicated (see action-continuity.ts).
+    const engagedPrior: Array<{ id: string; cycleId: string; priority: string; findingCode: string; periodEnd: Date | null }> = (
+      await tx.recoveryAction.findMany({
+        where: { businessId, workspaceId, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        select: { id: true, cycleId: true, priority: true, finding: { select: { code: true } }, cycle: { select: { snapshot: { select: { periodEnd: true } } } } },
+      })
+    )
+      .filter((r: { finding: { code: string } | null }) => r.finding !== null)
+      .map((r: { id: string; cycleId: string; priority: string; finding: { code: string }; cycle: { snapshot: { periodEnd: Date } | null } | null }) => ({
+        id: r.id,
+        cycleId: r.cycleId,
+        priority: r.priority,
+        findingCode: r.finding.code,
+        periodEnd: periodEndOf(r.cycle?.snapshot?.periodEnd),
+      }));
+    // Back-fill: a cycle for an older period never takes over in-flight work on a newer period's cycle.
+    const continuity = planWithContinuity(actionSpecs, engagedPrior, {
+      current: snapshotPeriodEnd,
+      currentCompleted: completedEvidencePeriod(snapshotRow, new Date()),
+      of: (p) => p.periodEnd,
+    });
+    carriedForwardIds = [];
+    // Re-attach (guarded by status; original findingId kept — its baseline predates the work).
+    const movedPlanned = new Set<(typeof actionSpecs)[number]>();
+    for (const c of continuity.carried) {
+      const moved = await tx.recoveryAction.updateMany({
+        where: { id: c.prior.id, status: { in: [...ENGAGED_ACTION_STATUSES] } },
+        data: { cycleId, priority: c.planned.priority, version: { increment: 1 } },
+      });
+      if (moved.count === 0) continue;
+      movedPlanned.add(c.planned);
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.RECOVERY_ACTION_UPDATED,
+          actorId,
+          workspaceId,
+          entityType: "RecoveryAction",
+          entityId: c.prior.id,
+          payload: {
+            reason: "carried_forward_by_diagnosis",
+            fromCycleId: c.prior.cycleId,
+            toCycleId: cycleId,
+            priority: { from: c.prior.priority, to: c.planned.priority },
+          },
+        },
+        tx
+      );
+      carriedForwardIds.push(c.prior.id);
+    }
+    const recreate = continuity.carried.map((c) => c.planned).filter((p, i, all) => !movedPlanned.has(p) && all.indexOf(p) === i);
+
     const now = Date.now();
-    for (const a of actionSpecs) {
+    createdActionCount = continuity.toCreate.length + recreate.length;
+    for (const a of [...continuity.toCreate, ...recreate]) {
       await tx.recoveryAction.create({
         data: {
           id: randomUUID(),
@@ -150,7 +221,8 @@ export async function runCycle(
           businessId,
           cycleNumber,
           findingCount: findings.length,
-          actionCount: actionSpecs.length,
+          actionCount: createdActionCount,
+          carriedForwardActionIds: carriedForwardIds,
           healthStatus: health.status,
         },
       },
@@ -166,7 +238,9 @@ export async function getCycle(cycleId: string, workspaceId: string) {
     where: { id: cycleId, workspaceId },
     include: {
       snapshot: true,
-      findings: { orderBy: { severity: "asc" } },
+      // Ranked after read: severity is a plain string, so a DB orderBy sorts it
+      // alphabetically (critical, high, low, medium). See rankOwnerFindingsBySeverity.
+      findings: true,
       actions: {
         include: { verifications: { orderBy: { createdAt: "desc" } } },
         orderBy: { createdAt: "asc" },
@@ -174,17 +248,22 @@ export async function getCycle(cycleId: string, workspaceId: string) {
     },
   });
   if (!cycle) throw new NotFoundError("RecoveryCycle", cycleId);
-  return cycle;
+  return { ...cycle, findings: rankOwnerFindingsBySeverity(cycle.findings) };
 }
 
 export async function listCycles(businessId: string, workspaceId: string) {
   await getBusiness(businessId, workspaceId);
-  return db.recoveryCycle.findMany({
+  const cycles = await db.recoveryCycle.findMany({
     where: { businessId, workspaceId },
     orderBy: { cycleNumber: "desc" },
     include: {
-      findings: { select: { id: true, code: true, severity: true } },
+      // confidence is RecoveryFinding's only ranking column besides severity/code.
+      findings: { select: { id: true, code: true, severity: true, confidence: true } },
       actions: { select: { id: true, status: true } },
     },
   });
+  return cycles.map(<C extends { findings: Array<{ code: string; severity: string; confidence: number }> }>(c: C) => ({
+    ...c,
+    findings: rankOwnerFindingsBySeverity(c.findings),
+  }));
 }

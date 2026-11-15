@@ -177,6 +177,19 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
       expect(classifyPath("scripts/reset-staging.ts")).toBe(TIERS.DB_RUNTIME);
     });
 
+    it("classifies the DB-backed outcome-verification write path at DB_RUNTIME (PR #585: it must not skip DB verification)", () => {
+      for (const f of [
+        "src/services/owner-mode/owner-outcome-verification.service.ts",
+        "src/services/owner-mode/owner-action-outcome.service.ts",
+        "src/services/owner-mode/process-execution-bridge.service.ts",
+        "src/services/owner-mode/reassessment-event.service.ts",
+      ]) {
+        expect(classifyPath(f)).toBe(TIERS.DB_RUNTIME);
+      }
+      // Not a directory rule: unrelated owner-mode files keep their tier.
+      expect(classifyPath("src/services/owner-mode/owner-progress.service.ts")).toBe(TIERS.APPLICATION_NON_DB);
+    });
+
     it("classifies a non-DB test file change at APPLICATION_NON_DB, and a .db.test.ts change at DB_RUNTIME", () => {
       expect(classifyPath("src/__tests__/services/foo.test.ts")).toBe(TIERS.APPLICATION_NON_DB);
       expect(classifyPath("src/__tests__/services/foo.db.test.ts")).toBe(TIERS.DB_RUNTIME);

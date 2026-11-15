@@ -11,7 +11,9 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, fireEvent } from "@testing-library/react";
 import { MinimumOwnerCockpit } from "@/components/owner/MinimumOwnerCockpit";
+import { resolveOwnerDecision } from "@/domain/owner-spine/owner-decision";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
+import { NO_CHANGE_FACTS } from "@/__tests__/owner-decision/change-facts-fixture";
 
 afterEach(() => cleanup());
 
@@ -38,7 +40,10 @@ describe("MinimumOwnerCockpit", () => {
 
   it("2. owner sees why this is first (max 3 bullets)", () => {
     const { getByTestId, getAllByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
-    expect(getByTestId("cockpit-why").textContent).toMatch(/why this is first/i);
+    // Governed work is subordinate to the canonical decision: it explains why it matters, never
+    // that it "is first" (only the owner decision card says what comes first).
+    expect(getByTestId("cockpit-why").textContent).toMatch(/why this matters/i);
+    expect(getByTestId("cockpit-why").textContent).not.toMatch(/why this is first/i);
     expect(getAllByTestId("cockpit-why-bullet").length).toBeGreaterThan(0);
     expect(getAllByTestId("cockpit-why-bullet").length).toBeLessThanOrEqual(3);
   });
@@ -115,8 +120,10 @@ describe("MinimumOwnerCockpit", () => {
 
   it("14. allowed action buttons appear for the owner", () => {
     const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
+    // Owner-approval work is approval-first: a PROPOSED task offers APPROVE (not START / COMPLETE).
     expect(getByTestId("cockpit-action-APPROVE")).toBeTruthy();
-    expect(getByTestId("cockpit-action-COMPLETE")).toBeTruthy();
+    const started = render(<MinimumOwnerCockpit bridge={view({ topRoute: route({ status: "IN_PROGRESS" }) })} onAction={noop} />);
+    expect(started.getByTestId("cockpit-action-COMPLETE")).toBeTruthy();
   });
 
   it("15. forbidden / impossible actions do not appear (no APPROVE on a manager/staff task; no unsafe button)", () => {
@@ -156,7 +163,7 @@ describe("MinimumOwnerCockpit", () => {
   // route needs and whether evidence already on file already satisfies it, instead of a same-page 400.
   it("19. COMPLETE: the owner's typed evidence is included in the onAction request payload (UI request-body regression)", () => {
     const onAction = vi.fn();
-    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={onAction} />);
+    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view({ topRoute: route({ status: "IN_PROGRESS" }) })} onAction={onAction} />);
     fireEvent.click(getByTestId("cockpit-action-COMPLETE")); // opens the labelled form
     fireEvent.change(getByTestId("cockpit-evidence-input"), { target: { value: "invoice-4471" } });
     fireEvent.click(getByTestId("cockpit-confirm"));
@@ -165,6 +172,7 @@ describe("MinimumOwnerCockpit", () => {
 
   it("20. COMPLETE: a multi-item evidence route tells the owner how many distinct references it requires", () => {
     const twoItemRoute = route({
+      status: "IN_PROGRESS",
       requiredEvidence: ["the drafted SOP/checklist change", "evidence of adoption before it is marked done"],
       evidenceRefs: [],
     });
@@ -175,6 +183,7 @@ describe("MinimumOwnerCockpit", () => {
 
   it("21. COMPLETE: evidence already on file (e.g. from an earlier Submit evidence step) is recognised, and Complete succeeds without re-entering it", () => {
     const satisfiedRoute = route({
+      status: "IN_PROGRESS",
       requiredEvidence: ["the drafted SOP/checklist change", "evidence of adoption before it is marked done"],
       evidenceRefs: ["sop-draft-1", "adoption-proof-1"],
     });
@@ -192,37 +201,50 @@ describe("MinimumOwnerCockpit", () => {
     expect(queryByTestId("cockpit-top-action-title")).toBeNull();
   });
 
-  // F3 — cockpit surfaces the Finance diagnosis's top action, without overwriting an urgent governed issue.
-  const financePriority = {
-    businessId: "biz-1", businessName: "Test Biz", cycleId: "cycle-1", generatedAt: "2026-06-30T00:00:00Z",
-    survivalState: "WATCH", overallHealthScore: 60,
-    topAction: { id: "act-1", title: "Fix your thin gross margin", description: "Raise price or cut cost of goods.", priorityScore: 90 },
-  };
+  // The canonical owner decision (owner-home → Spine arbiter) replaced the Finance-first bridge: the
+  // Cockpit renders the SAME decision as Home/Priorities, first, and never elects its own target.
+  const ownerDecision = resolveOwnerDecision({
+    businessId: "biz-1", workspaceId: "ws-1",
+    candidates: [{
+      candidateId: "domain_action:finance:act-1", businessId: "biz-1", workspaceId: "ws-1", source: "domain_action", domain: "finance",
+      sourceId: "act-1", priorityClass: "PROFIT_LOSS", findingCode: "FIN_NEGATIVE_GROSS_MARGIN", findingId: null,
+      title: "Fix your thin gross margin", explanation: "Raise price or cut cost of goods.", severity: "high", priorityScore: 90,
+      expectedImpactScore: 60, confidence: 0.8, effortScore: 30, status: "proposed", ownerActionRequired: true, blocking: false,
+      evidence: [], missingData: [], verificationMetric: null, evidenceAsOf: null, stale: false, exclusion: null, targetRoute: "/owner/finance",
+    }],
+    diagnosedDomains: ["finance"],
+    dataSufficiency: { status: "sufficient", lowestDataConfidenceScore: 90, lowConfidenceDomains: [], missingCriticalData: [] },
+    staleDomains: [], strategy: null, reassessment: { days: 7, reason: "weekly" }, changeFacts: NO_CHANGE_FACTS,
+    now: new Date("2026-06-30T00:00:00Z"),
+  });
 
-  it("18b. (F3) clean state (no governed route) surfaces the finance diagnosis's top action as primary", () => {
+  it("18b. clean state (no governed route) shows the canonical main target as primary — no Finance-first card", () => {
     const { getByTestId, queryByTestId } = render(
       <MinimumOwnerCockpit
         bridge={{ routes: [], topRoute: null, summary: { total: 0, ownerApproval: 0, managerStaff: 0, dataTasks: 0, monitorOnly: 0 } }}
-        financeTopPriority={financePriority}
+        ownerDecision={ownerDecision}
         onAction={noop}
       />,
     );
-    expect(getByTestId("cockpit-finance-priority-primary").textContent).toMatch(/fix your thin gross margin/i);
-    expect(queryByTestId("cockpit-finance-priority-secondary")).toBeNull();
-  });
-
-  it("18c. (F3) a real actionable governed route stays primary; the finance action still surfaces, but only as secondary", () => {
-    const { getByTestId } = render(<MinimumOwnerCockpit bridge={view()} financeTopPriority={financePriority} onAction={noop} />);
-    // The governed route keeps the primary "top priority" slot — untouched, never overwritten.
-    expect(getByTestId("cockpit-top-action-title").textContent).toMatch(/approve the process correction/i);
-    // The finance action is still visible, just as a secondary signal.
-    expect(getByTestId("cockpit-finance-priority-secondary").textContent).toMatch(/fix your thin gross margin/i);
-  });
-
-  it("18d. (F3) with no finance diagnosis available, nothing finance-related renders (no fabrication)", () => {
-    const { queryByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
+    expect(getByTestId("owner-decision-title").textContent).toMatch(/fix your thin gross margin/i);
     expect(queryByTestId("cockpit-finance-priority-primary")).toBeNull();
-    expect(queryByTestId("cockpit-finance-priority-secondary")).toBeNull();
+  });
+
+  it("18c. with a governed route, the canonical target comes first and the route is subordinate governed work", () => {
+    const { getByTestId, getByText, queryByText } = render(<MinimumOwnerCockpit bridge={view()} ownerDecision={ownerDecision} onAction={noop} />);
+    const decisionEl = getByTestId("owner-decision");
+    const governedEl = getByTestId("cockpit-top-action");
+    expect(decisionEl.compareDocumentPosition(governedEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(getByTestId("cockpit-top-action-title").textContent).toMatch(/approve the process correction/i);
+    expect(getByText("Governed work you can start")).toBeTruthy();
+    expect(queryByText("Your top priority now")).toBeNull();
+    expect(getByTestId("cockpit-top-action-title").className).not.toMatch(/font-display/);
+  });
+
+  it("18d. with no canonical decision, nothing is fabricated and the governed route is not called the main target", () => {
+    const { queryByTestId, getByTestId } = render(<MinimumOwnerCockpit bridge={view()} onAction={noop} />);
+    expect(queryByTestId("owner-decision")).toBeNull();
+    expect(getByTestId("cockpit-no-canonical-decision").textContent).toMatch(/not your overall priority/i);
   });
 
   // F6: zero-data owner-facing copy must not read as internal jargon ("Business Operating System —
@@ -310,6 +332,43 @@ describe("MinimumOwnerCockpit — goal-state humanization (UX-06 Section G7)", (
       <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state })} />
     );
     expect(getByTestId("cockpit-goal-state").textContent).toBe(label);
+  });
+
+  it("shows the goal's scope label (business or workspace) so a goal is never read as another business's", () => {
+    const { getByTestId, rerender } = render(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state: "ON_TRACK", goalScope: "business", scopeLabel: "Business goal · Trinity Services" })} />
+    );
+    expect(getByTestId("cockpit-goal-scope").textContent).toBe("Business goal · Trinity Services");
+    expect(getByTestId("cockpit-goal-scope").getAttribute("data-cockpit-goal-scope")).toBe("business");
+    rerender(
+      <MinimumOwnerCockpit bridge={view()} onAction={noop} goalAttentionSignal={goalSignal({ state: "ON_TRACK", goalScope: "workspace", scopeLabel: "Workspace goal" })} />
+    );
+    expect(getByTestId("cockpit-goal-scope").textContent).toBe("Workspace goal");
+  });
+
+  it("the clean Home (no urgent action) still shows the selected business's goal and its scope", () => {
+    const clean = { routes: [], topRoute: null, summary: { total: 0, ownerApproval: 0, managerStaff: 0, dataTasks: 0, monitorOnly: 0 } };
+    const { getByTestId, rerender } = render(
+      <MinimumOwnerCockpit bridge={clean} onAction={noop} goalAttentionSignal={goalSignal({ state: "ON_TRACK", goalScope: "business", scopeLabel: "Business goal · Alpha Laundry" })} />
+    );
+    expect(getByTestId("cockpit-clean").textContent).toMatch(/no urgent action/i);
+    expect(getByTestId("cockpit-goal-scope").textContent).toBe("Business goal · Alpha Laundry");
+    rerender(
+      <MinimumOwnerCockpit bridge={clean} onAction={noop} goalAttentionSignal={goalSignal({ state: "NO_GOAL", goalScope: null, scopeLabel: "No goal set for Beta", beginnerExplanation: "No goal set for Beta. Add a goal to track your progress." })} />
+    );
+    expect(getByTestId("cockpit-goal-explanation").textContent).toMatch(/No goal set for Beta/);
+  });
+
+  it("with no goal for the selected business, names the business and shows no scope badge", () => {
+    const { getByTestId, queryByTestId } = render(
+      <MinimumOwnerCockpit
+        bridge={view()}
+        onAction={noop}
+        goalAttentionSignal={goalSignal({ state: "NO_GOAL", goalScope: null, scopeLabel: "No goal set for Beta", beginnerExplanation: "No goal set for Beta. Add a goal to track your progress." })}
+      />
+    );
+    expect(queryByTestId("cockpit-goal-scope")).toBeNull();
+    expect(getByTestId("cockpit-goal-explanation").textContent).toMatch(/No goal set for Beta/);
   });
 
   it("an unrecognized future state falls back to a safe label, never the raw value", () => {

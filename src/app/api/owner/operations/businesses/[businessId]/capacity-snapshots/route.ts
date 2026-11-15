@@ -8,6 +8,7 @@
  * the business belongs to the caller's workspace (`assertBusinessInWorkspace`); this route enforces auth + capability
  * + workspace. No seed script, no fabricated data.
  */
+import { endNotBeforeStart } from "@/validation/date-range";
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
@@ -27,7 +28,8 @@ const capacitySnapshotSchema = z.object({
   expansionThreshold: z.number().gt(0).max(1).optional(),
   periodStart: z.string().datetime().optional(),
   periodEnd: z.string().datetime().optional(),
-});
+})
+  .superRefine(endNotBeforeStart("periodStart", "periodEnd", "The period end must be on or after the period start"));
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {

@@ -22,6 +22,16 @@ import {
   isCriticalCategory,
 } from "@/domain/owner-mode/input-catalog";
 import type { Confidence } from "@/services/owner-mode/owner-domain-ingestion";
+import {
+  FIRST_READ_FACT_CATEGORIES,
+  FIRST_READ_FACT_LABEL,
+  FIRST_READ_STALE_AFTER_DAYS,
+  evidenceFreshnessOf,
+  firstReadSufficiencyFromCategories,
+  type EvidenceFreshness,
+  type FirstReadFact,
+  type FirstReadSufficiency,
+} from "@/domain/owner-finance/first-read-sufficiency";
 import { type SmbArchetype, SMB_ARCHETYPES, SMB_ARCHETYPE_CONFIG } from "@/domain/owner-mode/smb-archetype";
 
 /**
@@ -46,7 +56,11 @@ export interface ProfileInputRequirements {
   optional: OwnerInputCategory[];
 }
 
-/** Categories every business needs for a first survival-grade read (never fewer than these). */
+/**
+ * The STARTER-MINIMUM evidence categories every business profile needs for a well-founded picture.
+ * This is profile/confidence evidence, NOT the first-read gate: whether a first read is possible is
+ * decided only by the canonical `FirstReadSufficiency` (first-read-sufficiency.ts).
+ */
 const UNIVERSAL_MINIMUM: OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
 
 function uniq<T>(xs: T[]): T[] {
@@ -92,6 +106,14 @@ export interface OnboardingInput {
   suppliedCategories: OwnerInputCategory[];
   /** For multi-location: number of branches the owner operates. */
   branchCount?: number;
+  /**
+   * The canonical first-read sufficiency (first-read-sufficiency.ts), computed from the real Finance
+   * snapshot. When omitted (callers that only know category presence) it is derived from
+   * `suppliedCategories` through the same rule — the gate is never a separate category list.
+   */
+  firstRead?: FirstReadSufficiency;
+  /** The clock for the evidence-freshness verdict. When omitted the verdict is "unknown" (never guessed). */
+  now?: Date;
 }
 
 export type OnboardingStepId =
@@ -130,8 +152,12 @@ export interface OnboardingState {
   missingMinimum: MissingMinimum[];
   /** HONEST confidence available before diagnosis — never "high" while a critical category is missing. */
   confidenceBeforeDiagnosis: Confidence;
-  /** A limited first diagnosis is allowed once the universal financial minimum is present. */
+  /** A limited first diagnosis is allowed once the canonical first-read sufficiency is met. */
   canRunFirstDiagnosis: boolean;
+  /** The canonical first-read sufficiency this state's gate is derived from (one rule, no copies). */
+  firstRead: FirstReadSufficiency;
+  /** Whether the evidence that first read rests on is still current — the same window Home uses for "out of date". */
+  evidenceFreshness: EvidenceFreshness;
   minimumComplete: boolean;
   /** Cautious, data-aware first action — collect the dominant missing input first if data is weak. */
   firstAction: string;
@@ -147,8 +173,23 @@ export interface OnboardingState {
   multiLocation: boolean;
 }
 
-/** Categories that unlock a limited first diagnosis (survival-grade financial read). */
-const FIRST_DIAGNOSIS_GATE: OwnerInputCategory[] = ["revenue_sales", "expenses", "cash_debt"];
+/**
+ * True only for a missing category that actually blocks the first read under the CANONICAL contract
+ * (`firstRead`): the category explains a fact the engine still lacks. A cost category blocks only while
+ * NO cost component is known (any one satisfies it), so supplying fixed costs never leaves "Expenses"
+ * flagged as blocking. Any other missing starter-minimum category improves confidence but does not stop
+ * the owner from acting on the financial read the critical facts already support.
+ */
+export function blocksFirstRead(category: OwnerInputCategory, firstRead: FirstReadSufficiency): boolean {
+  return firstRead.missing.some((fact) => FIRST_READ_FACT_CATEGORIES[fact].includes(category));
+}
+
+/** Owner-facing sentence naming what the first read still needs ("revenue and one cost figure"). */
+export function describeMissingFirstReadFacts(missing: readonly FirstReadFact[]): string {
+  const labels = missing.map((f) => FIRST_READ_FACT_LABEL[f]);
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
 
 function severityOf(category: OwnerInputCategory): "critical" | "high" | "medium" {
   if (isCriticalCategory(category)) return "critical";
@@ -183,7 +224,8 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
 
   // Confidence before diagnosis — DERIVED, never inflated.
   const anyCriticalMissing = requirements.minimumRequired.some((c) => isCriticalCategory(c) && !supplied.has(c));
-  const firstGateMet = FIRST_DIAGNOSIS_GATE.every((c) => supplied.has(c));
+  const firstRead = input.firstRead ?? firstReadSufficiencyFromCategories(supplied);
+  const firstGateMet = firstRead.sufficient;
   const minRatio = requirements.minimumRequired.length === 0 ? 1 : minimumSuppliedCount / requirements.minimumRequired.length;
   let confidenceBeforeDiagnosis: Confidence;
   if (!firstGateMet || minimumSuppliedCount === 0) confidenceBeforeDiagnosis = "none";
@@ -208,8 +250,7 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
   // Cautious first action.
   let firstAction: string;
   if (!canRunFirstDiagnosis) {
-    const need = FIRST_DIAGNOSIS_GATE.filter((c) => !supplied.has(c)).map((c) => INPUT_CATALOG[c].label);
-    firstAction = `Enter your ${need.join(", ")} so OpsIQ can run a first survival-grade read. No strong action yet — the numbers come first.`;
+    firstAction = `Enter your ${describeMissingFirstReadFacts(firstRead.missing)} so OpsIQ can run a first read. Leave anything you don't know blank rather than guessing. No strong action yet — the numbers come first.`;
   } else if (confidenceBeforeDiagnosis !== "high" && nextBestUpload) {
     firstAction = `Run the limited first diagnosis, then add ${INPUT_CATALOG[nextBestUpload].label} before acting on anything risky — confidence is ${confidenceBeforeDiagnosis}, so treat the first read as directional.`;
   } else {
@@ -277,6 +318,10 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     missingMinimum,
     confidenceBeforeDiagnosis,
     canRunFirstDiagnosis,
+    firstRead,
+    evidenceFreshness: input.now
+      ? evidenceFreshnessOf(firstRead, input.now)
+      : { state: "unknown", periodEnd: null, ageDays: null, staleAfterDays: FIRST_READ_STALE_AFTER_DAYS },
     minimumComplete,
     firstAction,
     whatNotToDo,
@@ -285,6 +330,24 @@ export function computeOnboardingState(input: OnboardingInput): OnboardingState 
     delegationGuidance,
     multiLocation: input.ownerRole === "multi_location",
   };
+}
+
+/**
+ * The ONE owner-facing status for the starter information, freshness-aware: "complete" is never claimed for figures
+ * the Home page would call out of date. Every surface that shows the starter status renders this.
+ */
+export function starterStatusPhrase(confidence: string, freshness?: Pick<EvidenceFreshness, "state"> | null): string {
+  if (freshness?.state === "stale" && (confidence === "high" || confidence === "medium")) {
+    return confidence === "high" ? "Starter information entered — figures out of date" : "Getting there — figures out of date";
+  }
+  return confidenceDisplayPhrase(confidence);
+}
+
+/** One sentence explaining stale evidence, or null when the evidence is current/unknown. */
+export function staleEvidenceNotice(freshness?: EvidenceFreshness | null): string | null {
+  if (!freshness || freshness.state !== "stale" || freshness.periodEnd === null) return null;
+  const end = freshness.periodEnd.slice(0, 10);
+  return `Your latest figures cover the period ending ${end}, more than ${freshness.staleAfterDays} days ago. Add the latest period so OpsIQ reads your business as it is now.`;
 }
 
 /**

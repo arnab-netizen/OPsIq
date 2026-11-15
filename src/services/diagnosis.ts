@@ -1,125 +1,63 @@
+/**
+ * Generic (consultant quick-intake) diagnosis — POST /api/diagnosis.
+ *
+ * A consultant enters a client's name, type, problem description, main concern and up to three
+ * figures (monthly revenue, monthly costs, customers). This service:
+ *  1. builds the evidence-grounded answer (src/domain/generic-diagnosis/answer.ts) — one main
+ *     problem or an explicit "I can't determine that yet.", with provenance on every reason;
+ *  2. records it as a governed consulting engagement through the canonical services
+ *     (createClient / createEngagement / addMember — audit, plan entitlement, intervention state,
+ *     re-evaluation), with the creator as a member so the engagement is reachable;
+ *  3. persists only what the evidence supports: the submitted facts as evidence, a finding only
+ *     when the figures prove one, and the answer's first/then steps as unvalidated proposals.
+ *
+ * It does not write a business-condition profile: the quick intake carries no evidence for the
+ * human-factor or maturity dimensions that profile requires, and inventing them is not allowed.
+ * The engagement starts with health "unknown" (createEngagement) until a consultant assesses it.
+ */
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { ValidationError } from "@/infra/errors";
-import { assessCondition } from "@/services/business-condition";
-import { randomUUID } from "crypto";
-import type { InterventionPhase } from "@/domain/constants/statuses";
-import { DataValidationEngine } from "@/engines/DataValidationEngine";
-import { FinancialEngine } from "@/engines/FinancialEngine";
-import { DiagnosisOrchestrator } from "@/engines/DiagnosisOrchestrator";
-import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contracts";
+import { ConflictError, ForbiddenError, PlanLimitError, ValidationError } from "@/infra/errors";
+import { assertCapability } from "@/services/entitlement.service";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { generatePersonalizedRecommendations } from "@/services/recommendation/engine";
+import { createClient } from "@/services/client-account";
+import { createEngagement } from "@/services/engagement";
+import { addMember } from "@/services/engagement-membership";
+import { triggerReEvaluation } from "@/services/re-evaluation";
+import { getCapabilitiesForRole, hasCapability, highestRole } from "@/policies/capability-check";
+import { isClientRole } from "@/domain/constants/roles";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
+import type { InterventionMode } from "@/domain/constants/statuses";
 import {
-  extractProblemSignals,
-  findingEvidence,
-  deriveWhyThisMattersNow,
-  deriveWhyFirst,
-  deriveBottleneck,
-  enrichFirstActionDescription,
-  deriveWhatNotToDoYet,
-} from "@/services/diagnosis-signals";
+  buildGenericDiagnosisAnswer,
+  GENERIC_DIAGNOSIS_MAIN_ISSUES,
+  MAIN_ISSUE_LABEL,
+  type GenericDiagnosisAnswer,
+  type GenericDiagnosisInput,
+  type Severity,
+} from "@/domain/generic-diagnosis/answer";
 
-// ─── Types ─────────────────────────────────────────────────────────────────
-
-interface DiagnosisTransactionResult {
-  createdEvidenceItems: Array<{ id: string }>;
-  createdFindings: Array<{ id: string }>;
-  createdRecommendations: Array<{ id: string }>;
-  createdActions: Array<{ id: string }>;
-}
-
-export interface BusinessProblemInput {
-  businessName: string;
-  businessType: string;
-  problemStatement: string;
-  mainIssue: "low_sales" | "high_costs" | "cash_flow" | "customer_retention" | "operations" | "unclear";
-  monthlyRevenue?: number;
-  monthlyCosts?: number;
-  customerCount?: number;
-}
-
-export interface ActionPlanItem {
-  title: string;
-  description: string;
-  priority: "high" | "medium" | "low";
-  ownerRole: string;
-  dueInDays: number;
-  successMetric: string;
-  urgency?: "immediate" | "next";
-  bottleneck?: string;
-}
-
-export interface ExecutiveBrief {
-  title: string;
-  summary: string;
-  warnings: string[];
-}
+export type BusinessProblemInput = GenericDiagnosisInput;
 
 export interface DiagnosisResult {
-  id: string;
-  input: BusinessProblemInput;
-  diagnosisSummary: string;
-  primaryProblemCategory: string;
-  severity: "low" | "medium" | "high" | "critical";
-  interventionPhase: InterventionPhase;
-  findings: Array<{ id: string; title: string; severity: string; description: string; evidence?: string }>;
-  recommendations: Array<{ id: string; title: string; priority: string; description: string; whyFirst?: string }>;
-  actionPlan: ActionPlanItem[];
   engagementId: string;
+  engagementCode: string;
   createdAt: string;
-  executiveBrief: ExecutiveBrief;
-  confidence: "low" | "medium" | "high";
-  dataWarnings: string[];
-  whyThisMattersNow?: string;
-  whatNotToDoYet?: string[];
-  _engineMetadata?: {
-    orchestratedDiagnosis: OrchestratedDiagnosis;
-    enginesUsed: string[];
-  };
-}
-
-// ─── Data Quality & Impact Analysis ───────────────────────────────────────
-
-function detectDataIssues(input: BusinessProblemInput): string[] {
-  const issues: string[] = [];
-
-  if (input.customerCount && input.monthlyRevenue) {
-    const revenuePerCustomer = input.monthlyRevenue / input.customerCount;
-
-    if (revenuePerCustomer > 2000) {
-      issues.push("Revenue per customer unusually high — verify customer count or pricing model");
-    }
-
-    if (revenuePerCustomer < 10) {
-      issues.push("Revenue per customer unusually low — possible pricing or demand issue");
-    }
-  }
-
-  if (input.monthlyCosts && input.monthlyRevenue && input.monthlyCosts > input.monthlyRevenue * 1.5) {
-    issues.push("Costs significantly exceed revenue — business may be in critical cash burn");
-  }
-
-  return issues;
-}
-
-function calculateBusinessImpact(input: BusinessProblemInput): { monthlyLoss: number; riskLevel: "severe" | "moderate" } | null {
-  if (!input.monthlyRevenue || !input.monthlyCosts) return null;
-
-  const loss = input.monthlyCosts - input.monthlyRevenue;
-
-  if (loss <= 0) return null;
-
-  return {
-    monthlyLoss: loss,
-    riskLevel: loss > input.monthlyRevenue * 0.5 ? "severe" : "moderate",
-  };
+  input: BusinessProblemInput;
+  answer: GenericDiagnosisAnswer;
+  /** Supporting detail for the engagement record — never the lead of the answer. */
+  engagement: { interventionMode: InterventionMode; severity: Severity | null };
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────
+
+/** Upper bound on any figure (one trillion): larger values are typing errors, not a business. */
+export const MAX_DIAGNOSIS_FIGURE = 1_000_000_000_000;
 
 export function validateBusinessProblem(input: BusinessProblemInput): void {
   if (!input.businessName || input.businessName.trim().length === 0) {
@@ -131,690 +69,229 @@ export function validateBusinessProblem(input: BusinessProblemInput): void {
   if (!input.problemStatement || input.problemStatement.trim().length === 0) {
     throw new ValidationError("problemStatement is required");
   }
-  const validMainIssues = ["low_sales", "high_costs", "cash_flow", "customer_retention", "operations", "unclear"];
-  if (!validMainIssues.includes(input.mainIssue)) {
-    throw new ValidationError(`mainIssue must be one of: ${validMainIssues.join(", ")}`);
+  if (!(GENERIC_DIAGNOSIS_MAIN_ISSUES as readonly string[]).includes(input.mainIssue)) {
+    throw new ValidationError(`mainIssue must be one of: ${GENERIC_DIAGNOSIS_MAIN_ISSUES.join(", ")}`);
   }
-  if (input.monthlyRevenue !== undefined && input.monthlyRevenue < 0) {
-    throw new ValidationError("monthlyRevenue must be non-negative");
+  for (const field of ["monthlyRevenue", "monthlyCosts", "customerCount"] as const) {
+    const v = input[field];
+    if (v === undefined) continue; // not entered = unknown (never coerced to 0)
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > MAX_DIAGNOSIS_FIGURE) {
+      throw new ValidationError(`${field} must be a number from 0 to ${MAX_DIAGNOSIS_FIGURE.toLocaleString("en-US")} when provided`);
+    }
   }
-  if (input.monthlyCosts !== undefined && input.monthlyCosts < 0) {
-    throw new ValidationError("monthlyCosts must be non-negative");
-  }
-  if (input.customerCount !== undefined && input.customerCount < 0) {
-    throw new ValidationError("customerCount must be non-negative");
+  if (input.customerCount !== undefined && !Number.isInteger(input.customerCount)) {
+    throw new ValidationError("customerCount must be a whole number when provided");
   }
 }
 
-// ─── Diagnosis Rules ───────────────────────────────────────────────────────
-
-function generateDiagnosisSummary(input: BusinessProblemInput, category: string, severity: string): string {
-  const baseMsg = `${input.businessName} (${input.businessType}) faces a ${severity} ${category.replace(/_/g, " ")} issue.`;
-  const problemMsg = `Key problem: ${input.problemStatement}`;
-
-  const details: string[] = [];
-  if (input.monthlyRevenue !== undefined) {
-    details.push(`Monthly revenue: $${input.monthlyRevenue}`);
+/**
+ * Intervention mode for the engagement record, derived only from what the figures prove.
+ * Undetermined evidence → "mixed" (no single mode is supported yet).
+ */
+export function interventionModeFor(answer: GenericDiagnosisAnswer): InterventionMode {
+  if (answer.status === "concluded") {
+    return answer.supporting.severity === "critical" ? "recovery" : "stabilization";
   }
-  if (input.monthlyCosts !== undefined) {
-    details.push(`Monthly costs: $${input.monthlyCosts}`);
-  }
-  if (input.customerCount !== undefined) {
-    details.push(`Customers: ${input.customerCount}`);
-  }
-
-  return `${baseMsg} ${problemMsg}${details.length > 0 ? " (" + details.join("; ") + ")" : ""}`;
+  return "mixed";
 }
 
-function generateFindings(input: BusinessProblemInput, category: string, severity: string): Array<{
-  title: string;
-  description: string;
-  severity: string;
-}> {
-  const findings: Array<{ title: string; description: string; severity: string }> = [];
+// ─── Main ─────────────────────────────────────────────────────────────────
 
-  if (category === "revenue_generation") {
-    findings.push({
-      title: "Insufficient Revenue Streams",
-      description: `${input.businessName} is experiencing low sales. Current customer count: ${input.customerCount || "unknown"}.`,
-      severity: severity === "critical" ? "critical" : "high",
-    });
-    findings.push({
-      title: "Sales Process Gaps",
-      description: "No documented sales process or lead generation system detected.",
-      severity: "high",
-    });
-  } else if (category === "cost_control") {
-    findings.push({
-      title: "Cost Structure Misalignment",
-      description: `Monthly costs ($${input.monthlyCosts || "unknown"}) are not aligned with revenue ($${input.monthlyRevenue || "unknown"}).`,
-      severity: severity === "critical" ? "critical" : "high",
-    });
-    findings.push({
-      title: "Lack of Cost Visibility",
-      description: "Unable to identify which cost categories are driving the highest expenses.",
-      severity: "high",
-    });
-  } else if (category === "cash_flow_stability") {
-    findings.push({
-      title: "Cash Flow Volatility",
-      description: "Business is experiencing irregular or insufficient cash generation.",
-      severity: severity === "critical" ? "critical" : "high",
-    });
-    findings.push({
-      title: "Working Capital Constraints",
-      description: "Insufficient working capital to sustain operations and growth.",
-      severity: "high",
-    });
-  } else if (category === "customer_retention") {
-    findings.push({
-      title: "Customer Churn Risk",
-      description: `Current customer base (${input.customerCount || "unknown"}) is at risk or declining.`,
-      severity: "high",
-    });
-    findings.push({
-      title: "Value Proposition Misalignment",
-      description: "Unclear or mismatched value proposition for target customers.",
-      severity: "medium",
-    });
-  } else if (category === "operational_efficiency") {
-    findings.push({
-      title: "Operational Inefficiencies",
-      description: "Processes and operations are not optimized for efficiency.",
-      severity: "high",
-    });
-    findings.push({
-      title: "Lack of Process Documentation",
-      description: "Key operational processes are not documented or standardized.",
-      severity: "medium",
-    });
-  } else {
-    findings.push({
-      title: "Unclear Business Health",
-      description: `Insufficient data to assess ${input.businessName}'s specific challenges.`,
-      severity: severity === "critical" ? "critical" : "medium",
-    });
-  }
-
-  return findings;
-}
-
-function generateRecommendations(
-  input: BusinessProblemInput
-): Array<{ title: string; description: string; priority: string; estimatedImpact?: string }> {
-  const assessment = {
-    businessName: input.businessName,
-    businessType: input.businessType,
-    revenue: input.monthlyRevenue || 0,
-    costs: input.monthlyCosts || 0,
-    customers: input.customerCount || 0,
-  };
-
-  const personalized = generatePersonalizedRecommendations(assessment);
-
-  return personalized.map((rec) => ({
-    title: rec.recommendation.title,
-    description: rec.recommendation.description,
-    priority: rec.recommendation.priority as "high" | "medium" | "low",
-    estimatedImpact: rec.recommendation.estimatedImpact,
-  }));
-}
-
-function generateActionPlan(category: string, severity: string): ActionPlanItem[] {
-  const baseDays = severity === "critical" ? 3 : severity === "high" ? 7 : 14;
-  const actions: ActionPlanItem[] = [];
-
-  if (category === "revenue_generation") {
-    actions.push({
-      title: "Map Current Sales Activities",
-      description: "Catalog all current sales and marketing activities to understand what is and isn't working.",
-      priority: "high",
-      ownerRole: "Sales Lead",
-      dueInDays: baseDays,
-      successMetric: "Complete activity audit with win/loss analysis",
-    });
-    actions.push({
-      title: "Identify Target Customer Profile",
-      description: "Define ideal customer profile and key decision makers.",
-      priority: "high",
-      ownerRole: "Marketing Manager",
-      dueInDays: baseDays + 3,
-      successMetric: "ICP document with 3 customer segments defined",
-    });
-    actions.push({
-      title: "Create Sales Outreach Plan",
-      description: "Develop a 30/60/90 day sales outreach plan to reach new prospects.",
-      priority: "high",
-      ownerRole: "Sales Lead",
-      dueInDays: baseDays + 7,
-      successMetric: "Outreach plan with 100+ targets identified and first 20 contacted",
-    });
-    actions.push({
-      title: "Establish Sales Metrics",
-      description: "Set up daily/weekly sales tracking (pipeline, conversion rate, avg deal size).",
-      priority: "medium",
-      ownerRole: "Sales Manager",
-      dueInDays: baseDays + 10,
-      successMetric: "Sales dashboard with 2-week rolling metrics",
-    });
-    actions.push({
-      title: "Launch Customer Win-Back Campaign",
-      description: "Contact previous customers who churned to understand why and offer return options.",
-      priority: "medium",
-      ownerRole: "Customer Success",
-      dueInDays: baseDays + 14,
-      successMetric: "Contact list of 50+ previous customers; 10+ re-engaged",
-    });
-  } else if (category === "cost_control") {
-    actions.push({
-      title: "Categorize All Expenses",
-      description: "Break down all monthly expenses by category (payroll, vendor, overhead, etc.).",
-      priority: "high",
-      ownerRole: "Owner/Manager",
-      dueInDays: baseDays,
-      successMetric: "Detailed expense breakdown with year-to-date trends",
-    });
-    actions.push({
-      title: "Identify Top 5 Cost Drivers",
-      description: "Focus on the 5 largest expense categories that represent 80% of costs.",
-      priority: "high",
-      ownerRole: "Owner/Manager",
-      dueInDays: baseDays + 3,
-      successMetric: "Analysis showing top 5 cost categories and % of total",
-    });
-    actions.push({
-      title: "Vendor Renegotiation Plan",
-      description: "Identify and approach top 3-5 vendors for price renegotiation.",
-      priority: "high",
-      ownerRole: "Operations",
-      dueInDays: baseDays + 7,
-      successMetric: "Renegotiation requests sent; 2+ vendors agree to discuss",
-    });
-    actions.push({
-      title: "Review Staffing Levels",
-      description: "Audit headcount and workload distribution to identify optimization opportunities.",
-      priority: "medium",
-      ownerRole: "HR/Operations",
-      dueInDays: baseDays + 10,
-      successMetric: "Report identifying roles for consolidation or reduction",
-    });
-    actions.push({
-      title: "Implement Approval Workflows",
-      description: "Set up cost control approval workflows for expenses above threshold amounts.",
-      priority: "medium",
-      ownerRole: "Finance",
-      dueInDays: baseDays + 14,
-      successMetric: "Cost approval policy documented and implemented",
-    });
-  } else if (category === "cash_flow_stability") {
-    actions.push({
-      title: "Model Cash Flow",
-      description: "Create 13-week rolling cash flow forecast to identify peaks and valleys.",
-      priority: "high",
-      ownerRole: "Owner/Manager",
-      dueInDays: baseDays,
-      successMetric: "13-week cash forecast with revenue, expense, and payment timing",
-    });
-    actions.push({
-      title: "Accelerate Collections",
-      description: "Review customer payment terms and develop collection plan for overdue receivables.",
-      priority: "high",
-      ownerRole: "Manager",
-      dueInDays: baseDays + 3,
-      successMetric: "A/R aging report and action plan for 30+ day overdue accounts",
-    });
-    actions.push({
-      title: "Negotiate Vendor Payments",
-      description: "Extend payment terms with key vendors to improve cash timing.",
-      priority: "high",
-      ownerRole: "Operations",
-      dueInDays: baseDays + 7,
-      successMetric: "Extended payment terms with 3+ vendors; 30+ day extension achieved",
-    });
-    actions.push({
-      title: "Establish Cash Reserves",
-      description: "Establish target cash reserve (3-6 months of burn rate) and develop funding plan.",
-      priority: "medium",
-      ownerRole: "Owner",
-      dueInDays: baseDays + 10,
-      successMetric: "Cash reserve target and funding strategy documented",
-    });
-    actions.push({
-      title: "Explore Financing Options",
-      description: "Evaluate credit line, invoice factoring, or other financing options as safety net.",
-      priority: "medium",
-      ownerRole: "Owner",
-      dueInDays: baseDays + 14,
-      successMetric: "3 financing options evaluated with terms and conditions",
-    });
-  } else if (category === "customer_retention") {
-    actions.push({
-      title: "Analyze Customer Churn",
-      description: "Identify which customers are churning and their common characteristics.",
-      priority: "high",
-      ownerRole: "Customer Success",
-      dueInDays: baseDays,
-      successMetric: "Churn analysis showing top reasons for departure",
-    });
-    actions.push({
-      title: "Implement Retention Program",
-      description: "Create loyalty/retention program with incentives and engagement tactics.",
-      priority: "high",
-      ownerRole: "Customer Success",
-      dueInDays: baseDays + 5,
-      successMetric: "Retention program defined with incentive tiers",
-    });
-    actions.push({
-      title: "Proactive Customer Engagement",
-      description: "Launch monthly touchbase calls with top 20 customers to understand satisfaction.",
-      priority: "high",
-      ownerRole: "Account Manager",
-      dueInDays: baseDays + 7,
-      successMetric: "Calls scheduled and completed with 20+ customers; feedback documented",
-    });
-    actions.push({
-      title: "Enhance Support Quality",
-      description: "Review customer support process and implement quality improvements.",
-      priority: "medium",
-      ownerRole: "Customer Success Manager",
-      dueInDays: baseDays + 10,
-      successMetric: "Support SLA defined; response time target set and tracked",
-    });
-    actions.push({
-      title: "Customer Health Score System",
-      description: "Implement customer health scoring to identify at-risk accounts early.",
-      priority: "medium",
-      ownerRole: "Customer Success",
-      dueInDays: baseDays + 14,
-      successMetric: "Health score model active; 5+ at-risk customers identified and flagged",
-    });
-  } else if (category === "operational_efficiency") {
-    actions.push({
-      title: "Map Core Processes",
-      description: "Document 5 critical business processes with current-state process flows.",
-      priority: "high",
-      ownerRole: "Operations",
-      dueInDays: baseDays,
-      successMetric: "5 process maps created showing steps, owners, and pain points",
-    });
-    actions.push({
-      title: "Identify Inefficiencies",
-      description: "Review mapped processes to identify bottlenecks, redundancies, and rework.",
-      priority: "high",
-      ownerRole: "Operations Manager",
-      dueInDays: baseDays + 3,
-      successMetric: "Report listing 10+ inefficiencies with time/cost impact",
-    });
-    actions.push({
-      title: "Design Improvements",
-      description: "Design improved process flows addressing identified inefficiencies.",
-      priority: "high",
-      ownerRole: "Operations",
-      dueInDays: baseDays + 7,
-      successMetric: "Improved process designs documented with expected time savings",
-    });
-    actions.push({
-      title: "Implement Quick Wins",
-      description: "Roll out 3 highest-impact improvements and measure results.",
-      priority: "medium",
-      ownerRole: "Operations",
-      dueInDays: baseDays + 14,
-      successMetric: "3 improvements implemented; baseline and new metrics captured",
-    });
-    actions.push({
-      title: "Training and Documentation",
-      description: "Create training materials and documentation for new/improved processes.",
-      priority: "medium",
-      ownerRole: "Operations",
-      dueInDays: baseDays + 21,
-      successMetric: "Process documentation and training materials completed for all staff",
-    });
-  } else {
-    actions.push({
-      title: "Schedule Discovery Meeting",
-      description: "Meet with leadership to gather more context about business challenges.",
-      priority: "high",
-      ownerRole: "Engagement Lead",
-      dueInDays: 2,
-      successMetric: "2-hour discovery session completed with decision makers",
-    });
-    actions.push({
-      title: "Gather Financial Data",
-      description: "Collect latest financial statements, P&L, and cash flow data.",
-      priority: "high",
-      ownerRole: "Finance",
-      dueInDays: 3,
-      successMetric: "Last 12 months of financial data collected and reviewed",
-    });
-    actions.push({
-      title: "Interview Key Stakeholders",
-      description: "Conduct interviews with 5-7 key leaders to understand pain points.",
-      priority: "high",
-      ownerRole: "Engagement Lead",
-      dueInDays: 7,
-      successMetric: "Interview notes with themes and problem statements identified",
-    });
-    actions.push({
-      title: "Develop Detailed Diagnosis",
-      description: "Based on data and interviews, identify the real root causes and primary issue.",
-      priority: "high",
-      ownerRole: "Consultant",
-      dueInDays: 10,
-      successMetric: "Detailed diagnosis report with root cause analysis and priority ranking",
-    });
-    actions.push({
-      title: "Present Findings",
-      description: "Present diagnosis findings and recommended actions to leadership.",
-      priority: "medium",
-      ownerRole: "Engagement Lead",
-      dueInDays: 12,
-      successMetric: "Findings presentation completed; action plan approved",
-    });
-  }
-
-  return actions;
-}
-
-// ─── Main Diagnosis Function ───────────────────────────────────────────────
-
-export async function diagnoseBusiness(input: BusinessProblemInput, authContext: CanonicalAuthContext, workspaceId: string): Promise<DiagnosisResult> {
+export async function diagnoseBusiness(
+  input: BusinessProblemInput,
+  authContext: CanonicalAuthContext,
+  workspaceId: string
+): Promise<DiagnosisResult> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
   enforceWorkspaceId(validatedWorkspaceId, "diagnoseBusiness", "diagnosis");
-
   validateBusinessProblem(input);
 
-  // Engine layer: orchestrate diagnosis from multiple engines
-  const businessAssessment: BusinessAssessment = {
-    businessName: input.businessName,
-    businessType: input.businessType,
-    problemStatement: input.problemStatement,
-    mainIssue: input.mainIssue,
-    monthlyRevenue: input.monthlyRevenue,
-    monthlyCosts: input.monthlyCosts,
-    customerCount: input.customerCount,
-  };
-
-  const orchestrator = new DiagnosisOrchestrator([
-    new DataValidationEngine(),
-    new FinancialEngine(),
-  ]);
-
-  // Engine layer: orchestrate diagnosis from multiple engines
-  const engineDiagnosis = await orchestrator.orchestrate(businessAssessment);
-
-  // Engine output drives final diagnosis (not just stored in metadata)
-  const severity = engineDiagnosis.severity;
-  const category = engineDiagnosis.category;
-  const phase = engineDiagnosis.phase;
-
-  // Generate outputs based on orchestrated diagnosis
-  const summary = generateDiagnosisSummary(input, category, severity);
-  const findingsData = generateFindings(input, category, severity);
-  const recommendationsData = generateRecommendations(input);
-  const actionPlanData = generateActionPlan(category, severity);
-
-  // Deterministic specificity layer: extract signals from the user's own
-  // problem statement and numbers so reasoning reflects THIS business.
-  const signals = extractProblemSignals(input);
-  const whyThisMattersNow = deriveWhyThisMattersNow(signals, category, severity);
-  const whatNotToDoYet = deriveWhatNotToDoYet(signals);
-  const bottleneck = deriveBottleneck(signals, category);
-  if (actionPlanData.length > 0) {
-    actionPlanData[0] = {
-      ...actionPlanData[0],
-      description: enrichFirstActionDescription(actionPlanData[0].description, signals),
-      bottleneck,
-    };
+  // Plan entitlement first: nothing (not even the client) is written for a workspace whose plan
+  // does not include engagements. createEngagement repeats this check; failing here avoids
+  // leaving an orphan client behind on every refused attempt.
+  const entitlement = await assertCapability(validatedWorkspaceId, "create_engagement");
+  if (!entitlement.allowed) {
+    throw new PlanLimitError("create_engagement", entitlement.reason || "Plan limit exceeded");
   }
 
-  // V2 enhancements - merge with engine findings
-  const dataWarnings = engineDiagnosis.issues.length > 0
-    ? engineDiagnosis.issues
-    : detectDataIssues(input);
-  const confidence: "low" | "medium" | "high" =
-    engineDiagnosis.diagnosticConfidence >= 0.75 ? "high" :
-    engineDiagnosis.diagnosticConfidence >= 0.5 ? "medium" :
-    "low";
-  const impact = calculateBusinessImpact(input);
+  const answer = buildGenericDiagnosisAnswer(input);
+  const interventionMode = interventionModeFor(answer);
+  const severity = answer.supporting.severity;
 
-  const executiveBrief: ExecutiveBrief = {
-    title: severity === "critical" ? "🚨 CRITICAL BUSINESS ALERT" : "⚠️ BUSINESS DIAGNOSIS",
-    summary: `${input.businessName} is currently facing a ${severity.toUpperCase()} business risk.${impact ? ` Estimated monthly loss: $${impact.monthlyLoss.toLocaleString()}` : ""} Primary issue: ${category.replace(/_/g, " ")}.${impact ? " Immediate intervention required to prevent further financial deterioration." : ""}`,
-    warnings: dataWarnings,
-  };
-
-  // Get or create client — scoped to the verified workspace (DEC-TEN-01). The previous
-  // findFirst({ name }) matched clients across ALL workspaces (a cross-tenant read).
-  let client = await db.clientAccount.findFirst({
+  // Client: reuse this workspace's client of the same name, else create it (governed + audited).
+  const existingClient = await db.clientAccount.findFirst({
     where: { name: input.businessName, workspaceId: validatedWorkspaceId },
+    select: { id: true },
   });
-
-  if (!client) {
-    client = await db.clientAccount.create({
-      data: {
-        id: randomUUID(),
-        workspaceId: validatedWorkspaceId,
-        name: input.businessName,
-        industry: input.businessType,
-        visibility: "internal",
-        createdBy: actorId,
-        updatedAt: new Date(),
-      },
-    });
+  if (!existingClient && !(authContext.policy && hasCapability(authContext.policy, CAPABILITIES.CLIENT_CREATE))) {
+    // Adding a client is its own protected action; quick diagnosis never bypasses it.
+    throw new ForbiddenError(
+      "CAPABILITY_NOT_GRANTED",
+      "This business isn't a client yet, and adding a new client needs client-creation access. Ask an admin to add the client, then run the diagnosis again."
+    );
   }
+  const clientId = existingClient
+    ? existingClient.id
+    : (await createClient({ name: input.businessName, industry: input.businessType }, authContext, validatedWorkspaceId)).id;
 
-  // Create engagement
-  const engagement = await db.engagement.create({
-    data: {
-      id: randomUUID(),
-      code: `DIAG-${Date.now()}`,
-      title: `${input.businessName} - ${input.mainIssue.replace(/_/g, " ")}`,
-      clientId: client.id,
+  // Engagement via the canonical service (plan entitlement, audit, intervention state,
+  // re-evaluation). The title is unique per run so a new diagnosis never merges into an old one.
+  const runAt = new Date();
+  const engagement = await createEngagement(
+    {
+      title: `${input.businessName} — quick diagnosis (${MAIN_ISSUE_LABEL[input.mainIssue]}) ${runAt.toISOString().slice(0, 23).replace("T", " ")} UTC`,
+      clientId,
       serviceTier: "standard",
       engagementMode: "expert",
-      status: "active",
-      interventionMode: category.includes("revenue") ? "growth" : category.includes("cost") ? "stabilization" : "recovery",
-      interventionPhase: phase,
+      interventionMode,
       description: input.problemStatement,
-      createdBy: actorId,
-      workspaceId: validatedWorkspaceId,
-      updatedAt: new Date(),
     },
-  });
+    authContext,
+    validatedWorkspaceId
+  );
 
-  // Create business condition profile based on diagnosis
-  const conditionInput = {
-    engagementId: engagement.id,
-    workspaceId: validatedWorkspaceId,
-    businessStatus: severity === "critical" ? "critical" : severity === "high" ? "distressed" : "challenged",
-    severityScore: severity === "critical" ? 9 : severity === "high" ? 7 : 5,
-    urgencyLevel: severity === "critical" || severity === "high" ? "critical" : "medium",
-    cashPressureLevel: category === "cash_flow_stability" ? "critical" : "medium",
-    marginPressureLevel: category === "cost_control" ? "critical" : "low",
-    clientConcentrationRisk: category === "customer_retention" ? "high" : "medium",
-    ownerDependencyRisk: "medium",
-    keyPersonDependencyRisk: "medium",
-    processMaturityLevel: category === "operational_efficiency" ? "low" : "medium",
-    managementMaturityLevel: "medium",
-    executionCapacityLevel: "medium",
-    moralFragilityLevel: "low",
-    resilienceLevel: "low",
-    growthReadinessLevel: category === "revenue_generation" ? "high" : "medium",
-    notes: summary,
-  };
+  // The consultant who ran the diagnosis must be able to open the engagement it created.
+  await ensureCreatorMembership(engagement.id, actorId, validatedWorkspaceId, authContext);
 
-  // Use the verified auth context passed to diagnose function
-  await assessCondition(conditionInput, authContext);
+  // Persist only supported records.
+  const submittedEvidence = answer.evidence.filter((e) => e.provenance !== "calculated");
+  const finding =
+    answer.status === "concluded"
+      ? {
+          title: answer.mainProblem.headline,
+          summary: [...answer.why.map((r) => r.text), answer.whatThisMeans].join(" "),
+          severity: severity ?? "high",
+        }
+      : null;
+  const steps = [answer.firstStep, ...answer.thenSteps];
 
-  // Atomic transaction: create all value-path records together
-  // All IDs and timestamps prepared before entering transaction
-  const transactionResult = await db.$transaction(async (tx: any): Promise<DiagnosisTransactionResult> => {
-    // Create Evidence records first (required for Finding.primaryEvidenceId)
-    const createdEvidenceItems = await Promise.all(
-      findingsData.map((f) =>
-        tx.evidence.create({
+  const created = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const evidenceRows = [];
+    for (const item of submittedEvidence) {
+      evidenceRows.push(
+        await tx.evidence.create({
           data: {
             id: randomUUID(),
             engagementId: engagement.id,
-            title: f.title,
-            description: f.description,
-            source: "diagnosis",
+            title: item.label,
+            description: item.value,
+            source: item.provenance, // "owner_input" | "owner_statement" — reported, not validated
             status: "identified",
-            updatedAt: new Date(),
+            evidenceType: "quick_diagnosis_intake",
+            submittedBy: actorId,
+            collectedAt: runAt,
+            metadata: { provenance: item.provenance, key: item.key, verified: false },
+            updatedAt: runAt,
           },
         })
-      )
-    );
+      );
+    }
 
-    // Create Finding records (depend on Evidence IDs)
-    const createdFindings = await Promise.all(
-      findingsData.map((f, index) => {
-        const summary = f.description || "";
-        const primaryEvidenceId = createdEvidenceItems[index].id;
+    let findingRow: { id: string } | null = null;
+    if (finding) {
+      // Primary evidence: the figures the finding is calculated from (costs, else revenue).
+      const primary =
+        evidenceRows[submittedEvidence.findIndex((e) => e.key === "monthlyCosts")] ??
+        evidenceRows[submittedEvidence.findIndex((e) => e.key === "monthlyRevenue")];
+      findingRow = await tx.finding.create({
+        data: {
+          id: randomUUID(),
+          engagementId: engagement.id,
+          title: finding.title,
+          summary: finding.summary,
+          primaryEvidenceId: primary.id,
+          impactArea: "finance", // the gap may come from costs, revenue or both — not yet known
+          severity: finding.severity,
+          rootCause: null,
+          updatedAt: runAt,
+        },
+      });
+    }
 
-        // Validate primaryEvidenceId (same as createFinding service)
-        if (!primaryEvidenceId) {
-          throw new ValidationError(
-            "primaryEvidenceId is required. Evidence must be created before Finding."
-          );
-        }
-
-        return tx.finding.create({
-          data: {
-            id: randomUUID(),
-            engagementId: engagement.id,
-            title: f.title,
-            summary: summary,
-            primaryEvidenceId: primaryEvidenceId,
-            impactArea: category.includes("revenue")
-              ? "revenue"
-              : category.includes("cost")
-                ? "cost"
-                : category.includes("cash")
-                  ? "revenue"
-                  : "execution",
-            severity: f.severity,
-            rootCause: null,
-            updatedAt: new Date(),
-          },
-        });
-      })
-    );
-
-    // Create Recommendation records (depend on Finding IDs)
-    const createdRecommendations = await Promise.all(
-      recommendationsData.map((r) =>
-        tx.recommendation.create({
+    const recommendationRows = [];
+    for (const step of steps) {
+      recommendationRows.push(
+        await tx.recommendation.create({
           data: {
             engagementId: engagement.id,
-            findingId: createdFindings[0]?.id || null,
-            priority: r.priority,
-            title: r.title,
-            description: r.description || null,
+            findingId: findingRow?.id ?? null,
+            priority: step === answer.firstStep ? "high" : "medium",
+            title: step.title,
+            description: step.why,
             estimatedImpact: null,
             workspaceId: validatedWorkspaceId,
             createdBy: actorId,
-            // GAP-REC-01 — diagnosis recommendations are auto-generated, un-arbitrated
-            // template advice. They must NOT be persisted as validated, medium-reliability,
-            // owner-actionable output (the previous hardcoded 75 / "medium" mislabelled raw
-            // advice as validated). They are marked as AI proposals with low/unverified
-            // reliability and left in the default non-actionable "pending" status; becoming
-            // owner-actionable requires the gated promotion path (updateRecommendationStatus
-            // → enforceOwnerGatesForPromotion: data-sufficiency, confidence, cash, business
-            // impact). Raw advice cannot bypass that gate by being born "validated".
+            // Unvalidated proposals: never born validated/owner-actionable (GAP-REC-01).
             isAiProposal: true,
             evidenceValidationScore: 0,
             reliabilityLevel: "low",
             kpiHealthScore: 0,
             kpiRiskLevel: "unknown",
-            updatedAt: new Date(),
+            updatedAt: runAt,
           },
         })
-      )
-    );
+      );
+    }
 
-    // Create Action records (depend on Recommendation IDs)
-    const createdActions = await Promise.all(
-      actionPlanData.map((a) =>
-        tx.action.create({
-          data: {
-            id: randomUUID(),
-            engagementId: engagement.id,
-            recommendationId: createdRecommendations[0]?.id || null,
-            title: a.title,
-            description: a.description || null,
-            assignedTo: null,
-            dueAt: null,
-            status: "draft",
-            updatedAt: new Date(),
-          },
-        })
-      )
-    );
+    const actionRow = await tx.action.create({
+      data: {
+        id: randomUUID(),
+        engagementId: engagement.id,
+        recommendationId: recommendationRows[0].id,
+        title: answer.firstStep.title,
+        description: answer.firstStep.why,
+        assignedTo: null,
+        dueAt: null,
+        status: "draft",
+        updatedAt: runAt,
+      },
+    });
 
-    return { createdEvidenceItems, createdFindings, createdRecommendations, createdActions };
+    return { evidenceRows, findingRow, recommendationRows, actionRow };
   });
 
-  const {
-    createdFindings,
-    createdRecommendations,
-    createdActions,
-  }: DiagnosisTransactionResult = transactionResult;
-
-  // Side effects after transaction commit: audit events
-  // Do NOT do side effects inside transaction to avoid nested transaction issues
-
-  // Emit audit event for findings
-  for (let i = 0; i < createdFindings.length; i++) {
-    const finding = createdFindings[i];
+  // Audit after commit (no side effects inside the transaction).
+  for (let i = 0; i < created.evidenceRows.length; i++) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.EVIDENCE_SUBMITTED,
+      actorId,
+      entityType: "Evidence",
+      entityId: created.evidenceRows[i].id,
+      workspaceId: validatedWorkspaceId,
+      payload: { engagementId: engagement.id, key: submittedEvidence[i].key, provenance: submittedEvidence[i].provenance },
+      visibility: "internal",
+    });
+  }
+  if (created.findingRow && finding) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.FINDING_CREATED,
       actorId,
       entityType: "Finding",
-      entityId: finding.id,
+      entityId: created.findingRow.id,
       workspaceId: validatedWorkspaceId,
-      payload: {
-        engagementId: engagement.id,
-        severity: findingsData[i]?.severity || "medium",
-        title: findingsData[i]?.title || "",
-      },
+      payload: { engagementId: engagement.id, severity: finding.severity, title: finding.title },
     });
   }
-
-  // Emit audit event for recommendations
-  for (let i = 0; i < createdRecommendations.length; i++) {
-    const recommendation = createdRecommendations[i];
+  for (let i = 0; i < created.recommendationRows.length; i++) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
       actorId,
       entityType: "recommendation",
-      entityId: recommendation.id,
+      entityId: created.recommendationRows[i].id,
       workspaceId: validatedWorkspaceId,
-      payload: {
-        engagementId: engagement.id,
-        priority: recommendationsData[i]?.priority || "medium",
-      },
+      payload: { engagementId: engagement.id, priority: i === 0 ? "high" : "medium", source: "quick_diagnosis" },
       visibility: "internal",
     });
   }
-
-  // Emit audit event for actions
-  for (let i = 0; i < createdActions.length; i++) {
-    const action = createdActions[i];
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.ACTION_CREATED,
-      actorId,
-      entityType: "action",
-      entityId: action.id,
-      workspaceId: validatedWorkspaceId,
-      payload: {
-        engagementId: engagement.id,
-        priority: actionPlanData[i]?.priority || "medium",
-      },
-      visibility: "internal",
-    });
-  }
-
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ACTION_CREATED,
+    actorId,
+    entityType: "action",
+    entityId: created.actionRow.id,
+    workspaceId: validatedWorkspaceId,
+    payload: { engagementId: engagement.id, priority: "high" },
+    visibility: "internal",
+  });
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.DIAGNOSIS_COMPLETED,
     actorId,
@@ -822,51 +299,65 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     entityId: engagement.id,
     workspaceId: validatedWorkspaceId,
     payload: {
-      businessProblem: input,
+      mainIssue: input.mainIssue,
+      status: answer.status,
+      mainProblemCode: answer.mainProblem.code,
+      certainty: answer.confidence.certainty.level,
+      economics: answer.supporting.economics,
       severity,
-      category,
-      phase,
+      interventionMode,
+      figuresProvided: answer.confidence.dataCompleteness.provided,
     },
   });
 
-  const actionPlanWithUrgency = actionPlanData.map((action, index) => ({
-    ...action,
-    urgency: (index < 2 ? "immediate" : "next") as "immediate" | "next",
-  }));
+  // Mandatory adaptive rule: a finding proven from the figures is new critical evidence.
+  if (created.findingRow && severity === "critical") {
+    await triggerReEvaluation({
+      changeType: "new_critical_evidence",
+      entityType: "finding",
+      entityId: created.findingRow.id,
+      engagementId: engagement.id,
+      workspaceId: validatedWorkspaceId,
+      severity: "critical",
+      description: answer.mainProblem.headline,
+      triggeredBy: actorId,
+    });
+  }
 
   return {
-    id: engagement.id,
-    input,
-    diagnosisSummary: summary,
-    primaryProblemCategory: category,
-    severity,
-    interventionPhase: phase,
-    findings: createdFindings.map((f, i) => ({
-      id: f.id,
-      title: findingsData[i]?.title || "",
-      severity: findingsData[i]?.severity || "medium",
-      description: findingsData[i]?.description || "",
-      // Top finding carries the strongest concrete evidence; never fabricated.
-      evidence: i === 0 ? findingEvidence(input, signals) : undefined,
-    })),
-    recommendations: createdRecommendations.map((r, i) => ({
-      id: r.id,
-      title: recommendationsData[i]?.title || "",
-      priority: recommendationsData[i]?.priority || "medium",
-      description: recommendationsData[i]?.description || "",
-      whyFirst: i === 0 ? deriveWhyFirst(signals, category, severity) : undefined,
-    })),
-    actionPlan: actionPlanWithUrgency,
     engagementId: engagement.id,
-    createdAt: engagement.createdAt.toISOString(),
-    executiveBrief,
-    confidence,
-    dataWarnings,
-    whyThisMattersNow,
-    whatNotToDoYet,
-    _engineMetadata: {
-      orchestratedDiagnosis: engineDiagnosis,
-      enginesUsed: engineDiagnosis.allEngineResults.map((r) => r.engine),
-    },
+    engagementCode: engagement.code,
+    createdAt: runAt.toISOString(),
+    input,
+    answer,
+    engagement: { interventionMode, severity },
   };
+}
+
+async function ensureCreatorMembership(
+  engagementId: string,
+  actorId: string,
+  workspaceId: string,
+  authContext: CanonicalAuthContext
+): Promise<void> {
+  // Derive the membership role from the exact policy the request was authorized with — never a
+  // fresh, wider role query — and only from roles that themselves grant ENGAGEMENT_CREATE under
+  // this workspace's membership (so a self-serve owner's narrowed admin role, a client role or a
+  // stray non-workspace assignment can never be written onto the engagement).
+  const policy = authContext.policy;
+  if (!policy) return; // no authorized policy → no membership is granted
+  const eligible = policy.roles.filter(
+    (r) =>
+      r.scope === "workspace" &&
+      r.scopeId === workspaceId &&
+      !isClientRole(r.role) &&
+      getCapabilitiesForRole(r.role, policy.workspaceRole).includes(CAPABILITIES.ENGAGEMENT_CREATE)
+  );
+  const role = highestRole({ ...policy, roles: eligible });
+  if (!role) return;
+  try {
+    await addMember({ userId: actorId, engagementId, role, workspaceId }, authContext);
+  } catch (e) {
+    if (!(e instanceof ConflictError)) throw e; // already a member
+  }
 }

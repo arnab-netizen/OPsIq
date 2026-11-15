@@ -34,6 +34,11 @@ export const ROLES = {
   // identity is assigned this role by this change; provisioning it is a
   // separate, explicitly-authorized action.
   ADMINISTRATION_OPERATOR: "administration_operator",
+
+  // Acceptance fixture authority. Carries ONLY ACCEPTANCE_FIXTURE_WRITE (see capability-check.ts) —
+  // a SEPARATE role, not an extension of any other operator bundle. No production identity is
+  // assigned this role by this change; provisioning it is a separate, explicitly-authorized action.
+  ACCEPTANCE_FIXTURE_OPERATOR: "acceptance_fixture_operator",
 } as const;
 
 export type RoleName = (typeof ROLES)[keyof typeof ROLES];
@@ -56,6 +61,8 @@ export const ROLE_HIERARCHY: Record<RoleName, number> = {
   // Same rationale as BETA_REQUEST_OPERATOR: low, non-overlapping, must never
   // be mistaken for a broader internal tier by assertHierarchyAuthority.
   [ROLES.ADMINISTRATION_OPERATOR]: 5,
+  // Same rationale as the other narrow operator roles.
+  [ROLES.ACCEPTANCE_FIXTURE_OPERATOR]: 5,
 };
 
 /** Roles that are internal/consultant-side — not client-facing */
@@ -67,6 +74,7 @@ export const INTERNAL_ROLES: readonly RoleName[] = [
   ROLES.ANALYST,
   ROLES.BETA_REQUEST_OPERATOR,
   ROLES.ADMINISTRATION_OPERATOR,
+  ROLES.ACCEPTANCE_FIXTURE_OPERATOR,
 ];
 
 /** Roles that are client-side */

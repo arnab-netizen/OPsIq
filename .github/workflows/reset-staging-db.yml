@@ -20,6 +20,9 @@ jobs:
     timeout-minutes: 20
     environment: staging
 
+    env:
+      OPSIQ_DB_TARGET: staging
+      OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: ${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}
     steps:
       - name: Confirm destructive reset
         run: |
@@ -51,6 +54,15 @@ jobs:
             exit 1
           fi
           echo "✓ STAGING_DATABASE_URL secret is configured"
+
+      # Positive staging-target proof BEFORE the first write. `psql` below never loads prisma.config.ts, so the
+      # Prisma datasource guard cannot protect the DROP SCHEMA: this step does, with the SAME secret expression the
+      # destructive step uses (src/infra/staging-database-target.ts is the one shared validator).
+      - name: Verify staging target (approved endpoint allowlist — before any write)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          OPSIQ_APPROVED_STAGING_ENDPOINT_IDS: ${{ vars.OPSIQ_APPROVED_STAGING_ENDPOINT_IDS }}
+        run: npx tsx scripts/assert-approved-staging-database.ts DATABASE_URL
 
       - name: Remove local environment files
         run: |

@@ -6,3 +6,4 @@
 export * from "./types";
 export * from "./thresholds";
 export * from "./engine";
+export * from "./investment-eligibility";

@@ -10,10 +10,31 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AuditEventName } from "@/domain/constants/audit-events";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 import { hasAnyRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
+import { SCHEDULER_SYSTEM_ACTOR, toAuditActor } from "@/domain/owner-budget/system-actor";
+import { raiseIdempotentAlert, resolveIdempotentAlerts, type IdempotentAlertOutcome } from "@/services/alerts/alert-service";
+import { logger } from "@/infra/logger";
+
+/** A risk's alert keys: its critical alert and its review-overdue alert. */
+function riskAlertKeys(riskId: string): string[] {
+  return [`risk_critical_${riskId}`, `risk_overdue_${riskId}`];
+}
+function criticalRiskAlert(workspaceId: string, actorId: string, riskId: string, message: string) {
+  return {
+    workspaceId, userId: actorId, type: "threshold_breach" as const, channel: "in_app" as const, severity: "critical" as const,
+    message, entityType: "BusinessRiskEntry", entityId: riskId, idempotencyKey: `risk_critical_${riskId}`, auditActor: toAuditActor(actorId),
+  };
+}
+function overdueRiskAlert(workspaceId: string, recipientUserId: string, auditActorId: string, riskId: string, riskCode: string) {
+  return {
+    workspaceId, userId: recipientUserId, type: "blocked" as const, channel: "in_app" as const, severity: "high" as const,
+    message: `Risk review overdue: ${riskCode}`, entityType: "BusinessRiskEntry", entityId: riskId, idempotencyKey: `risk_overdue_${riskId}`,
+    auditActor: toAuditActor(auditActorId),
+  };
+}
 
 export type RiskCategory =
   | "OPERATIONAL"
@@ -125,26 +146,18 @@ export async function createBusinessRisk(input: CreateBusinessRiskInput) {
       tx,
     );
 
+    // A critical risk's alert is raised with the risk, in the same transaction (never lost after commit).
+    if (severity >= CRITICAL_SEVERITY_THRESHOLD) {
+      await raiseIdempotentAlert(tx, criticalRiskAlert(input.workspaceId, input.actorId, created.id, `Critical risk identified: ${created.riskCode}`));
+    }
     return created;
   });
 
-  if (severity >= CRITICAL_SEVERITY_THRESHOLD) {
-    const { createAlert } = await import("@/services/alerts/alert-service");
-    await createAlert({
-      workspaceId: input.workspaceId,
-      userId: input.actorId,
-      type: "threshold_breach",
-      channel: "in_app",
-      severity: "critical",
-      message: `Critical risk identified: ${risk.riskCode}`,
-      entityType: "BusinessRiskEntry",
-      entityId: risk.id,
-      idempotencyKey: `risk_critical_${risk.id}`,
-    }).catch(() => {});
-  }
-
   return risk;
 }
+
+/** Statuses whose risk record is final: a generic edit never rewrites it (status transitions follow the lifecycle). */
+const FINAL_RISK_STATUSES = new Set<string>(["RESOLVED", "CLOSED"]);
 
 export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
   if (input.category) validateCategory(input.category);
@@ -154,34 +167,60 @@ export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
     where: { id: input.riskId, workspaceId: input.workspaceId },
   });
   if (!existing) throw new NotFoundError("BusinessRiskEntry", input.riskId);
+  const statusChange = input.status !== undefined && input.status !== existing.status;
+  // A status change follows the same lifecycle as a review (VALID_REVIEW_TRANSITIONS): a closed risk is
+  // never silently reopened or re-labelled by a generic edit.
+  if (statusChange) {
+    const allowed = VALID_REVIEW_TRANSITIONS[existing.status] ?? [];
+    if (!allowed.includes(input.status!)) {
+      throw new ValidationError(`Illegal risk transition: ${existing.status} → ${input.status}. Allowed: ${allowed.join(", ") || "none"}`);
+    }
+  }
 
   const likelihood = input.likelihood !== undefined ? clamp100(input.likelihood) : existing.likelihood;
   const impact = input.impact !== undefined ? clamp100(input.impact) : existing.impact;
   const severity = computeSeverity(likelihood, impact);
+  const fields: Record<string, unknown> = {
+    ...(input.title !== undefined ? { title: input.title.trim() } : {}),
+    ...(input.description !== undefined ? { description: input.description } : {}),
+    ...(input.category !== undefined ? { category: input.category } : {}),
+    ...(input.likelihood !== undefined ? { likelihood } : {}),
+    ...(input.impact !== undefined ? { impact } : {}),
+    ...(input.mitigationAction !== undefined ? { mitigationAction: input.mitigationAction } : {}),
+    ...(input.residualRisk !== undefined ? { residualRisk: input.residualRisk } : {}),
+    ...(input.linkedObjectiveId !== undefined ? { linkedObjectiveId: input.linkedObjectiveId } : {}),
+    ...(input.reviewedAt !== undefined ? { reviewedAt: input.reviewedAt } : {}),
+  };
+  const existingRecord = existing as unknown as Record<string, unknown>;
+  const changed = Object.keys(fields).filter((k) => JSON.stringify(fields[k] ?? null) !== JSON.stringify(existingRecord[k] ?? null));
+  // A resolved or closed risk is a final record: its fields are never rewritten by a generic edit.
+  if (FINAL_RISK_STATUSES.has(existing.status) && changed.length > 0) {
+    throw new ValidationError(`This risk is ${existing.status.toLowerCase()}; its record can no longer be edited.`);
+  }
+  // Nothing changes (same fields, same status, same severity): no write and no audit — an idempotent no-op.
+  if (!statusChange && changed.length === 0 && severity === existing.severity) return existing;
 
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const updated = await tx.businessRiskEntry.update({
-      where: { id: input.riskId },
-      data: {
-        ...(input.title !== undefined ? { title: input.title.trim() } : {}),
-        ...(input.description !== undefined ? { description: input.description } : {}),
-        ...(input.category !== undefined ? { category: input.category } : {}),
-        ...(input.status !== undefined ? { status: input.status } : {}),
-        likelihood,
-        impact,
-        severity,
-        ...(input.mitigationAction !== undefined ? { mitigationAction: input.mitigationAction } : {}),
-        ...(input.residualRisk !== undefined ? { residualRisk: input.residualRisk } : {}),
-        ...(input.linkedObjectiveId !== undefined ? { linkedObjectiveId: input.linkedObjectiveId } : {}),
-        ...(input.reviewedAt !== undefined ? { reviewedAt: input.reviewedAt } : {}),
-      },
+  const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Compare-and-set on the row version as read (updatedAt changes on every write): a concurrent change to
+    // ANY field between the read above and this write — status, residual risk, likelihood or impact the
+    // severity is recomputed from — is never overwritten, nor audited as a transition that never happened
+    // (the owner decision's "what changed" reads these audit payloads). A lost race is a 409.
+    const guarded = await tx.businessRiskEntry.updateMany({
+      where: { id: input.riskId, workspaceId: input.workspaceId, updatedAt: existing.updatedAt },
+      data: { ...fields, ...(statusChange ? { status: input.status } : {}), severity },
     });
-
-    let eventName: AuditEventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_STATUS_CHANGED;
-    if (input.status === "RESOLVED" || input.status === "CLOSED") {
-      eventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_RESOLVED;
+    if (guarded.count !== 1) {
+      throw new ConflictError("This risk was changed by another request. Reload and retry.");
     }
+    const row = await tx.businessRiskEntry.findFirstOrThrow({ where: { id: input.riskId, workspaceId: input.workspaceId } });
 
+    // The event names what happened: a lifecycle move (resolved/closed, or another status change), or an
+    // edit of the record's fields (with their old and new values).
+    const eventName: AuditEventName = !statusChange
+      ? AUDIT_EVENTS.OWNER_BUSINESS_RISK_UPDATED
+      : RISK_RESOLUTION_STATUSES.has(input.status!)
+        ? AUDIT_EVENTS.OWNER_BUSINESS_RISK_RESOLVED
+        : AUDIT_EVENTS.OWNER_BUSINESS_RISK_STATUS_CHANGED;
     await emitAuditEvent(
       {
         eventName,
@@ -189,13 +228,32 @@ export async function updateBusinessRisk(input: UpdateBusinessRiskInput) {
         actorId: input.actorId,
         entityType: "BusinessRiskEntry",
         entityId: input.riskId,
-        payload: { status: updated.status, severity },
+        payload: {
+          status: row.status, severity, previousSeverity: existing.severity, previousStatus: existing.status,
+          previousResidualRisk: existing.residualRisk ?? null, residualRisk: row.residualRisk ?? null,
+          changedFields: changed,
+          previous: Object.fromEntries(changed.map((k) => [k, existingRecord[k] ?? null])),
+          next: Object.fromEntries(changed.map((k) => [k, (row as unknown as Record<string, unknown>)[k] ?? null])),
+        },
       },
       tx,
     );
 
-    return updated;
+    // Its alerts, reconciled in the SAME transaction (never a best-effort write after commit): a risk moved to
+    // RESOLVED or CLOSED resolves its open critical/overdue alerts; an open risk that is critical now — newly
+    // critical by this edit, or reopened — has an active critical alert (a resolved one is reactivated).
+    if (statusChange && RISK_RESOLUTION_STATUSES.has(input.status!)) {
+      await resolveIdempotentAlerts(tx, { workspaceId: input.workspaceId, idempotencyKeys: riskAlertKeys(input.riskId), auditActor: toAuditActor(input.actorId), reason: "risk_resolved" });
+    } else if (
+      !FINAL_RISK_STATUSES.has(row.status) && severity >= CRITICAL_SEVERITY_THRESHOLD &&
+      (existing.severity < CRITICAL_SEVERITY_THRESHOLD || FINAL_RISK_STATUSES.has(existing.status))
+    ) {
+      await raiseIdempotentAlert(tx, criticalRiskAlert(input.workspaceId, input.actorId, input.riskId, `Critical risk: ${row.riskCode}`));
+    }
+    return row;
   });
+
+  return updated;
 }
 
 export async function listBusinessRisks(
@@ -315,6 +373,18 @@ const CRITICAL_SEVERITY_THRESHOLD = 75;
 // MITIGATING, ASSESSED, IDENTIFIED remain active — mitigation underway ≠ remediation verified.
 const RISK_RESOLUTION_STATUSES = new Set(["RESOLVED", "CLOSED"]);
 
+/**
+ * P2-10: the ONE definition of "this risk's alerts are resolved, not a live overdue risk" — reused by both
+ * the review mutation (resolvesAlerts, above) and the scheduled overdue scan below. A risk the owner accepted
+ * with an explicit rationale is a governed lifecycle state, not an unresolved ignored risk: it must not
+ * re-enter the scheduled scan's candidate set and be re-alerted as overdue. Re-alerting happens only on an
+ * explicit lifecycle change (reopened, acceptance revoked, a transition back out of ACCEPTED) — never
+ * invented as a time-based acceptance expiry the risk model does not have.
+ */
+function riskAlertsAreResolved(status: string, acceptanceRationale: string | null): boolean {
+  return RISK_RESOLUTION_STATUSES.has(status) || (status === "ACCEPTED" && !!acceptanceRationale);
+}
+
 const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
   IDENTIFIED:  ["ASSESSED", "MITIGATING", "ACCEPTED", "CLOSED"],
   ASSESSED:    ["MITIGATING", "ACCEPTED", "CLOSED"],
@@ -328,7 +398,7 @@ const VALID_REVIEW_TRANSITIONS: Record<string, string[]> = {
 export async function reviewRisk(input: ReviewRiskInput) {
   const existing = await db.businessRiskEntry.findFirst({
     where: { id: input.riskId, workspaceId: input.workspaceId },
-    select: { id: true, status: true, riskCode: true, severity: true, reviewDueDate: true },
+    select: { id: true, status: true, riskCode: true, severity: true, reviewDueDate: true, updatedAt: true },
   });
   if (!existing) throw new NotFoundError("BusinessRiskEntry", input.riskId);
 
@@ -341,8 +411,10 @@ export async function reviewRisk(input: ReviewRiskInput) {
 
   const now = new Date();
   const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const updated = await tx.businessRiskEntry.update({
-      where: { id: input.riskId },
+    // Compare-and-set on the status the transition was validated against and the row version as read: a
+    // concurrent review is never overwritten nor audited from a status that no longer existed (409).
+    const guarded = await tx.businessRiskEntry.updateMany({
+      where: { id: input.riskId, workspaceId: input.workspaceId, status: existing.status, updatedAt: existing.updatedAt },
       data: {
         status: input.newStatus,
         reviewedAt: now,
@@ -351,6 +423,10 @@ export async function reviewRisk(input: ReviewRiskInput) {
         ...(input.reviewDueDate !== undefined ? { reviewDueDate: input.reviewDueDate } : {}),
       },
     });
+    if (guarded.count !== 1) {
+      throw new ConflictError("This risk was changed by another request. Reload and retry.");
+    }
+    const updated = await tx.businessRiskEntry.findFirstOrThrow({ where: { id: input.riskId, workspaceId: input.workspaceId } });
 
     let eventName: AuditEventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_REVIEW_COMPLETED;
     if (input.newStatus === "ACCEPTED") eventName = AUDIT_EVENTS.OWNER_BUSINESS_RISK_ACCEPTED;
@@ -372,83 +448,69 @@ export async function reviewRisk(input: ReviewRiskInput) {
       },
       tx,
     );
-    return updated;
-  });
 
-  // Post-transaction alert integration (best effort — risk is already committed)
-  const effectiveReviewDueDate =
-    input.reviewDueDate !== undefined ? input.reviewDueDate : existing.reviewDueDate;
-
-  // Alerts are resolved when:
-  //   - risk reaches RESOLVED or CLOSED (remediation verified / lifecycle complete)
-  //   - risk is ACCEPTED with an explicit rationale (owner-authorized acceptance)
-  // MITIGATING does NOT resolve alerts — work underway ≠ remediation verified.
-  const resolvesAlerts =
-    RISK_RESOLUTION_STATUSES.has(input.newStatus) ||
-    (input.newStatus === "ACCEPTED" && !!input.acceptanceRationale);
-
-  if (resolvesAlerts) {
-    // Resolve any active critical or overdue alerts
-    const active = await db.alert.findMany({
-      where: {
-        workspaceId: input.workspaceId,
-        idempotencyKey: { in: [`risk_critical_${input.riskId}`, `risk_overdue_${input.riskId}`] },
-        resolvedAt: null,
-      },
-      select: { id: true },
-    }).catch(() => [] as Array<{ id: string }>);
-    if (active.length > 0) {
-      const { resolveAlert } = await import("@/services/alerts/alert-service");
-      for (const a of active) {
-        await resolveAlert(a.id, input.workspaceId, input.actorId).catch(() => {});
+    // Its alerts, in the SAME transaction (never a best-effort write after commit):
+    //   - RESOLVED / CLOSED (remediation verified, lifecycle complete) or ACCEPTED with an explicit rationale
+    //     (owner-authorized acceptance) resolves its active critical and overdue alerts;
+    //   - otherwise (IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED without rationale) a critical risk keeps an
+    //     active critical alert and an overdue review an active overdue alert (a resolved one is reactivated).
+    //     MITIGATING does NOT resolve alerts — work underway is not remediation verified.
+    const effectiveReviewDueDate = input.reviewDueDate !== undefined ? input.reviewDueDate : existing.reviewDueDate;
+    const resolvesAlerts = riskAlertsAreResolved(input.newStatus, input.acceptanceRationale ?? null);
+    if (resolvesAlerts) {
+      await resolveIdempotentAlerts(tx, { workspaceId: input.workspaceId, idempotencyKeys: riskAlertKeys(input.riskId), auditActor: toAuditActor(input.actorId), reason: "risk_resolved" }, now);
+    } else {
+      if (existing.severity >= CRITICAL_SEVERITY_THRESHOLD) {
+        await raiseIdempotentAlert(tx, criticalRiskAlert(input.workspaceId, input.actorId, input.riskId, `Critical risk under review: ${existing.riskCode}`), now);
+      }
+      if (effectiveReviewDueDate && effectiveReviewDueDate < now) {
+        await raiseIdempotentAlert(tx, overdueRiskAlert(input.workspaceId, input.actorId, input.actorId, input.riskId, existing.riskCode), now);
       }
     }
-  } else {
-    // Non-resolving statuses (IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED w/o rationale):
-    // keep or create alerts as appropriate.
-    const { createAlert } = await import("@/services/alerts/alert-service");
-    if (existing.severity >= CRITICAL_SEVERITY_THRESHOLD) {
-      await createAlert({
-        workspaceId: input.workspaceId,
-        userId: input.actorId,
-        type: "threshold_breach",
-        channel: "in_app",
-        severity: "critical",
-        message: `Critical risk under review: ${existing.riskCode}`,
-        entityType: "BusinessRiskEntry",
-        entityId: input.riskId,
-        idempotencyKey: `risk_critical_${input.riskId}`,
-      }).catch(() => {});
-    }
-    if (effectiveReviewDueDate && effectiveReviewDueDate < now) {
-      await createAlert({
-        workspaceId: input.workspaceId,
-        userId: input.actorId,
-        type: "blocked",
-        channel: "in_app",
-        severity: "high",
-        message: `Risk review overdue: ${existing.riskCode}`,
-        entityType: "BusinessRiskEntry",
-        entityId: input.riskId,
-        idempotencyKey: `risk_overdue_${input.riskId}`,
-      }).catch(() => {});
-    }
-  }
+    return updated;
+  });
 
   return result;
 }
 
 // ─── Overdue risk alert evaluation ───────────────────────────────────────────
 //
-// Called best-effort from the owner now-view on every load (and from any other
-// evaluation seam that has a valid actorId). Frequency: per owner now-view request.
-// Limitation: no background scheduler — alerts surface only when the view is loaded.
+// A risk becomes overdue by time passing, not by a mutation, so this runs as an explicit process: the
+// scheduler's risk-review scan (scanOverdueRiskAlertsForWorkspace below, enqueued daily per workspace by
+// enqueueDueRiskReviewScanTasks) and the risk review mutation itself (reviewRisk raises or resolves the
+// alerts of the risk it changes). It is never run from a read: the owner Now View GET is
+// read-only.
 
+/**
+ * What an overdue-risk evaluation did, counted honestly: `attempted` overdue risks; of those, alerts
+ * `created`, `reactivated` (a resolved alert whose condition returned) or `alreadyActive` (nothing new —
+ * never counted as raised); `resolved` stale alerts; `failed` raises or resolutions (logged; the scheduler
+ * reports PARTIAL_FAILURE).
+ */
+export interface OverdueRiskAlertResult {
+  attempted: number;
+  created: number;
+  reactivated: number;
+  alreadyActive: number;
+  resolved: number;
+  failed: number;
+}
+
+export const EMPTY_OVERDUE_RISK_ALERT_RESULT: Readonly<OverdueRiskAlertResult> = Object.freeze({ attempted: 0, created: 0, reactivated: 0, alreadyActive: 0, resolved: 0, failed: 0 });
+
+/**
+ * Raise (or reactivate) the review-overdue alert of every open overdue risk, and resolve the alerts (critical
+ * and overdue) of risks that have since been resolved/closed. Each alert write commits with its audit event;
+ * alerts go to `recipientUserId`, and raising/resolving are audited as `auditActorId` (a human actor, or
+ * SCHEDULER_SYSTEM_ACTOR → a system event — the recipient did not act).
+ */
 export async function evaluateOverdueRiskAlerts(
   workspaceId: string,
-  actorId: string,
+  recipientUserId: string,
   now: Date = new Date(),
-): Promise<void> {
+  auditActorId: string = recipientUserId,
+): Promise<OverdueRiskAlertResult> {
+  const result: OverdueRiskAlertResult = { ...EMPTY_OVERDUE_RISK_ALERT_RESULT };
   // Query non-terminal risks with reviewDueDate in the past (bounded at 500)
   // isFixtureRecord: false — a QA blueprint's risk must never generate a real owner-visible
   // "Risk review overdue" alert. See ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
@@ -467,52 +529,81 @@ export async function evaluateOverdueRiskAlerts(
       workspaceId,
       reviewDueDate: { lt: now },
       status: { notIn: ["RESOLVED", "CLOSED"] },
+      // P2-10: a risk ACCEPTED with an explicit rationale is a governed lifecycle state whose alerts the
+      // review mutation already resolved (riskAlertsAreResolved, above) — it must never re-enter this
+      // scan's candidate set and be reactivated as overdue merely because time passed.
+      NOT: { status: "ACCEPTED", acceptanceRationale: { not: null } },
       isFixtureRecord: false,
       ...fixtureSessionExclusion,
     },
     select: { id: true, riskCode: true },
+    // Most overdue first, deterministically (a bounded scan never starves the same risks every day).
+    orderBy: [{ reviewDueDate: "asc" }, { id: "asc" }],
     take: 500,
-  }).catch(() => [] as Array<{ id: string; riskCode: string }>);
+  });
 
-  if (overdueRisks.length > 0) {
-    const { createAlert } = await import("@/services/alerts/alert-service");
-    for (const risk of overdueRisks) {
-      await createAlert({
-        workspaceId,
-        userId: actorId,
-        type: "blocked",
-        channel: "in_app",
-        severity: "high",
-        message: `Risk review overdue: ${risk.riskCode}`,
-        entityType: "BusinessRiskEntry",
-        entityId: risk.id,
-        idempotencyKey: `risk_overdue_${risk.id}`,
-      }).catch(() => {});
+  const count: Record<IdempotentAlertOutcome, keyof OverdueRiskAlertResult> = { created: "created", reactivated: "reactivated", already_active: "alreadyActive" };
+  for (const risk of overdueRisks) {
+    result.attempted++;
+    try {
+      const { outcome }: { outcome: IdempotentAlertOutcome } = await db.$transaction((tx: Prisma.TransactionClient) =>
+        raiseIdempotentAlert(tx, overdueRiskAlert(workspaceId, recipientUserId, auditActorId, risk.id, risk.riskCode), now)
+      );
+      result[count[outcome]]++;
+    } catch (error) {
+      result.failed++;
+      logger.warn("Overdue risk alert could not be raised", { workspaceId, riskId: risk.id, error: error instanceof Error ? error.name : "unknown" });
     }
   }
 
-  // Resolve stale overdue alerts for risks that have since been resolved/closed
-  const resolvedRisks = await db.businessRiskEntry.findMany({
-    where: { workspaceId, status: { in: ["RESOLVED", "CLOSED"] } },
-    select: { id: true },
-    take: 500,
-  }).catch(() => [] as Array<{ id: string }>);
-
-  if (resolvedRisks.length > 0) {
-    const staleAlerts = await db.alert.findMany({
-      where: {
-        workspaceId,
-        idempotencyKey: { in: resolvedRisks.map((r: { id: string }) => `risk_overdue_${r.id}`) },
-        resolvedAt: null,
-      },
-      select: { id: true },
-    }).catch(() => [] as Array<{ id: string }>);
-
-    if (staleAlerts.length > 0) {
-      const { resolveAlert } = await import("@/services/alerts/alert-service");
-      for (const a of staleAlerts) {
-        await resolveAlert(a.id, workspaceId, actorId).catch(() => {});
-      }
+  // Resolve the stale alerts (critical and overdue) of risks that have since been resolved/closed: read from
+  // the open alerts themselves (never a bounded list of resolved risks, which could miss some).
+  const openRiskAlerts: Array<{ id: string; idempotencyKey: string | null }> = await db.alert.findMany({
+    where: { workspaceId, resolvedAt: null, OR: [{ idempotencyKey: { startsWith: "risk_overdue_" } }, { idempotencyKey: { startsWith: "risk_critical_" } }] },
+    select: { id: true, idempotencyKey: true },
+    orderBy: { createdAt: "asc" },
+    take: 1000,
+  });
+  const riskIdOf = (key: string | null) => String(key).replace(/^risk_(overdue|critical)_/, "");
+  const riskIds = [...new Set(openRiskAlerts.map((a) => riskIdOf(a.idempotencyKey)))];
+  const closedRisks: Array<{ id: string }> = riskIds.length > 0
+    ? await db.businessRiskEntry.findMany({
+        where: {
+          workspaceId, id: { in: riskIds },
+          OR: [{ status: { in: ["RESOLVED", "CLOSED"] } }, { status: "ACCEPTED", acceptanceRationale: { not: null } }],
+        },
+        select: { id: true },
+      })
+    : [];
+  for (const r of closedRisks) {
+    try {
+      result.resolved += await db.$transaction((tx: Prisma.TransactionClient) =>
+        resolveIdempotentAlerts(tx, { workspaceId, idempotencyKeys: riskAlertKeys(r.id), auditActor: toAuditActor(auditActorId), reason: "risk_resolved" }, now)
+      );
+    } catch (error) {
+      result.failed++;
+      logger.warn("Stale risk alert could not be resolved", { workspaceId, riskId: r.id, error: error instanceof Error ? error.name : "unknown" });
     }
   }
+  return result;
+}
+
+/**
+ * The scheduler's risk-review scan for one workspace: alerts go to the workspace's active owner (the
+ * earliest-added active owner membership); resolutions are audited as a system event. Returns what it
+ * did so the task reports honestly (no owner ⇒ nothing can be addressed).
+ */
+export async function scanOverdueRiskAlertsForWorkspace(
+  workspaceId: string,
+  now: Date = new Date(),
+): Promise<{ recipientFound: boolean } & OverdueRiskAlertResult> {
+  const owner = await db.workspaceMembership.findFirst({
+    where: { workspaceId, role: "owner", isActive: true, removedAt: null },
+    orderBy: { addedAt: "asc" },
+    select: { userId: true },
+  });
+  if (!owner) return { recipientFound: false, ...EMPTY_OVERDUE_RISK_ALERT_RESULT };
+  // Raised and resolved as the scheduler (a system event) — the recipient owner did not act.
+  const result = await evaluateOverdueRiskAlerts(workspaceId, owner.userId, now, SCHEDULER_SYSTEM_ACTOR);
+  return { recipientFound: true, ...result };
 }

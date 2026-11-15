@@ -17,6 +17,16 @@ import {
 import type { StrategySnapshotInput, StrategyDerivedMetrics } from "./types";
 import type { StrategyThresholds } from "./thresholds";
 import { isValidCurrency } from "./data-confidence";
+import { num, rawFundingShortfall, ruleConsistentValue } from "./metrics";
+import { classifyStrategyInputs } from "./input-status";
+import { aboutStrategyMoney, downsideWhen, formatStrategyMoney } from "./decision-format";
+import { RISK_LEVEL_SPREAD } from "./thresholds";
+
+/** The risk-level spread applied to the revenue change (0 when no valid level is set). */
+function riskSpread(input: StrategySnapshotInput): number {
+  const level = input.riskLevel;
+  return level && Object.prototype.hasOwnProperty.call(RISK_LEVEL_SPREAD, level) ? RISK_LEVEL_SPREAD[level] : 0;
+}
 
 /** Default urgency by severity (deterministic baseline). */
 const SEVERITY_URGENCY: Record<OwnerSeverity, number> = {
@@ -74,15 +84,19 @@ export function buildStrategyRiskFindings(
 ): OwnerFinding[] {
   const findings: OwnerFinding[] = [];
   const conf = clampConfidence(m.dataConfidenceScore / 100);
+  // Thresholds are compared on FULL-PRECISION values only; display values are shown (made
+  // rule-consistent at boundaries) but never decide an outcome.
+  const r = m.raw;
+  const about = (x: number | null) => aboutStrategyMoney(x ?? 0, input.currency);
 
   // Invalid currency (certain)
   if (!isValidCurrency(input.currency)) {
     findings.push(
       risk({
         code: "STR_INVALID_CURRENCY",
-        title: "Reporting currency is invalid",
+        title: "Currency code is not valid",
         summary:
-          "The snapshot currency is missing or not a valid 3–8 letter code; fix it so the money figures are trustworthy.",
+          "The scenario's currency code isn't valid, so the money figures can't be trusted.",
         sourceMetric: "currency",
         sourceValue: null,
         severity: "medium",
@@ -103,7 +117,7 @@ export function buildStrategyRiskFindings(
         code: "STR_MISSING_CRITICAL_DATA",
         title: "Critical scenario inputs are missing",
         summary:
-          "Key inputs needed to evaluate this option are missing; provide them so the recommendation is trustworthy, not a guess.",
+          "Inputs needed to judge this option are missing, so its profit effect or affordability can't be calculated.",
         sourceMetric: "dataConfidenceScore",
         sourceValue: m.dataConfidenceScore,
         severity,
@@ -119,56 +133,105 @@ export function buildStrategyRiskFindings(
     );
   }
 
+  // Missing cash while an investment is required (certain about the absence). Affordability and
+  // the funding gap are UNKNOWN — not "affordable". A known cash = 0 is a fact handled by the
+  // affordability bands below; with no (or zero) investment, missing cash blocks nothing.
+  const status = classifyStrategyInputs(input);
+  if (status.cashNeededButMissing) {
+    findings.push(
+      risk({
+        code: "STR_MISSING_CASH",
+        title: "Cash available is not entered",
+        summary:
+          "This option needs an upfront investment, but the cash you can put into it is not entered — whether you can afford it, and how much you would be short, is unknown.",
+        sourceMetric: "cashAvailable",
+        sourceValue: null,
+        severity: "high",
+        confidence: 1,
+        impactScore: 45,
+        evidence: ["cashAvailable not provided", `investmentRequired = ${num(input.investmentRequired)}`],
+        missingData: ["cashAvailable"],
+        verificationMetric: "affordabilityRatio",
+      })
+    );
+  }
+
+  // Missing execution risk (certain about the absence). The downside range cannot be calculated,
+  // so no downside (and no "safe upside") is asserted either way.
+  if (status.riskLevel === null) {
+    findings.push(
+      risk({
+        code: "STR_MISSING_RISK_LEVEL",
+        title: "Execution risk is not chosen",
+        summary:
+          "Without an execution risk level the downside can't be calculated — it is unknown, not safe.",
+        sourceMetric: "riskLevel",
+        sourceValue: null,
+        severity: "medium",
+        confidence: 1,
+        impactScore: 35,
+        evidence: ["riskLevel not provided"],
+        missingData: ["riskLevel"],
+        verificationMetric: "worstMonthlyProfitDelta",
+      })
+    );
+  }
+
   // Negative base case (the option loses money in the expected case)
-  if (m.baseMonthlyProfitDelta !== null && m.baseMonthlyProfitDelta <= 0) {
+  if (r.baseMonthlyProfitDelta !== null && r.baseMonthlyProfitDelta <= 0) {
+    const shown = ruleConsistentValue(r.baseMonthlyProfitDelta, m.baseMonthlyProfitDelta!, (v) => v <= 0);
     findings.push(
       risk({
         code: "STR_NEGATIVE_BASE_CASE",
-        title: "The expected case loses money",
+        title: r.baseMonthlyProfitDelta === 0 ? "Adds no profit on your numbers" : "Loses money on your numbers",
         summary:
-          "On the expected numbers this option reduces monthly profit — it should not be pursued as framed. Re-scope it or drop it.",
+          r.baseMonthlyProfitDelta === 0
+            ? "On the expected numbers the revenue and cost changes cancel out — monthly profit does not go up."
+            : `On the expected numbers this reduces monthly profit by ${about(r.baseMonthlyProfitDelta)}.`,
         sourceMetric: "baseMonthlyProfitDelta",
-        sourceValue: m.baseMonthlyProfitDelta,
+        sourceValue: shown,
         threshold: 0,
         severity: "critical",
         confidence: conf,
         impactScore: 85,
-        evidence: [`baseMonthlyProfitDelta = ${m.baseMonthlyProfitDelta} ≤ 0`],
+        evidence: [`baseMonthlyProfitDelta = ${shown} ≤ 0`],
         verificationMetric: "baseMonthlyProfitDelta",
       })
     );
-  } else if (m.roiAnnualPct !== null && m.roiAnnualPct < t.criticalRoiPct) {
+  } else if (r.roiAnnualPct !== null && r.roiAnnualPct < t.criticalRoiPct) {
     // Negative ROI with a (barely) positive base is still value-destroying on capital.
+    const shown = ruleConsistentValue(r.roiAnnualPct, m.roiAnnualPct!, (v) => v < t.criticalRoiPct);
     findings.push(
       risk({
         code: "STR_NEGATIVE_ROI",
-        title: "Return on the investment is negative",
+        title: "The investment is never earned back",
         summary:
-          "The capital required is not recovered by the profit gain — the option destroys value as framed.",
+          "The profit it adds does not earn back the upfront investment.",
         sourceMetric: "roiAnnualPct",
-        sourceValue: m.roiAnnualPct,
+        sourceValue: shown,
         threshold: t.criticalRoiPct,
         severity: "critical",
         confidence: conf,
         impactScore: 80,
-        evidence: [`roiAnnualPct = ${m.roiAnnualPct}% < ${t.criticalRoiPct}%`],
+        evidence: [`roiAnnualPct = ${shown}% < ${t.criticalRoiPct}%`],
         verificationMetric: "roiAnnualPct",
       })
     );
-  } else if (m.roiAnnualPct !== null && m.roiAnnualPct < t.lowRoiPct) {
+  } else if (r.roiAnnualPct !== null && r.roiAnnualPct < t.lowRoiPct) {
+    const shown = ruleConsistentValue(r.roiAnnualPct, m.roiAnnualPct!, (v) => v < t.lowRoiPct);
     findings.push(
       risk({
         code: "STR_WEAK_ROI",
-        title: "Return on the investment is weak",
+        title: "Low return on the investment",
         summary:
-          "The option returns little on the capital; a higher-ROI use of the same cash likely exists — compare before committing.",
+          `It returns only about ${shown}% a year on the money put in.`,
         sourceMetric: "roiAnnualPct",
-        sourceValue: m.roiAnnualPct,
+        sourceValue: shown,
         threshold: t.lowRoiPct,
         severity: "high",
         confidence: conf,
         impactScore: 50,
-        evidence: [`roiAnnualPct = ${m.roiAnnualPct}% < ${t.lowRoiPct}%`],
+        evidence: [`roiAnnualPct = ${shown}% < ${t.lowRoiPct}%`],
         verificationMetric: "roiAnnualPct",
       })
     );
@@ -176,63 +239,66 @@ export function buildStrategyRiskFindings(
 
   // Negative worst case (downside loses money even though the base case is positive)
   if (
-    m.worstMonthlyProfitDelta !== null &&
-    m.worstMonthlyProfitDelta < 0 &&
-    m.baseMonthlyProfitDelta !== null &&
-    m.baseMonthlyProfitDelta > 0
+    r.worstMonthlyProfitDelta !== null &&
+    r.worstMonthlyProfitDelta < 0 &&
+    r.baseMonthlyProfitDelta !== null &&
+    r.baseMonthlyProfitDelta > 0
   ) {
+    const shown = ruleConsistentValue(r.worstMonthlyProfitDelta, m.worstMonthlyProfitDelta!, (v) => v < 0);
     findings.push(
       risk({
         code: "STR_NEGATIVE_WORST_CASE",
-        title: "The downside case loses money",
+        title: "The downside loses money",
         summary:
-          "If revenue lands at the low end, this option turns into a monthly loss — size the bet so a bad month is survivable, or de-risk it.",
+          `${downsideWhen(num(input.expectedRevenueChange), riskSpread(input)) ?? "In the downside case"}, this becomes a monthly loss of ${about(r.worstMonthlyProfitDelta)}.`,
         sourceMetric: "worstMonthlyProfitDelta",
-        sourceValue: m.worstMonthlyProfitDelta,
+        sourceValue: shown,
         threshold: 0,
         severity: "high",
         confidence: conf,
         impactScore: 55,
-        evidence: [`worstMonthlyProfitDelta = ${m.worstMonthlyProfitDelta} < 0`],
+        evidence: [`worstMonthlyProfitDelta = ${shown} < 0`],
         verificationMetric: "worstMonthlyProfitDelta",
       })
     );
   }
 
   // Payback bands (only meaningful when the base case is positive)
-  if (m.baseMonthlyProfitDelta !== null && m.baseMonthlyProfitDelta > 0) {
-    if (m.paybackMonths === null) {
+  if (r.baseMonthlyProfitDelta !== null && r.baseMonthlyProfitDelta > 0) {
+    if (r.paybackMonths === null) {
       // positive base but payback not computable here only if investment missing — skip
-    } else if (m.paybackMonths > t.criticalPaybackMonths) {
+    } else if (r.paybackMonths > t.criticalPaybackMonths) {
+      const shown = ruleConsistentValue(r.paybackMonths, m.paybackMonths!, (v) => v > t.criticalPaybackMonths);
       findings.push(
         risk({
           code: "STR_LONG_PAYBACK",
-          title: "Payback takes too long",
+          title: "Takes far too long to earn back",
           summary:
-            "The capital takes a very long time to come back, tying up cash and raising the risk that conditions change first.",
+            `It takes about ${shown} months to earn back the investment — longer than the ${t.criticalPaybackMonths}-month limit.`,
           sourceMetric: "paybackMonths",
-          sourceValue: m.paybackMonths,
+          sourceValue: shown,
           threshold: t.criticalPaybackMonths,
           severity: "high",
           confidence: conf,
           impactScore: 55,
-          evidence: [`paybackMonths = ${m.paybackMonths} > ${t.criticalPaybackMonths}`],
+          evidence: [`paybackMonths = ${shown} > ${t.criticalPaybackMonths}`],
           verificationMetric: "paybackMonths",
         })
       );
-    } else if (m.paybackMonths > t.longPaybackMonths) {
+    } else if (r.paybackMonths > t.longPaybackMonths) {
+      const shown = ruleConsistentValue(r.paybackMonths, m.paybackMonths!, (v) => v > t.longPaybackMonths);
       findings.push(
         risk({
           code: "STR_LONG_PAYBACK",
-          title: "Payback is slower than target",
-          summary: "The capital comes back slowly; confirm cash can be spared that long before committing.",
+          title: "Slower to earn back than target",
+          summary: `It takes about ${shown} months to earn back the investment (target: ${t.longPaybackMonths} months or less).`,
           sourceMetric: "paybackMonths",
-          sourceValue: m.paybackMonths,
+          sourceValue: shown,
           threshold: t.longPaybackMonths,
           severity: "medium",
           confidence: conf,
           impactScore: 40,
-          evidence: [`paybackMonths = ${m.paybackMonths} > ${t.longPaybackMonths}`],
+          evidence: [`paybackMonths = ${shown} > ${t.longPaybackMonths}`],
           verificationMetric: "paybackMonths",
         })
       );
@@ -240,42 +306,89 @@ export function buildStrategyRiskFindings(
   }
 
   // Affordability bands (cash cannot fund the investment)
-  if (m.affordabilityRatio !== null) {
-    if (m.affordabilityRatio < t.criticalAffordabilityRatio) {
+  const shortfall = rawFundingShortfall(input);
+  const gapSummary = () => {
+    const cash = num(input.cashAvailable) ?? 0;
+    const inv = num(input.investmentRequired) ?? 0;
+    const digits = shortfall !== null && shortfall < 100 && !Number.isInteger(Math.round(shortfall * 100) / 100) ? 2 : undefined;
+    const f = (x: number) => formatStrategyMoney(x, input.currency, digits);
+    return cash === 0
+      ? `No cash is available for the ${f(inv)} investment — ${f(shortfall ?? inv)} short.`
+      : `You have ${f(cash)} for the ${f(inv)} investment — ${f(shortfall ?? 0)} short.`;
+  };
+  if (r.affordabilityRatio !== null && shortfall !== null && shortfall > 0) {
+    if (r.affordabilityRatio < t.criticalAffordabilityRatio) {
+      const shown = ruleConsistentValue(r.affordabilityRatio, m.affordabilityRatio!, (v) => v < t.criticalAffordabilityRatio);
       findings.push(
         risk({
           code: "STR_UNAFFORDABLE",
-          title: "Cash cannot fund this investment",
-          summary:
-            "Available cash covers only a fraction of the required investment — pursuing it would create a liquidity risk. Stage it or secure funding first.",
+          title: "Cash covers less than half of the investment",
+          summary: gapSummary(),
           sourceMetric: "affordabilityRatio",
-          sourceValue: m.affordabilityRatio,
+          sourceValue: shown,
           threshold: t.criticalAffordabilityRatio,
           severity: "critical",
           confidence: conf,
           impactScore: 75,
-          evidence: [`affordabilityRatio = ${m.affordabilityRatio} < ${t.criticalAffordabilityRatio}`],
+          evidence: [`affordabilityRatio = ${shown} < ${t.criticalAffordabilityRatio}`],
           verificationMetric: "affordabilityRatio",
         })
       );
-    } else if (m.affordabilityRatio < t.minAffordabilityRatio) {
+    } else {
+      const shown = ruleConsistentValue(r.affordabilityRatio, m.affordabilityRatio!, (v) => v < t.minAffordabilityRatio);
       findings.push(
         risk({
           code: "STR_UNAFFORDABLE",
-          title: "Investment stretches available cash",
-          summary:
-            "The investment uses most/all available cash, leaving little buffer; stage the spend or keep a reserve.",
+          title: "Not enough cash for the investment",
+          summary: gapSummary(),
           sourceMetric: "affordabilityRatio",
-          sourceValue: m.affordabilityRatio,
+          sourceValue: shown,
           threshold: t.minAffordabilityRatio,
           severity: "high",
           confidence: conf,
           impactScore: 55,
-          evidence: [`affordabilityRatio = ${m.affordabilityRatio} < ${t.minAffordabilityRatio}`],
+          evidence: [`affordabilityRatio = ${shown} < ${t.minAffordabilityRatio}`],
           verificationMetric: "affordabilityRatio",
         })
       );
     }
+  }
+
+  // Investment covered but little or no cash left in reserve (< lowReserveRatio of the investment).
+  // Only when the economics work (adds profit, earns back within the critical limit, ROI not below
+  // the critical ROI) — the same predicate as the decision's LOW_CASH_RESERVE condition.
+  const investmentForReserve = num(input.investmentRequired);
+  const economicsWork =
+    r.baseMonthlyProfitDelta !== null &&
+    r.baseMonthlyProfitDelta > 0 &&
+    (r.roiAnnualPct === null || r.roiAnnualPct >= t.criticalRoiPct) &&
+    (r.paybackMonths === null || r.paybackMonths <= t.criticalPaybackMonths);
+  if (
+    shortfall !== null &&
+    shortfall <= 0 &&
+    investmentForReserve !== null &&
+    -shortfall < investmentForReserve * t.lowReserveRatio &&
+    economicsWork
+  ) {
+    const left = -shortfall || 0;
+    findings.push(
+      risk({
+        code: "STR_LOW_CASH_RESERVE",
+        title: left === 0 ? "No cash left in reserve" : "Little cash left in reserve",
+        summary:
+          left === 0
+            ? "The investment uses all the cash available for it — one bad month could leave you short."
+            : `After the investment only ${formatStrategyMoney(left, input.currency)} of the cash is left in reserve — one bad month could leave you short.`,
+        sourceMetric: "affordabilityRatio",
+        sourceValue: r.affordabilityRatio,
+        threshold: t.minAffordabilityRatio,
+        severity: "medium",
+        confidence: conf,
+        impactScore: 40,
+        evidence: [`cash left after investment = ${left} < ${t.lowReserveRatio} × investmentRequired`],
+        verificationMetric: "affordabilityRatio",
+      })
+    );
   }
 
   // High qualitative execution risk (owner-flagged)
@@ -285,8 +398,8 @@ export function buildStrategyRiskFindings(
         code: "STR_HIGH_EXECUTION_RISK",
         title: "Execution risk is high",
         summary:
-          "You flagged this option as high-risk to execute; pair it with a concrete de-risking step (pilot, staged rollout, exit trigger) before committing fully.",
-        sourceMetric: "riskLevel",
+          "You rated this option as high-risk to carry out.",
+        sourceMetric: "strategyRiskScore",
         sourceValue: m.strategyRiskScore,
         threshold: null,
         severity: "medium",

@@ -62,16 +62,16 @@ function SectionForm({ section, businessId }: { section: ManualEntrySection; bus
           <span>{f.label}{f.required ? " *" : ""}</span>
           {f.kind === "text" ? (
             <textarea data-testid={`manual-entry-${f.key}-${section.id}`} rows={3} placeholder={f.placeholder}
-              className="w-full rounded-md border border-border p-2 text-sm" value={typeof values[f.key] === "string" ? (values[f.key] as string) : ""}
+              className="w-full rounded-md border border-border p-3 text-base sm:p-2 sm:text-sm" value={typeof values[f.key] === "string" ? (values[f.key] as string) : ""}
               onChange={(e) => setField(f.key, e.target.value)} />
           ) : f.kind === "amount" ? (
             <input type="number" min={0} data-testid={`manual-entry-${f.key}-${section.id}`} placeholder={f.placeholder}
-              className="w-full rounded-md border border-border p-2 text-sm sm:w-60"
+              className="min-h-11 w-full rounded-md border border-border p-3 text-base sm:w-60 sm:p-2 sm:text-sm"
               value={typeof values[f.key] === "number" ? String(values[f.key]) : ""}
               onChange={(e) => setField(f.key, e.target.value === "" ? null : Number(e.target.value))} />
           ) : (
             <input type="text" data-testid={`manual-entry-${f.key}-${section.id}`} placeholder={f.placeholder}
-              className="w-full rounded-md border border-border p-2 text-sm"
+              className="min-h-11 w-full rounded-md border border-border p-3 text-base sm:p-2 sm:text-sm"
               value={typeof values[f.key] === "string" ? (values[f.key] as string) : ""}
               onChange={(e) => setField(f.key, e.target.value)} />
           )}

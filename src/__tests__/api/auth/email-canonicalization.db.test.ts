@@ -23,6 +23,7 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { db } from "@/lib/db";
+import * as bcrypt from "bcryptjs";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 const mockCookieSet = vi.fn();
@@ -69,12 +70,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
   async function signup(body: Record<string, unknown>) {
     const { POST } = await import("@/app/api/auth/signup/route");
     return POST(
-      jsonRequest("http://localhost/api/auth/signup", {
-        acceptTerms: true,
-        acceptPrivacy: true,
-        acceptBetaNotice: true,
-        ...body,
-      }) as never
+      jsonRequest("http://localhost/api/auth/signup", { ...body }) as never
     );
   }
 
@@ -99,15 +95,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
 
     const res = await signup({
       email: `${base.toUpperCase()}@EXAMPLE.COM`,
-      password: "password123",
       workspaceName: "Canon Co",
     });
     expect(res.status).toBe(201);
     const json = await res.json();
-    expect(json.user.email).toBe(canonicalEmail);
+    expect(json.pendingVerification).toBe(true);
 
     const rows = await db.user.findMany({ where: { email: canonicalEmail } });
     expect(rows).toHaveLength(1);
+    expect(rows[0].email).toBe(canonicalEmail);
   });
 
   it("[db] a case-variant of an already-registered email is rejected, never creates a second User", async () => {
@@ -117,14 +113,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
 
     const first = await signup({
       email: canonicalEmail,
-      password: "password123",
       workspaceName: "First Co",
     });
     expect(first.status).toBe(201);
+    // A still-pending account is re-driven (rotated link, 201); the duplicate CONFLICT applies once the mailbox is proven.
+    await db.user.update({ where: { email: canonicalEmail }, data: { emailVerifiedAt: new Date() } });
 
     const second = await signup({
       email: canonicalEmail.toUpperCase(),
-      password: "password123",
       workspaceName: "Second Co",
     });
     expect(second.status).toBe(409);
@@ -144,14 +140,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
 
     const first = await signup({
       email: canonicalEmail,
-      password: "password123",
       workspaceName: "First Co",
     });
     expect(first.status).toBe(201);
+    await db.user.update({ where: { email: canonicalEmail }, data: { emailVerifiedAt: new Date() } });
 
     const second = await signup({
       email: `  ${canonicalEmail}  `,
-      password: "password123",
       workspaceName: "Second Co",
     });
     expect(second.status).toBe(409);
@@ -167,18 +162,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Email canonicalization — cross-rou
 
     const signupRes = await signup({
       email: canonicalEmail,
-      password: "password123",
       workspaceName: "Login Co",
     });
     expect(signupRes.status).toBe(201);
-    const { user } = await signupRes.json();
+    const user = (await db.user.findUnique({ where: { email: canonicalEmail } }))!;
 
     // This test's subject is CASE/WHITESPACE canonicalization of the login
     // lookup, not the email-verification journey (covered by
     // verify-email.db.test.ts) — open-beta signup itself creates no session,
     // and login refuses an unverified account. Mark it verified directly,
     // exactly the state POST /api/auth/verify-email would have produced.
-    await db.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
+    await db.user.update({
+      where: { id: user.id },
+      data: { emailVerifiedAt: new Date(), hashedPassword: await bcrypt.hash("password123", 4) },
+    });
 
     const loginRes = await login({
       email: `  ${canonicalEmail.toUpperCase()}  `,

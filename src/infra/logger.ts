@@ -169,6 +169,24 @@ function writeLog(entry: LogEntry, config: LoggerConfig): void {
 }
 
 /**
+ * Normalise the (error, context) arguments of error()/fatal(). Callers that pass a plain
+ * context object in the error slot (`logger.error("msg", { key: value })`) used to have it
+ * stringified to "[object Object]"; such an object is now logged as context (merged under any
+ * explicit context) and no synthetic error is attached. Error instances and other values are
+ * handled as before.
+ */
+export function errorLogArgs(
+  error: unknown,
+  context: LogContext | undefined
+): { error: Error | undefined; context: LogContext | undefined } {
+  if (error instanceof Error) return { error, context };
+  if (error !== null && typeof error === "object" && Object.getPrototypeOf(error) === Object.prototype) {
+    return { error: undefined, context: { ...(error as LogContext), ...context } };
+  }
+  return { error: new Error(String(error)), context };
+}
+
+/**
  * Log entry with specified level
  */
 function log(
@@ -297,8 +315,8 @@ export const logger = {
     metadata?: Record<string, unknown>,
     config?: LoggerConfig
   ): void {
-    const err = error instanceof Error ? error : new Error(String(error));
-    log(LogLevel.ERROR, message, context, metadata, err, config);
+    const a = errorLogArgs(error, context);
+    log(LogLevel.ERROR, message, a.context, metadata, a.error, config);
   },
 
   fatal(
@@ -308,8 +326,8 @@ export const logger = {
     metadata?: Record<string, unknown>,
     config?: LoggerConfig
   ): void {
-    const err = error instanceof Error ? error : new Error(String(error));
-    log(LogLevel.FATAL, message, context, metadata, err, config);
+    const a = errorLogArgs(error, context);
+    log(LogLevel.FATAL, message, a.context, metadata, a.error, config);
   },
 
   flush(config?: LoggerConfig): void {
@@ -374,12 +392,12 @@ export function createLogger(
       log(LogLevel.WARN, message, { ...defaultContext, ...context }, metadata);
     },
     error(message: string, error?: Error | unknown, context?: LogContext, metadata?: Record<string, unknown>): void {
-      const err = error instanceof Error ? error : new Error(String(error));
-      log(LogLevel.ERROR, message, { ...defaultContext, ...context }, metadata, err);
+      const a = errorLogArgs(error, context);
+      log(LogLevel.ERROR, message, { ...defaultContext, ...a.context }, metadata, a.error);
     },
     fatal(message: string, error?: Error | unknown, context?: LogContext, metadata?: Record<string, unknown>): void {
-      const err = error instanceof Error ? error : new Error(String(error));
-      log(LogLevel.FATAL, message, { ...defaultContext, ...context }, metadata, err);
+      const a = errorLogArgs(error, context);
+      log(LogLevel.FATAL, message, { ...defaultContext, ...a.context }, metadata, a.error);
     },
   };
 }

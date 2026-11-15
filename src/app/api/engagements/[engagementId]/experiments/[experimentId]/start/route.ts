@@ -43,5 +43,5 @@ export const POST = withCanonicalEnforcement(
 
     return toExperimentDTO(active);
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
+  { requireCommercial: "governed_execution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE] }
 );

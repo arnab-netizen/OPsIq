@@ -14,6 +14,7 @@
  * archetype the pack falls back SAFELY and downgrades confidence (no overclaim).
  */
 import { archetypeFromBusinessType } from "@/domain/owner-guidance/archetype-guidance";
+import { BUDGET_MARGIN_REPAIR_TITLES } from "@/domain/owner-budget/action-mapping";
 import type { BudgetGeneratedAction, BudgetSignal } from "@/domain/owner-budget/types";
 
 export type BudgetArchetype = "laundry" | "housekeeping" | "generic";
@@ -163,7 +164,7 @@ function assessLaundry(s: LaundryArchetypeSignals): ArchetypePackResult {
   if (b2bMargin !== null && b2bMargin < 10) {
     r.signals.push({ type: "laundry_b2b_margin_risk", severity: "HIGH", message: `B2B contribution margin ${b2bMargin.toFixed(1)}% is below a safe threshold — reprice or tighten collection before taking more B2B volume.` });
     r.actions.push({
-      title: "Reprice / renegotiate low-margin B2B laundry contracts",
+      title: BUDGET_MARGIN_REPAIR_TITLES.REPRICE_B2B_LAUNDRY,
       accountableRole: "owner",
       decisionType: "INCREASE",
       requiredProof: "B2B contract price + kg/linen cost + payment terms",
@@ -269,7 +270,7 @@ function assessHousekeeping(s: HousekeepingArchetypeSignals): ArchetypePackResul
   if (recurringMargin !== null && recurringMargin < 10) {
     r.signals.push({ type: "housekeeping_contract_underpriced", severity: "HIGH", message: `Recurring contract margin ${recurringMargin.toFixed(1)}% is below a safe threshold — reprice before taking more contracts.` });
     r.actions.push({
-      title: "Reprice underpriced recurring housekeeping contracts",
+      title: BUDGET_MARGIN_REPAIR_TITLES.REPRICE_RECURRING_HOUSEKEEPING,
       accountableRole: "owner",
       decisionType: "INCREASE",
       requiredProof: "Contract pricing/payment terms + per-contract margin",

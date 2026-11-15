@@ -69,9 +69,17 @@ describe("owner-cashflow — safe numeric + currency", () => {
 });
 
 describe("owner-cashflow — cash position + obligations", () => {
-  it("totalCash sums present cash sources; null if neither present", () => {
+  it("totalCash is known ONLY when BOTH components are known (a known 0 is known; a partial position is unknown)", () => {
     expect(totalCash(healthy())).toBe(200000);
-    expect(totalCash({ ...healthy(), cashInHand: undefined })).toBe(150000);
+    expect(totalCash({ ...healthy(), cashInHand: 0, bankBalance: 0 })).toBe(0);
+    expect(totalCash({ ...healthy(), cashInHand: 100, bankBalance: 0 })).toBe(100);
+    expect(totalCash({ ...healthy(), cashInHand: 0, bankBalance: 100 })).toBe(100);
+    expect(totalCash({ ...healthy(), cashInHand: undefined })).toBeNull();
+    expect(totalCash({ ...healthy(), bankBalance: undefined })).toBeNull();
+    expect(totalCash({ ...healthy(), cashInHand: 0, bankBalance: undefined })).toBeNull();
+    expect(totalCash({ ...healthy(), cashInHand: undefined, bankBalance: 0 })).toBeNull();
+    expect(totalCash({ ...healthy(), cashInHand: Number.NaN })).toBeNull();
+    expect(totalCash({ ...healthy(), bankBalance: Number.POSITIVE_INFINITY })).toBeNull();
     expect(
       totalCash({ ...healthy(), cashInHand: undefined, bankBalance: undefined })
     ).toBeNull();
@@ -101,6 +109,7 @@ describe("owner-cashflow — runway is burning-only and honest", () => {
       periodEnd: "2026-05-03",
       currency: "INR",
       cashInHand: 100000,
+      bankBalance: 0,
       salaryDue: 90000,
       dailyCollections: 20000,
     };
@@ -163,6 +172,7 @@ describe("owner-cashflow — state escalation", () => {
       periodEnd: "2026-05-31",
       currency: "INR",
       cashInHand: 5000,
+      bankBalance: 0,
       dailyCollections: 500,
       rentDue: 20000,
       salaryDue: 50000,
@@ -177,6 +187,7 @@ describe("owner-cashflow — state escalation", () => {
       periodEnd: "2026-05-03", // 3 days
       currency: "INR",
       cashInHand: 100000,
+      bankBalance: 0,
       salaryDue: 90000, // urgent 90% (high, not critical)
       dailyCollections: 20000, // runway 10 days (< critical 14, ≥ insolvent 5)
     });
@@ -189,6 +200,7 @@ describe("owner-cashflow — state escalation", () => {
       periodEnd: "2026-05-31",
       currency: "INR",
       cashInHand: 100000,
+      bankBalance: 0,
       dailyCollections: 5000, // covers obligations → not burning
       rentDue: 70000, // urgent 70% (> 60 high, < 100)
     });
@@ -232,7 +244,7 @@ describe("owner-cashflow — data confidence + missing data honesty", () => {
       currency: "INR",
     });
     expect(m.missingRequiredInputs).toEqual(
-      expect.arrayContaining(["cash", "nearTermObligations", "dailyCollections"])
+      expect.arrayContaining(["cashInHand", "bankBalance", "nearTermObligations", "dailyCollections"])
     );
     expect(m.dataConfidenceScore).toBeLessThan(50);
     expect(m.cashflowState).toBe("WATCH"); // not enough data to assert SAFE

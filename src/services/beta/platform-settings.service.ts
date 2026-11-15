@@ -84,7 +84,7 @@ export interface EffectiveSettings {
   source: "database" | "legacy";
 }
 
-type SettingsClient = Pick<Prisma.TransactionClient, "platformSetting" | "workspace">;
+type SettingsClient = Pick<Prisma.TransactionClient, "platformSetting" | "workspace" | "$queryRaw">;
 
 /** Legacy-behavior mapping: byte-identical to pre-Administration-V1 signup gating. Exported for the bootstrap action's preview step. */
 export function legacyEffectiveSettings(): EffectiveSettings {
@@ -138,15 +138,133 @@ export async function countExternalBetaWorkspaces(client: SettingsClient = db): 
   });
 }
 
+/**
+ * CAPACITY DEFINITION (decision record — see docs/opsiq/product/PUBLIC_BETA_SEA_RUNBOOK.md §5).
+ *
+ * The cap protects the cost and operator attention of REAL customers, so it is a cap on VERIFIED beta accounts plus
+ * the unverified signups that are still inside a short pending hold. It is deliberately NOT "every row ever created":
+ * with open registration anybody can submit unverified signups for addresses they do not own, and counting them
+ * forever would let a handful of requests fill the whole beta permanently.
+ *
+ *   - verified  = external beta workspaces whose creator verified their email (or never needed to). They hold a slot
+ *                 permanently; suspension never frees one (the original ledger rule is kept for them).
+ *   - pending   = unverified creators, for PENDING_SIGNUP_HOLD_MS after signup. They hold a slot so a real person who
+ *                 is about to click the link is guaranteed room.
+ *   - consumed  = verified + pending: what admission compares to the limit.
+ *   - ledger    = every external beta workspace ever created (informational; includes lapsed unverified signups).
+ *
+ * A lapsed unverified signup stops holding a slot without any row being deleted or rewritten, so abuse is a temporary
+ * slowdown, never a permanent exhaustion. A single source address may also hold only PENDING_SIGNUPS_PER_SOURCE_LIMIT
+ * pending places at once (attributed through the first verification token's recorded address, see countPendingFromSource), which makes occupying the pending hold take many addresses.
+ * If a lapsed signup's owner clicks the link later, verification re-checks capacity under the same advisory lock (see the
+ * verify-email route), so the limit can never be exceeded by a late verifier either.
+ */
+export const PENDING_SIGNUP_HOLD_MS = 24 * 60 * 60 * 1000;
+export const PENDING_SIGNUPS_PER_SOURCE_LIMIT = 3;
+
+export interface CapacityUsage {
+  verified: number;
+  pending: number;
+  consumed: number;
+  ledger: number;
+}
+
+export async function countCapacityUsage(client: SettingsClient = db, now: Date = new Date()): Promise<CapacityUsage> {
+  const cutoff = new Date(now.getTime() - PENDING_SIGNUP_HOLD_MS);
+  const rows = await client.$queryRaw<Array<{ verified: bigint; pending: bigint; ledger: bigint }>>`
+    SELECT
+      COUNT(*) FILTER (WHERE u.id IS NULL OR u.requires_email_verification = false OR u.email_verified_at IS NOT NULL) AS verified,
+      COUNT(*) FILTER (WHERE u.requires_email_verification = true AND u.email_verified_at IS NULL AND w.created_at > ${cutoff}) AS pending,
+      COUNT(*) AS ledger
+    FROM workspaces w
+    LEFT JOIN users u ON u.id = w.created_by
+    WHERE w.signup_source IN (${PUBLIC_BETA_SIGNUP_SOURCE}, ${CONTROLLED_BETA_SIGNUP_SOURCE})
+  `;
+  const row = rows[0];
+  const verified = Number(row?.verified ?? 0);
+  const pending = Number(row?.pending ?? 0);
+  return { verified, pending, consumed: verified + pending, ledger: Number(row?.ledger ?? 0) };
+}
+
+/**
+ * Unverified signups still inside their hold that were made from this source address. Signup writes no policy
+ * acceptance (consents are collected after the mailbox is proven), so the source is read from the one record signup does
+ * write: the user's FIRST (earliest created) EmailVerificationToken, whose ip_address is the platform-trusted client
+ * address the signup route recorded. Only the first token counts, so a rotation token issued by someone else (a repeated
+ * signup or a resend for the same email from another address) can never move a user to a different source. Zero for an
+ * unknown source: the per-source bound is skipped when there is no address.
+ */
+export async function countPendingFromSource(client: SettingsClient, sourceIp: string | null, now: Date = new Date()): Promise<number> {
+  if (!sourceIp || sourceIp === "unknown") return 0;
+  const cutoff = new Date(now.getTime() - PENDING_SIGNUP_HOLD_MS);
+  const rows = await client.$queryRaw<Array<{ n: bigint }>>`
+    SELECT COUNT(*) AS n
+    FROM users u
+    WHERE u.requires_email_verification = true AND u.email_verified_at IS NULL AND u.created_at > ${cutoff}
+      AND (
+        SELECT t.ip_address FROM email_verification_tokens t
+        WHERE t.user_id = u.id
+        ORDER BY t.created_at ASC, t.id ASC
+        LIMIT 1
+      ) = ${sourceIp}
+  `;
+  return Number(rows[0]?.n ?? 0);
+}
+
+/** Whether one more signup may be admitted right now against the total bound (diagnostics and admission share this). */
+export function hasSignupCapacity(usage: CapacityUsage, capacityLimit: number): boolean {
+  return usage.consumed < capacityLimit;
+}
+
 async function acquireCapacityLock(tx: Prisma.TransactionClient): Promise<void> {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"public_beta_workspace_cap"}))`;
+}
+
+/** Longest operator reason accepted (mirrors the API schema bound). */
+export const CAPACITY_REASON_MAX_LENGTH = 500;
+
+/**
+ * The operator's explicit, high-risk confirmation of ONE capacity increase. It names the exact current and proposed
+ * capacity, so it can authorize only that change: a stale page, a replayed request or a confirmation given for a
+ * different value never matches the live row and is refused. It is not a reusable flag.
+ */
+export interface CapacityIncreaseConfirmation {
+  from: number;
+  to: number;
 }
 
 export interface UpdatePlatformSettingsInput {
   actorId: string;
   admissionMode?: AdmissionMode;
   capacityLimit?: number;
+  /** Required (with `reason`) whenever `capacityLimit` is above the current capacity; never needed for a decrease or a mode-only change. */
+  capacityIncreaseConfirmation?: CapacityIncreaseConfirmation;
   reason?: string;
+}
+
+/**
+ * Refuses a capacity INCREASE that is not explicitly confirmed for exactly this current -> proposed change and
+ * explained. Runs inside the capacity-locked transaction against the live row, so it cannot be satisfied by stale
+ * client state. Capacity decreases (the fast path to fail closed) and mode-only changes never reach this check.
+ */
+function assertCapacityIncreaseAuthorized(
+  currentCapacity: number,
+  proposedCapacity: number,
+  confirmation: CapacityIncreaseConfirmation | undefined,
+  reason: string | undefined
+): void {
+  const confirmedForThisChange =
+    confirmation !== undefined && confirmation.from === currentCapacity && confirmation.to === proposedCapacity;
+  if (!confirmedForThisChange) {
+    throw new ValidationError(
+      `Raising capacity from ${currentCapacity} to ${proposedCapacity} needs your explicit confirmation of that exact increase. Nothing was changed.`
+    );
+  }
+  if (!reason) {
+    throw new ValidationError(
+      `Raising capacity from ${currentCapacity} to ${proposedCapacity} needs a short reason. Nothing was changed.`
+    );
+  }
 }
 
 /**
@@ -161,7 +279,11 @@ export interface UpdatePlatformSettingsInput {
  * this function never creates it, matching the governed-bootstrap contract.
  */
 export async function updatePlatformSettings(input: UpdatePlatformSettingsInput): Promise<EffectiveSettings> {
-  const { actorId, admissionMode, capacityLimit, reason } = input;
+  const { actorId, admissionMode, capacityLimit, capacityIncreaseConfirmation } = input;
+  const reason = input.reason?.trim() || undefined;
+  if (reason !== undefined && reason.length > CAPACITY_REASON_MAX_LENGTH) {
+    throw new ValidationError(`The reason must be ${CAPACITY_REASON_MAX_LENGTH} characters or fewer.`);
+  }
   if (admissionMode === undefined && capacityLimit === undefined) {
     throw new ValidationError("Nothing to update: provide admissionMode and/or capacityLimit.");
   }
@@ -189,8 +311,14 @@ export async function updatePlatformSettings(input: UpdatePlatformSettingsInput)
       );
     }
 
+    // Checked against the LIVE capacity, under the lock, before any write: a refused increase changes nothing,
+    // not even a mode supplied in the same request.
+    if (capacityLimit !== undefined && capacityLimit > current.capacityLimit) {
+      assertCapacityIncreaseAuthorized(current.capacityLimit, capacityLimit, capacityIncreaseConfirmation, reason);
+    }
+
     if (capacityLimit !== undefined) {
-      const utilization = await countExternalBetaWorkspaces(tx);
+      const utilization = (await countCapacityUsage(tx)).consumed;
       if (capacityLimit < utilization) {
         throw new ValidationError(
           `Cannot set capacity to ${capacityLimit}: current usage is ${utilization}.`

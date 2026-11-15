@@ -15,7 +15,7 @@ import {
 } from "@/domain/owner-spine/contracts";
 import type { CashflowSnapshotInput, CashflowDerivedMetrics } from "./types";
 import type { CashflowThresholds } from "./thresholds";
-import { isValidCurrency } from "./data-confidence";
+import { isValidCurrency, criticalRequirementCount, CASH_POSITION_FIELD_LABEL } from "./data-confidence";
 import { num } from "./metrics";
 
 /** Default urgency by severity (deterministic baseline). */
@@ -99,7 +99,9 @@ export function buildCashflowRiskFindings(
 
   // Missing critical data (certain about the absence)
   if (m.missingRequiredInputs.length > 0) {
-    const severity: OwnerSeverity = m.missingRequiredInputs.length >= 2 ? "high" : "medium";
+    const severity: OwnerSeverity = criticalRequirementCount(m.missingRequiredInputs) >= 2 ? "high" : "medium";
+    // The cash position is established only from BOTH components: name the unknown one(s), never imply zero cash.
+    const cashGap = m.missingRequiredInputs.filter((k) => k in CASH_POSITION_FIELD_LABEL).map((k) => CASH_POSITION_FIELD_LABEL[k]);
     findings.push(
       risk({
         code: "CF_MISSING_CRITICAL_DATA",
@@ -113,6 +115,7 @@ export function buildCashflowRiskFindings(
         impactScore: 40,
         evidence: [
           `missing: ${m.missingRequiredInputs.join(", ")}`,
+          ...(cashGap.length > 0 ? [`total cash is not established: ${cashGap.join(" and ")} not recorded (enter 0 if you hold none)`] : []),
           `dataConfidenceScore = ${m.dataConfidenceScore}`,
         ],
         missingData: m.missingRequiredInputs,

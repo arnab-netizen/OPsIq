@@ -16,7 +16,7 @@ import { getOwnerNowView, type GuidanceDeps } from "@/services/owner-guidance/ow
 import { getPersistedProcessTasks } from "@/services/owner-mode/process-execution-bridge.service";
 import { PUBLIC_ARCHETYPES, type PublicArchetype } from "@/domain/owner-mode/public-signal-interpretation";
 import {
-  buildOwnerRecoveryStatus, deriveCrisisInput, type OwnerRecoveryStatusResponse,
+  buildOwnerRecoveryStatus, cashSeverityFromProtectionSignals, deriveCrisisInput, type OwnerRecoveryStatusResponse,
 } from "@/domain/owner-mode/owner-recovery-status";
 
 const QUALITY_FINDING = /QUALITY|REWORK/i;
@@ -35,7 +35,8 @@ export async function getOwnerRecoveryStatus(
 
   // Conservative signal severities from the live now-view. Only REAL signals feed the crisis:
   //   - DATA_INSUFFICIENT findings are a data gap, never a crisis (mirrors now-view's hasRealActivity gate).
-  //   - cash/profit + workload analyses are already null unless there is real activity.
+  //   - cash/profit + workload analyses are already null unless there is real activity; only their CASH-category
+  //     signals feed cash pressure (a data-gap or profit signal is shown on its own surface, not as a cash crisis).
   //   - the process-execution bridge route is NOT used as a severity source (it defaults to a generic task
   //     even on an empty workspace), so an empty/data-only workspace reads NONE — no fabricated crisis.
   const pi = nowView.processIntelligence;
@@ -49,7 +50,8 @@ export async function getOwnerRecoveryStatus(
   const crisis = deriveCrisisInput({
     caseId: `rc:${workspaceId}${businessId ? ":" + businessId : ""}`,
     archetype,
-    cashSeverity: severityOf(nowView.cashProfitProtection?.topSignal),
+    // CASH-category signals only: a margin/pricing/cost/working-capital/data top signal is never cash pressure.
+    cashSeverity: cashSeverityFromProtectionSignals(nowView.cashProfitProtection?.signals),
     qualitySeverity: isQuality ? severityOf(piFinding) : null,
     operationalSeverity: piFinding && !isQuality ? severityOf(piFinding) : null,
     workloadSeverity: severityOf(nowView.ownerWorkloadReduction?.topFinding),

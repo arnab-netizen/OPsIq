@@ -46,7 +46,7 @@ import { correctionExecutionStateFromTask } from "@/domain/owner-mode/effectiven
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
-import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
+import { buildCashProfitProtection, cashProfitRiskIsActive, cashSignalState, deriveFinanceCashProfitFacts, type CashProfitProtectionAnalysis, type CashRiskState, type FinanceCashProfitFacts, type FinanceReadingFacts } from "@/domain/owner-mode/cash-profit-protection";
 import { buildProcessExecutionBridge, computeCanStart, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
 import { buildBridgeExpansion } from "@/domain/owner-mode/process-execution-bridge-expansion";
 import { getPersistedProcessTasks } from "@/services/owner-mode/process-execution-bridge.service";
@@ -69,11 +69,20 @@ import { clearsFinding, isFindingSuppressed, AdjudicationSourceType } from "@/do
 import type { ProofRiskAdjudicationView } from "@/services/execution/proof-risk-adjudication.service";
 import { deriveBusinessConditionSignals, type DerivedBusinessConditionSignals } from "@/services/business-condition/business-condition-profile.service";
 import { analyzeBusinessTrend, type TrendAlert, type BusinessMetricName, type MetricDataPoint } from "@/domain/owner-mode/business-state-timeline";
-import { checkDoNotRepeatForGuidance, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
+import { ownerDnrAnnotationFromGate, type DoNotRepeatAnnotation } from "@/services/owner-mode/do-not-repeat.service";
+import { evaluateOwnerActionGate, type OwnerGateConstraints } from "@/domain/owner-mode/owner-action-gate-policy";
+import { loadProvisionalCashFinance, type ProvisionalCashFinanceDb } from "@/services/owner-spine/provisional-cash-finance";
 import { buildObjectivePortfolio, type ObjectiveType, type ObjectiveHealthStatus } from "@/domain/owner-mode/objective-portfolio";
-import { resolveCashFinanceSignal, type SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
+import type { SurvivalLikeState } from "@/domain/owner-guidance/cash-finance-conflict";
+import { cashFlowEvidenceGaps, financeEvidenceGaps, currentCashFinanceReading, toUnitConfidence, UNVERIFIED_GATE_CONFIDENCE } from "@/services/owner-spine/current-cash-finance-reading";
+import { cashFinanceOwnerNarrative } from "@/domain/owner-guidance/cash-finance-narrative";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import { hasExactlyOneRealBusiness } from "@/services/founder-recovery/business.service";
 import { getFixtureTaintedStartupSessionIds } from "@/services/owner-strategy/startup-session.service";
+import { financeSurvivalDriver, type CurrentOwnerDecision, type OwnerPriorityClass } from "@/domain/owner-spine/owner-decision";
+import { ownerImperativeContext, ownerTargetIntent, quoteTitles, reconcileOwnerProhibition, type OwnerProhibition } from "@/domain/owner-spine/owner-imperatives";
+import type { ActionToAvoid } from "@/domain/owner-guidance/next-best-step";
+import { projectCashflowCycleRow } from "@/domain/owner-cashflow/cycle-projection";
 export type { DoNotRepeatAnnotation };
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -84,7 +93,8 @@ const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date }
+type FinanceSnapshotFigures = NonNullable<FinanceReadingFacts["snapshot"]>;
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number; createdAt?: Date; generatedAt?: Date; snapshot?: ({ periodEnd: Date; supersededById?: string | null } & FinanceSnapshotFigures) | null; findings?: Array<{ code: string; sourceMetric?: string; sourceValue?: number | null; threshold?: number | null }> }
 interface EmployeeRow { overburdened: boolean; utilizationPct: number }
 interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
 interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
@@ -159,7 +169,11 @@ interface GuidanceDb {
     findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean>; orderBy: Record<string, unknown>; take: number }): Promise<MetricSnapshotForTrend[]>;
   };
   ownerSupplierInventorySnapshot: { findFirst(args: unknown): Promise<SupplierRow | null> };
-  ownerBusiness: { findFirst(args: unknown): Promise<BusinessRow | null> };
+  ownerBusiness: {
+    findFirst(args: unknown): Promise<BusinessRow | null>;
+    /** Present on the live client: resolves the workspace's sole real business when no business is given. */
+    findMany?(args: unknown): Promise<Array<{ id: string }>>;
+  };
   proof: {
     count(args: unknown): Promise<number>;
     /** Optional — present on the live client; enables anti-gaming + credibility + timing analytics. */
@@ -253,6 +267,13 @@ export interface GuidanceDeps {
    */
   proofOutcome?: (workspaceId: string) => Promise<ProofOutcomeLinkageReport>;
   /**
+   * The owner action gate's constraints loader (loadOwnerGateConstraints — the SAME constraints the canonical
+   * decision is resolved with). Present on the live path, so a caller that does not pass `ownerGate` still
+   * gets the gate's growth limits; absent on a fake-DI unit test, in which case growth readiness for a
+   * business is UNVERIFIED (never GROWTH_READY) — a missing gate never reads as "growth ready".
+   */
+  ownerGate?: (workspaceId: string, businessId: string) => Promise<OwnerGateConstraints>;
+  /**
    * Optional — the live dispute→risk source (maps governed proof-dispute categories into
    * Profit-Leak + Constraint signals). Present on the live path; absent on a fake-DI unit test,
    * in which case dispute-derived leaks/constraints simply do not fire (no fabrication).
@@ -270,20 +291,40 @@ export interface GuidanceDeps {
   validationOutcomes?: (workspaceId: string) => Promise<ValidationOutcomeView[]>;
   /** Optional — persisted opportunity execution-task statuses (PASS 12). Absent on a fake-DI test. */
   executionTasks?: (workspaceId: string) => Promise<Map<string, PersistedTaskStatus>>;
-  /** Optional — active owner goal trajectory (Phase 5). Absent on a fake-DI test → null. */
-  goalTrajectoryFn?: (workspaceId: string) => Promise<{
-    goal: { targetType: string; targetAmount: number; targetCurrency: string; targetDate: Date };
+  /**
+   * Optional — the goal Home shows for the selected business (goal.service.ts resolveHomeGoal): the
+   * business's own ACTIVE goal, or a legacy workspace goal only in a single-business workspace.
+   * Absent on a fake-DI test → null. `goal: null` = no goal applies (scopeLabel says for which business).
+   */
+  goalTrajectoryFn?: (workspaceId: string, businessId: string | null) => Promise<{
+    goal: { targetType: string; targetAmount: number; targetCurrency: string; targetDate: Date; scope?: "business" | "workspace" };
+    /** "Business goal · <name>" | "Workspace goal". */
+    scopeLabel?: string;
+    /** Set when the goal is not projected (e.g. not measured, or a legacy goal spanning businesses). */
+    unavailableReason?: string | null;
+    metricBasis?: string;
     trajectory: {
       confidence: string;
       confidenceRationale: string;
       trajectoryMiss: boolean;
       projectedMonthsToGoal: number | null;
       currentTrajectoryDate: Date | null;
-      gapToClose: number;
-      requiredMonthlyImprovement: number;
+      gapToClose: number | null;
+      requiredMonthlyImprovement: number | null;
       assumptions: string[];
+      /** Absent on older/fake trajectories; null = cannot be determined. */
+      onTrack?: boolean | null;
     };
-  } | null>;
+  } | { goal: null; scopeLabel: string } | null>;
+  /**
+   * Optional — which objectives' linkedGoalId resolves (following successors of replaced goals) to an
+   * ACTIVE goal in the objective's scope (goal.service.ts resolveAlignedObjectiveLinks). Absent on a
+   * fake-DI test → a link counts as aligned when set (previous behaviour).
+   */
+  objectiveGoalAlignmentFn?: (
+    workspaceId: string,
+    links: Array<{ objectiveId: string; objectiveBusinessId: string | null; linkedGoalId: string | null }>,
+  ) => Promise<Set<string>>;
   /** Optional — active operating policies for this workspace (Phase 7). Absent on a fake-DI test → null. */
   policyListFn?: (workspaceId: string) => Promise<Array<{ policyKey: string; isActive: boolean; hardBlock: boolean }>>;
   /** Optional — evaluate a single policy against a live measurement (Phase 7). Absent on a fake-DI test → null. */
@@ -302,10 +343,12 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getActiveExternalOpportunitySignals } = await import("@/services/owner-mode/external-opportunity-intake.service");
   const { getActiveValidationOutcomes } = await import("@/services/owner-mode/validation-outcome.service");
   const { getPersistedExecutionTasks } = await import("@/services/owner-mode/opportunity-execution.service");
-  const { computeActiveGoalTrajectory } = await import("@/services/owner-strategy/goal.service");
+  const { resolveHomeGoal, resolveAlignedObjectiveLinks } = await import("@/services/owner-strategy/goal.service");
   const { listPolicies, evaluatePolicy } = await import("@/services/governance/operating-policy.service");
+  const { loadOwnerGateConstraints } = await import("@/services/owner-mode/owner-action-gate.service");
   return {
     db: db as unknown as GuidanceDb,
+    ownerGate: (workspaceId: string, businessId: string) => loadOwnerGateConstraints(workspaceId, businessId),
     uuid: () => randomUUID(),
     now: () => Date.now(),
     externalOpportunitySignals: (workspaceId: string) => getActiveExternalOpportunitySignals(workspaceId),
@@ -317,7 +360,18 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
     complaintRework: (workspaceId: string) => getComplaintReworkLinks(workspaceId),
     reusedHash: (workspaceId: string) => getReusedHashFindings(workspaceId),
     proofRiskAdjudications: (workspaceId: string) => getProofRiskAdjudications(workspaceId),
-    goalTrajectoryFn: (workspaceId: string) => computeActiveGoalTrajectory(workspaceId),
+    goalTrajectoryFn: async (workspaceId: string, businessId: string | null) => {
+      const home = await resolveHomeGoal(workspaceId, businessId);
+      if (!home.view) return { goal: null, scopeLabel: home.scopeLabel };
+      return {
+        goal: { ...home.view.goal, scope: home.view.goal.scope },
+        trajectory: home.view.trajectory,
+        scopeLabel: home.scopeLabel,
+        unavailableReason: home.view.unavailableReason,
+        metricBasis: home.view.metricBasis,
+      };
+    },
+    objectiveGoalAlignmentFn: (workspaceId, links) => resolveAlignedObjectiveLinks(workspaceId, links),
     policyListFn: (workspaceId: string) => listPolicies(workspaceId),
     policyEvalFn: (workspaceId: string, policyKey: string, value: number, unit: string) => evaluatePolicy(workspaceId, policyKey, value, unit),
   };
@@ -338,6 +392,7 @@ async function safeCount(p: Promise<number>): Promise<number> {
   }
 }
 
+/** `score` is the fractional 0..1 confidence scale (toUnitConfidence) — never the raw 0..100 DB score. */
 function confidenceFromScore(score: number | null): EvidenceConfidenceLevel {
   if (score === null) return EvidenceConfidenceLevel.INSUFFICIENT;
   if (score >= 0.85) return EvidenceConfidenceLevel.VERIFIED;
@@ -345,12 +400,6 @@ function confidenceFromScore(score: number | null): EvidenceConfidenceLevel {
   if (score >= 0.5) return EvidenceConfidenceLevel.MODERATE;
   if (score >= 0.3) return EvidenceConfidenceLevel.WEAK;
   return EvidenceConfidenceLevel.INSUFFICIENT;
-}
-
-function cashSeverity(state: string | undefined): BusinessIssue["severity"] {
-  if (state === "INSOLVENT_RISK" || state === "CRITICAL") return "CRITICAL";
-  if (state === "AT_RISK") return "HIGH";
-  return "MEDIUM";
 }
 
 function countSeverity(n: number, hi: number, med: number): BusinessIssue["severity"] {
@@ -373,6 +422,12 @@ export interface GoalAttentionSignal {
   trajectoryMiss: boolean | null;
   assumptions: string[];
   beginnerExplanation: string;
+  /** "Business goal · <name>" | "Workspace goal" | "No goal set for <name>"; null on fake-DI paths. */
+  scopeLabel?: string | null;
+  /** Which goal scope is shown; null when no goal applies. */
+  goalScope?: "business" | "workspace" | null;
+  /** Why the goal is not projected, when it isn't (stated, never a guessed number). */
+  unavailableReason?: string | null;
 }
 
 export interface ActivePolicyDetail {
@@ -415,18 +470,6 @@ const POLICY_LABEL: Record<string, string> = {
   high_cost_low_payback: "Cost vs payback",
 };
 
-const ISSUE_CATEGORY_TO_IMPACT_AREA: Record<string, string> = {
-  CASH_DANGER: "cash",
-  CUSTOMER_SERVICE_FAILURE: "operations",
-  OVERLOAD: "management",
-  PROFIT_LEAK: "finance",
-  CAPACITY_BOTTLENECK: "operations",
-  COMPLIANCE_SAFETY_RISK: "compliance",
-  BLOCKED_EXECUTION: "operations",
-  PENDING_PROOF_OUTCOME: "governance",
-  GROWTH_OPPORTUNITY: "growth",
-  PROCESS_IMPROVEMENT: "operations",
-};
 
 export interface GuidanceStep {
   issueId: string;
@@ -590,8 +633,9 @@ export interface OwnerNowViewPayload {
    */
   trendAlerts: TrendAlert[] | null;
   /**
-   * Do-Not-Repeat Annotation — whether the top priority guidance action is blocked by an
-   * active do-not-repeat rule. Null when no matching rule exists.
+   * Do-Not-Repeat Annotation — whether the owner's main target (the canonical decision's primary
+   * class when supplied, else Now View's top operating signal) is blocked by an active
+   * do-not-repeat rule. Null when no matching rule exists.
    */
   doNotRepeatAnnotation: DoNotRepeatAnnotation | null;
   /**
@@ -826,18 +870,42 @@ function stepFor(issue: BusinessIssue, ag: ArchetypeGuidance): GuidanceStep {
 export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
-  deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null }> {
-  const scope = businessId ? { workspaceId, businessId } : { workspaceId };
+  deps: GuidanceDeps,
+  /**
+   * The owner action gate's constraints for this business (the SAME ones the canonical decision was
+   * resolved with): growth is never shown as ready while the gate holds growth. Not supplied (undefined) →
+   * loaded through `deps.ownerGate`; unavailable (null, or no loader) → growth readiness is unverified for a
+   * business (never ready).
+   */
+  gateInput?: OwnerGateConstraints | null
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; financeDriver?: "cash" | "profit" | null; financeFacts: FinanceCashProfitFacts | null; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null }; cashFinanceEffectiveState: SurvivalLikeState | null; cashSignalState: CashRiskState | null; avgActiveMargin: number | null; pipelineSummary: { openDealsCount: number; weightedPipelineValue: number } | null; evidenceScope: { workspaceId: string; businessId?: string } | null }> {
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
   const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
   const nowDate = new Date(deps.now());
+  // Business-scoped evidence (cash, Finance, workload, capacity, metrics, supplier) is read for ONE business,
+  // never aggregated across businesses: the requested business; with none requested, the workspace's sole
+  // real business; with several (or none), no business-scoped evidence at all — never whichever business
+  // wrote last. (A DI client without ownerBusiness.findMany is a single-business fixture by construction.)
+  let scopedBusinessId: string | null = businessId;
+  if (!scopedBusinessId && deps.db.ownerBusiness.findMany) {
+    const real = await deps.db.ownerBusiness.findMany({ where: { workspaceId, isActive: true, isFixtureBusiness: false }, select: { id: true }, take: 2 });
+    scopedBusinessId = real.length === 1 ? real[0].id : null;
+  }
+  const unscopedLegacy = !businessId && !deps.db.ownerBusiness.findMany;
+  const gate: OwnerGateConstraints | null =
+    gateInput !== undefined ? gateInput : scopedBusinessId && deps.ownerGate ? await deps.ownerGate(workspaceId, scopedBusinessId) : null;
+  const scope: { workspaceId: string; businessId?: string } | null = scopedBusinessId
+    ? { workspaceId, businessId: scopedBusinessId }
+    : unscopedLegacy ? { workspaceId } : null;
+  const none = Promise.resolve(null);
+  // A current cycle is one whose evidence period has ended (current-diagnosis-cycle.ts currentEvidenceWhere).
+  const cycleScope = scope ? { ...scope, ...currentEvidenceWhere(nowDate) } : null;
 
   const CLOSED_STAGES = ["CLOSED_WON", "CLOSED_LOST"];
-  const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
-    deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true } }),
-    deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true, createdAt: true } }),
+  const [cashRow, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen, latestCohorts, activePriceTiers, activeOpenDeals] = await Promise.all([
+    cycleScope ? deps.db.ownerCashflowCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { cashflowState: true, dataConfidenceScore: true, createdAt: true, generatedAt: true, snapshot: true } }) : none,
+    cycleScope ? deps.db.ownerFinanceCycle.findFirst({ where: cycleScope, orderBy: CURRENT_DIAGNOSIS_CYCLE_ORDER, select: { survivalState: true, dataConfidenceScore: true, createdAt: true, snapshot: { select: { periodEnd: true, supersededById: true, revenue: true, fixedCosts: true, variableCosts: true, costOfGoods: true, rent: true, payroll: true, utilities: true, deliveryCost: true, marketingSpend: true, cashOnHand: true } }, findings: { select: { code: true, severity: true, sourceMetric: true, sourceValue: true, threshold: true } } } }) : none,
     // ownerEmployeeWorkloadSnapshot has no businessId column (it's employee-scoped, genuinely
     // workspace-wide) — workspaceId-only is correct here. ownerWorkloadSnapshot,
     // ownerCapacitySnapshot, and ownerSupplierInventorySnapshot DO each have a businessId column
@@ -846,13 +914,16 @@ export async function assembleGuidanceContext(
     // most recently wrote a workload/capacity/supplier snapshot, presenting that business's real
     // problem (or lack of one) as this business's own.
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
-    deps.db.ownerWorkloadSnapshot.findFirst({ where: scope, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
-    deps.db.ownerCapacitySnapshot.findFirst({ where: scope, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
-    deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true, discountAmount: true, b2bRevenue: true } }),
-    deps.db.ownerSupplierInventorySnapshot.findFirst({ where: scope, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
-    businessId
-      ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: businessId }, select: { businessType: true } })
-      : deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } }),
+    scope ? deps.db.ownerWorkloadSnapshot.findFirst({ where: scope, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }) : none,
+    scope ? deps.db.ownerCapacitySnapshot.findFirst({ where: scope, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }) : none,
+    // The latest COMPLETED period's metrics (a period still in progress, or not started, is never "this period").
+    scope ? deps.db.ownerMetricSnapshot.findFirst({ where: { ...scope, periodEnd: { lte: nowDate } }, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true, discountAmount: true, b2bRevenue: true } }) : none,
+    scope ? deps.db.ownerSupplierInventorySnapshot.findFirst({ where: scope, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }) : none,
+    scopedBusinessId
+      ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: scopedBusinessId }, select: { businessType: true } })
+      : unscopedLegacy
+        ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } })
+        : none,
     safeCount(deps.db.proof.count({ where: { workspaceId, status: { in: OVERDUE_PROOF_STATUSES }, createdAt: { lt: overdueBefore } } })),
     safeCount(deps.db.ownerActionOutcome.count({ where: { workspaceId, OR: [{ outcomeStatus: OPEN_OUTCOME_STATUS }, { measurementPeriodEnd: { lt: nowDate } }] } })),
     safeCount(deps.db.ownerReassessmentEvent.count({ where: { workspaceId, status: "pending" } })),
@@ -866,6 +937,9 @@ export async function assembleGuidanceContext(
       ? deps.db.salesDealRecord.findMany({ where: { workspaceId, stage: { notIn: CLOSED_STAGES } }, select: { value: true, probability: true, stage: true } })
       : Promise.resolve([] as SalesDealRow[]),
   ]);
+  // Read-time projection (cycle-projection.ts): a Cash flow cycle whose snapshot cannot establish total cash is never
+  // shown as its persisted (possibly pre-fix, partial-total) conclusion; the gap is carried as evidence, not as danger.
+  const cash = cashRow ? projectCashflowCycleRow(cashRow) : null;
 
   // Compute avgActiveMargin from ACTIVE tiers that have cost data (0..1 fractional, same unit as profit-leak-radar marginPct).
   const tiersWithCost = activePriceTiers.filter(
@@ -885,23 +959,46 @@ export async function assembleGuidanceContext(
     ? { openDealsCount: activeOpenDeals.length, weightedPipelineValue }
     : null;
 
+  // The in-progress current period's cash/Finance readings (provisional: they may only tighten).
+  const provisional = scopedBusinessId
+    ? await loadProvisionalCashFinance(deps.db as unknown as ProvisionalCashFinanceDb, { workspaceId, businessId: scopedBusinessId }, nowDate)
+    : null;
   const ag = archetypeGuidance(business?.businessType);
-  const cashState = cash?.cashflowState;
-  const finState = fin?.survivalState;
-  // Cash-survival-triage and finance diagnosis are two separate signals for the same business
-  // that can go stale relative to each other (an owner can re-run one without the other). A real
-  // human usability test reproduced the exact failure this closes: an older AT_RISK cash reading
-  // presented as current truth alongside a newer SAFE finance diagnosis for the same business.
-  // See src/domain/owner-guidance/cash-finance-conflict.ts for the full arbitration rule.
-  const cashFinanceResolution = resolveCashFinanceSignal(
-    { state: (cashState as SurvivalLikeState | undefined) ?? null, generatedAt: cash?.createdAt ?? null },
-    { state: (finState as SurvivalLikeState | undefined) ?? null, generatedAt: fin?.createdAt ?? null }
+  // Cash-survival-triage and finance diagnosis are two separate signals for the same business that
+  // can go stale relative to each other, and a Finance diagnosis whose figures the owner has since
+  // amended is not a current reading. The ONE current cash/finance reading (the same one Home and the
+  // safety gates use) arbitrates them — see current-cash-finance-reading.ts / cash-finance-conflict.ts.
+  const cashFinanceResolution = currentCashFinanceReading(
+    cash ? { state: cash.cashflowState, snapshot: cash.snapshot, evidenceGaps: cashFlowEvidenceGaps(cash) } : null,
+    fin ? { state: fin.survivalState, snapshot: fin.snapshot, driver: financeSurvivalDriver(fin.findings), evidenceGaps: financeEvidenceGaps(fin.findings) } : null,
+    deps.now(),
+    provisional
   );
-  // Growth/high-impact gating stays conservative exactly as before when either signal is
-  // entirely missing (fail closed on missing critical data, tracked separately below via
-  // missingCriticalData) — the conflict resolution only changes behavior for the specific bug
-  // being fixed: both signals present AND disagreeing.
-  const cashSafe = !!cashState && !!finState && cashFinanceResolution.safe;
+  // The state the safety gates enforce (stale, amended and in-progress figures included) — Now View never
+  // shows cash as safer than it.
+  const enforcedState = cashFinanceResolution.gateState;
+  // Each source's CURRENT state only: a reading that is out of date, future-dated or (Finance) amended is
+  // last-known context, never presented as current truth (it is named as last known below, and the gate's
+  // unverified state applies).
+  const cashState: string | undefined = cashFinanceResolution.cashCurrent ? cashFinanceResolution.cashState ?? undefined : undefined;
+  const finState: string | undefined = cashFinanceResolution.financeCurrent ? cashFinanceResolution.financeState ?? undefined : undefined;
+  // Measured cash/profit facts are read ONLY from a Finance diagnosis that is current (not stale/amended/superseded).
+  const financeFacts = cashFinanceResolution.financeCurrent && fin
+    ? deriveFinanceCashProfitFacts({ findings: fin.findings, snapshot: fin.snapshot })
+    : null;
+  const cashLastKnown = !cashFinanceResolution.cashCurrent ? cashFinanceResolution.cashState : null;
+  const finStaleLastKnown = !cashFinanceResolution.financeCurrent ? cashFinanceResolution.financeState : null;
+  const finAmendedLastKnown = cashFinanceResolution.financeAmendedLastKnown;
+  // Growth/high-impact gating stays conservative when either current signal is missing (fail closed on
+  // missing critical data, tracked separately below via missingCriticalData).
+  const enforcedSafe = enforcedState !== null && SAFE_STATES.has(enforcedState);
+  // R10 P2-9: driven ONLY by the authoritative gateState (enforcedSafe) — never by the legacy
+  // resolution's own `.safe`, which is a second, independent arbitration of the same facts.
+  // State and EVIDENCE are separate: a safe-looking state resting on incomplete material cash evidence (a Cash flow position
+  // whose total cash is unknown, Finance liquidity unconfirmed) is never "cash safe" — it is a gap to fill, not a danger.
+  const cashSafe = !!cashState && !!finState && enforcedSafe && cashFinanceResolution.gateEvidenceSufficient;
+  // One safe reading with the other missing: a caution on the cash status, never a manufactured danger issue.
+  const cashHalfMeasured = (!!cashState !== !!finState) && enforcedSafe;
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
   // Deliberately conservative, matching cashSafe above: no capacity snapshot means growth
@@ -926,58 +1023,84 @@ export async function assembleGuidanceContext(
   const cohortAvgChurn = hasCustomerEvidence ? (latestCohorts[0]?.avgMonthlyChurn ?? null) : null;
   const churnRiskScore = cohortAvgChurn !== null ? Math.min(1, cohortAvgChurn * 5) : (metricChurnRate ?? 0);
   const retentionRiskHigh = hasCustomerEvidence && churnRiskScore >= 0.5;
-  const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh && !retentionRiskHigh;
+  // The owner action gate's own growth limits (cash, capacity, margin, compliance — never a domain-specific
+  // do-not-repeat rule): growth is never "ready" here while the gate would hold a growth step.
+  // Without the gate (not supplied and no loader) a business's growth readiness is unverified: never ready.
+  const gateHoldsGrowth = scopedBusinessId !== null && (
+    gate === null ||
+    !evaluateOwnerActionGate({ ...gate, doNotRepeat: [] }, { domain: "sales", intent: "GROW", findingId: null, findingCode: null }).allowed
+  );
+  const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh && !retentionRiskHigh && !gateHoldsGrowth;
   const outcomeChecksDue = outcomeOpen + reassessOpen;
 
-  const confScore =
+  // R10 P2-7: dataConfidenceScore is persisted 0..100; confidenceFromScore's thresholds (and
+  // UNVERIFIED_GATE_CONFIDENCE) are the fractional 0..1 scale every confidence constant in this domain
+  // uses -- convert ONCE, at this boundary, with the one shared helper (toUnitConfidence). Comparing the
+  // raw 0..100 score against the 0..1 cap directly (the previous `* 100` at the cap instead of dividing the
+  // score) made the cap numerically vacuous: any positive raw score already exceeds every fractional
+  // threshold in confidenceFromScore, so the capped value never changed which tier was reported.
+  const rawConfScore =
     cash && fin ? Math.min(cash.dataConfidenceScore, fin.dataConfidenceScore)
       : cash ? cash.dataConfidenceScore : fin ? fin.dataConfidenceScore : null;
-  const dataConfidence = confidenceFromScore(confScore);
+  const rawConfUnit = toUnitConfidence(rawConfScore);
+  // Figures that are not current (out of date, amended, in progress) are never high confidence: the same
+  // cap the gate applies (UNVERIFIED_GATE_CONFIDENCE).
+  const confUnit = rawConfUnit !== null && cashFinanceResolution.gateDriver === "unverified"
+    ? Math.min(rawConfUnit, UNVERIFIED_GATE_CONFIDENCE)
+    : rawConfUnit;
+  const dataConfidence = confidenceFromScore(confUnit);
 
   // Named, smallest-useful-first missing data — never a generic warning.
   const missingCriticalData: string[] = [];
-  if (!cash) missingCriticalData.push("latest cash position (cash on hand + obligations)");
+  // No Cash flow check yet. When the CURRENT Finance snapshot already carries cash on hand, that figure is
+  // measured and the owner is not asked for it again — only what the Cash flow check adds (what is due and
+  // expected) is named as missing. Without a measured cash figure the full cash position is requested.
+  if (!cash) {
+    missingCriticalData.push(financeFacts?.cashPositionMeasured
+      ? "cash obligations and expected inflows from a Cash flow check (your cash on hand is already measured from your Finance snapshot)"
+      : "latest cash position (cash on hand + obligations)");
+  }
   if (!fin) missingCriticalData.push("latest profit/margin figures");
+  else if (finAmendedLastKnown) missingCriticalData.push("a Finance diagnosis of your amended figures (re-run the Finance diagnosis)");
+  // Readings exist but none is current (out of date): the same unverified state the gate enforces.
+  if ((cash || fin) && cashFinanceResolution.gateDriver === "unverified" && !finAmendedLastKnown) {
+    missingCriticalData.push(
+      cashFinanceResolution.provisional
+        ? "cash and Finance figures for the latest completed period (only this period's in-progress figures are available)"
+        : "current cash and Finance figures (the latest ones are out of date)"
+    );
+  }
+  // A present current reading whose material cash evidence is incomplete: name exactly what to enter (never a danger claim).
+  for (const gap of cashFinanceResolution.gateEvidenceGaps) {
+    const what = gap.missing.map((m) => (m === "bankBalance" ? "bank balance" : "cash in hand")).join(" and ");
+    missingCriticalData.push(
+      gap.reason === "CASH_POSITION_INCOMPLETE"
+        ? `${what} in a Cash flow check (total cash isn't confirmed, so OpsIQ does not treat your cash as safe for growth yet)`
+        : `your bank balance (total cash isn't confirmed — enter 0 if you hold none, so OpsIQ can treat your cash as safe for growth)`
+    );
+  }
   if (!metric) missingCriticalData.push("latest customer + complaint counts");
   if (!supplier) missingCriticalData.push("supplier reliability + stock levels");
 
   const issues: BusinessIssue[] = [];
-  if (cashState && finState) {
-    // Both signals present — use the freshness/conflict-aware resolution so a stale reading is
-    // never presented as unqualified current truth (see cash-finance-conflict.ts). A newer SAFE
-    // reading that supersedes an older unsafe one means NO issue is pushed here at all — that is
-    // the fix for "Home must not present the stale action as current truth."
-    if (cashFinanceResolution.conflicting) {
-      issues.push({
-        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-        severity: cashSeverity(cashState) === "CRITICAL" || cashSeverity(finState) === "CRITICAL" ? "CRITICAL" : "HIGH",
-        headline: `We have conflicting information about cash health for this business: the latest cash check says ${cashState}, the latest finance diagnosis says ${finState}, and neither can be shown to be more current. Review both before acting on either.`,
-        requiresOwnerAction: true,
-      });
-    } else if (!cashFinanceResolution.safe) {
-      const effectiveState = cashFinanceResolution.effectiveState as string;
-      const sev = cashSeverity(effectiveState);
-      const supersedeNote = cashFinanceResolution.supersededSource
-        ? ` An earlier ${cashFinanceResolution.supersededSource === "cash" ? "cash check" : "finance diagnosis"} showed ${cashFinanceResolution.supersededState}; that reading is now out of date.`
-        : "";
-      issues.push({
-        id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-        severity: sev, headline: `Cash survival is ${effectiveState}.${supersedeNote}`,
-        requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
-      });
-    }
-  } else if (!cashSafe && (cashState || finState)) {
-    // Exactly one of the two signals exists — unchanged from prior behavior.
-    const sev = cashSeverity(cashState && !SAFE_STATES.has(cashState) ? cashState : finState);
-    issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
-      severity: sev, headline: `Cash survival is ${cashState ?? "unknown"} / finance ${finState ?? "unknown"}`,
-      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
-  }
-  if (finState && !SAFE_STATES.has(finState)) {
-    issues.push({ id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
-      severity: finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "HIGH" : "MEDIUM",
-      headline: "Profit/margin is below a safe level", requiresOwnerAction: false });
-  }
+  // Finance's survival state reads overall financial survival; its OWN findings say whether a danger there
+  // is about cash (runway, debt, payables) or about profit/margin — independent of whether Finance is the
+  // source currently deciding the gate. A profit-driven Finance state is described as the profit problem
+  // it is — never as "cash danger" — even when it is stale/superseded and `gateDriver` is "cash".
+  const financeProfitDriven = financeSurvivalDriver(fin?.findings) === "profit";
+  // R10 P2-9: the ONE narrative mapper for cash/finance issue text — it narrates the already-decided
+  // gateState/gateDriver/gateSource projection only; it never independently re-arbitrates via the
+  // legacy resolution's `.safe`/`.effectiveState`/`.supersededSource`/`.supersededState`. The one
+  // exception is `bothCurrentDisagree` (Case F): a narration trigger only, never a decider.
+  issues.push(...cashFinanceOwnerNarrative({
+    cashState, finState, cashLastKnown, finStaleLastKnown, finAmendedLastKnown,
+    gateState: enforcedState, gateDriver: cashFinanceResolution.gateDriver, gateSource: cashFinanceResolution.gateSource,
+    provisional: cashFinanceResolution.provisional, financeProfitDriven,
+    bothCurrentDisagree: Boolean(cashState) && Boolean(finState) && cashFinanceResolution.conflicting,
+    // CONTEXT ONLY (see cash-finance-narrative.ts doc): names which earlier reading is out of date,
+    // never used to decide severity/classification — gateState/gateDriver/gateSource do that.
+    supersededSource: cashFinanceResolution.supersededSource, supersededState: cashFinanceResolution.supersededState,
+  }));
   if (complaints >= 1) {
     issues.push({ id: "complaints", category: IssueCategory.CUSTOMER_SERVICE_FAILURE,
       businessFunction: [BusinessFunction.QUALITY, BusinessFunction.CUSTOMER_COMPLAINTS],
@@ -1026,11 +1149,16 @@ export async function assembleGuidanceContext(
   const ctx: GuidanceContext = {
     workspaceId, businessId: businessId ?? "", archetype: ag.archetype,
     dataConfidence, missingCriticalData, issues, changes: [],
-    growthGatePassed, cashSafe, staffOverloaded, ownerOverloaded, unsafeToGuide: false,
+    growthGatePassed, cashSafe, cashHalfMeasured, staffOverloaded, ownerOverloaded, unsafeToGuide: false,
   };
 
   const state: BusinessStateSnapshot = {
     cashRunwayDays: cashState ? RUNWAY_BY_STATE[cashState] ?? 0 : 0,
+    // The runway above is a state PROXY, never a measurement, and it is a COMPARABLE figure only when CURRENT Cashflow evidence
+    // supports it: a Cashflow reading that is current (not absent, stale, future-dated or superseded) AND whose cash position is
+    // complete. Anything else (including a Finance-only reading) leaves it unmeasured, so no owner-facing change message is built
+    // from a synthetic 0 / 45 / 120.
+    cashRunwayMeasured: !!cashState && !(cash?.cashPosition.judged && !cash.cashPosition.complete),
     netMarginPct: finState ? MARGIN_BY_STATE[finState] ?? 0 : 0,
     complaintsCount: complaints,
     reworkCount: rework,
@@ -1047,40 +1175,162 @@ export async function assembleGuidanceContext(
   return {
     ctx, state, ag,
     raw: {
-      cashState, finState,
+      cashState, finState, financeFacts,
+      // No findings at all = nothing to judge by: the legacy state mapping applies (risk is never hidden for want of findings).
+      financeDriver: cashFinanceResolution.financeCurrent && fin && (fin.findings?.length ?? 0) > 0 ? financeSurvivalDriver(fin.findings) : undefined,
       discountAmount: metric?.discountAmount ?? null, revenue: metric?.revenue ?? null,
       b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
       repeatCustomers: metric?.repeatCustomers ?? null,
     },
-    // The arbitrated cash/finance reading (see resolveCashFinanceSignal above) — callers that
+    // The arbitrated cash/finance reading (currentCashFinanceReading above) — callers that
     // build an owner-facing cash-risk signal from a state must use THIS, never raw.cashState
     // directly. Using the raw, un-arbitrated cashflow-cycle state is exactly the bug a real human
     // usability test reproduced: Home presented a superseded AT_RISK/INSOLVENT_RISK cash reading
     // as the top priority while the newer finance diagnosis was SAFE, because the arbitration
     // result was computed here but never threaded through to the cash/profit-protection signal
     // builder downstream in getOwnerNowView.
-    cashFinanceEffectiveState: cashFinanceResolution.effectiveState,
+    cashFinanceEffectiveState: cashFinanceResolution.gateState,
+    // The state the owner-facing CASH signal may be raised from (cash-profit-protection.ts cashSignalState): a
+    // profit-driven Finance state is not a cash danger. `cashFinanceEffectiveState` itself stays the enforced state.
+    cashSignalState: cashSignalState({
+      gateState: cashFinanceResolution.gateState as CashRiskState | null,
+      gateDriver: cashFinanceResolution.gateDriver,
+      cashState: cashFinanceResolution.supersededSource === "cash" ? null : (cashState as CashRiskState | undefined) ?? null,
+      provisionalCashState: cashFinanceResolution.provisionalCashState as CashRiskState | null,
+      financeMeasuredCash: financeFacts !== null && (financeFacts.cashRunwayDays !== null || financeFacts.cashDaysOfCosts !== null),
+    }),
     avgActiveMargin,
     pipelineSummary,
+    // The ONE business whose evidence was read (null ⇒ none): later business-scoped reads use the same scope.
+    evidenceScope: scope,
   };
 }
 
-function buildBeginner(view: OwnerNowView, steps: GuidanceStep[]): BeginnerExplanation {
-  const headline = view.topOwnerActions[0]?.headline ?? "Your business has no urgent issues right now";
-  const whatToDoFirst = steps.length > 0 ? steps.map((s) => s.exactStep) : ["Keep tracking cash and complaints"];
-  const whatNotToDo = view.actionsToAvoid.length > 0
-    ? view.actionsToAvoid.map((a) => a.avoid)
-    : ["Do not take on risk you cannot measure yet"];
+/** Business function each canonical priority class speaks to (plain-language "why it matters"). */
+const BUSINESS_FUNCTION_BY_OWNER_CLASS: Record<OwnerPriorityClass, BusinessFunction> = {
+  SAFETY_COMPLIANCE: BusinessFunction.RISK_COMPLIANCE,
+  SURVIVAL_CASH: BusinessFunction.CASH_FLOW,
+  CUSTOMER_SERVICE_FAILURE: BusinessFunction.CUSTOMER_COMPLAINTS,
+  OVERLOAD_BLOCKING: BusinessFunction.CAPACITY,
+  PROFIT_LOSS: BusinessFunction.PROFITABILITY,
+  BLOCKED_EXECUTION: BusinessFunction.SOP_PROCESS,
+  PLAN_COMMITMENT_RISK: BusinessFunction.STRATEGY,
+  MISSING_CRITICAL_EVIDENCE: BusinessFunction.DATA_QUALITY,
+  GROWTH_OPPORTUNITY: BusinessFunction.GROWTH_READINESS,
+  PROCESS_OPTIMISATION: BusinessFunction.SOP_PROCESS,
+};
+
+/** What happens if the canonical main target is ignored, per business-priority class. */
+const IF_IGNORED_BY_OWNER_CLASS: Record<OwnerPriorityClass, string> = {
+  SAFETY_COMPLIANCE: "a legal or safety requirement stays unmet and can stop the business from operating",
+  SURVIVAL_CASH: "you may run out of cash without warning",
+  CUSTOMER_SERVICE_FAILURE: "customers keep getting let down and some will stop coming back",
+  OVERLOAD_BLOCKING: "the overload keeps blocking work and the backlog grows",
+  PROFIT_LOSS: "the business keeps losing money it could keep",
+  BLOCKED_EXECUTION: "the blocked work stays stuck and the problems behind it get worse",
+  PLAN_COMMITMENT_RISK: "committing to the plan now could put money or delivery at risk",
+  MISSING_CRITICAL_EVIDENCE: "OpsIQ's advice stays based on missing or old numbers and can point you the wrong way",
+  GROWTH_OPPORTUNITY: "the opportunity stays unused",
+  PROCESS_OPTIMISATION: "the process keeps costing more time than it needs to",
+};
+
+/** The evidence period a cash/finance reading describes, or null when that evidence is out of date. */
+
+
+/**
+ * Now View's avoid rules, described by what each would forbid (see owner-imperatives.ts). They pass
+ * through the ONE shared reconciler, so an avoid rule never vetoes the canonical main target or a
+ * supporting step: growth/volume/discount rules touch only a genuine GROW target; the workload rule
+ * touches any action target; the hiring rule names no target work and is always kept as-is. A refresh
+ * main target is a data request, so every avoid is kept as-is.
+ */
+const AVOID_PROHIBITION: Record<string, Pick<OwnerProhibition, "vetoes" | "levers" | "asCondition">> = {
+  // Each condition states the PERMITTED SCOPE of the canonical steps it touches — never a "do not" that
+  // would forbid them.
+  avoid_growth_before_gates: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} as a capped trial within its existing budget until the cash, profit, capacity, workload and quality gates pass.` },
+  avoid_growth_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} as a small, low-cost trial within its existing budget while cash or financial survival is at risk.` },
+  avoid_discount_on_cash_danger: { vetoes: "GROW", asCondition: (t) => `Carry out ${quoteTitles(t)} at your normal prices and margins while cash or financial survival is at risk.` },
+  avoid_marketing_on_service_failure: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} only at a volume your service can handle well until service quality is fixed.` },
+  avoid_volume_on_capacity: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} only up to what current capacity can deliver.` },
+  avoid_growth_on_supplier_risk: { vetoes: "GROW", asCondition: (t) => `Run ${quoteTitles(t)} only up to what current supply can support until supplier risk is resolved.` },
+  avoid_new_tasks_on_overload: { vetoes: "ANY_ACTION", asCondition: (t) => `Go ahead with ${quoteTitles(t)}; hold other new non-critical tasks for staff and the owner until the workload eases.` },
+};
+
+/**
+ * Now View's avoid list reconciled with the canonical decision (main target AND supporting steps). A
+ * rule that would forbid a canonical step becomes a condition on it (`conditionOn` set, `avoid` = the
+ * permitted scope); surfaces show conditions as how to carry out the steps, never under "do not".
+ */
+export function reconcileAvoidsWithOwnerDecision(avoids: ActionToAvoid[], decision: CurrentOwnerDecision): ActionToAvoid[] {
+  const ctx = ownerImperativeContext(decision);
+  return avoids.map((a) => {
+    const spec = AVOID_PROHIBITION[a.id];
+    if (!spec) return a;
+    const r = reconcileOwnerProhibition({ text: a.avoid, ...spec }, ctx);
+    return r.kind === "condition" ? { ...a, avoid: r.text, conditionOn: r.conditionOn } : a;
+  });
+}
+
+function buildBeginner(view: OwnerNowView, steps: GuidanceStep[], ownerDecision?: CurrentOwnerDecision | null): BeginnerExplanation {
+  // When the canonical owner decision is available, EVERY overall-priority field (headline, what to
+  // do first, why it matters, what not to do, what happens if ignored) comes from it — Now View's
+  // own operating signals (topOwnerActions / step-by-step) are domain context and may not name a
+  // different overall priority. Without a decision, Now View never elects its own "#1": the
+  // headline stays neutral and the steps are presented as operating signals.
+  const avoidFromView = view.actionsToAvoid.map((a) => a.avoid);
+  if (ownerDecision) {
+    const primary = ownerDecision.primaryTarget;
+    const whatToDoFirst = primary
+      // The main target is the ONE first step; supporting steps follow it and never read as equals.
+      ? [primary.title, ...ownerDecision.supportingSteps.map((t) => `Then: ${t.title}`)]
+      : ownerDecision.whatToDoFirst
+        ? [...new Set([ownerDecision.whatToDoFirst, ...ownerDecision.missingInformation])]
+        : ownerDecision.missingInformation.length > 0
+          ? ownerDecision.missingInformation
+          : ["Keep your business numbers up to date so OpsIQ can spot problems early"];
+    // The decision's own "don't" list only: Now View's avoid list is shown separately on the page
+    // (and was already reconciled with the main target), so repeating it here would duplicate it.
+    const whatNotToDo = ownerDecision.whatNotToDo;
+    // No open diagnosed action is not the same as "no danger": the operating signals on this same
+    // page can still show cash danger, so the headline never contradicts them.
+    const cashSignalUnsafe = view.cashDangerStatus === "CRITICAL" || view.cashDangerStatus === "DANGER";
+    return buildBeginnerExplanation({
+      headline: primary
+        ? `Your main target: ${primary.title}`
+        : ownerDecision.state === "NO_EVIDENCE"
+          ? "OpsIQ needs your business numbers before it can pick a main target"
+          : cashSignalUnsafe
+            ? "No diagnosed area has an open action, but your cash signals need a check"
+            : "No diagnosed area has an open action right now",
+      businessFunction: [primary && primary.source !== "evidence_refresh" ? BUSINESS_FUNCTION_BY_OWNER_CLASS[primary.priorityClass] : BusinessFunction.DATA_QUALITY],
+      whatToDoFirst,
+      whatNotToDo: whatNotToDo.length > 0 ? whatNotToDo : ["Do not take on risk you cannot measure yet"],
+      proofToCollect: ownerDecision.evidence.slice(0, 4),
+      howToKnowItWorked: primary
+        ? `${primary.title} is done and its result is measured against fresh figures on the next check`
+        : "OpsIQ can name a main target from your numbers",
+      ifIgnoredConsequence: primary
+        ? primary.source === "evidence_refresh"
+          // A refresh target stands in for out-of-date findings: the consequence is acting (or not)
+          // on figures that may no longer be true — never a claim that the old problem is current.
+          ? "OpsIQ's advice keeps resting on out-of-date figures, and a real problem they showed could go unchecked"
+          : IF_IGNORED_BY_OWNER_CLASS[primary.priorityClass]
+        : cashSignalUnsafe
+          ? "you may run out of cash without warning"
+          : "problems can build up unnoticed",
+      dataIsWeak: ownerDecision.confidence.capped || view.confidenceCapped,
+    });
+  }
   return buildBeginnerExplanation({
-    headline,
-    businessFunction: view.topOwnerActions[0]?.businessFunction ?? [BusinessFunction.CASH_FLOW],
-    whatToDoFirst,
-    whatNotToDo,
+    headline: "Your current operating signals",
+    businessFunction: [BusinessFunction.DATA_QUALITY],
+    whatToDoFirst: steps.length > 0 ? steps.map((s) => s.exactStep) : ["Keep tracking cash and complaints"],
+    whatNotToDo: avoidFromView.length > 0 ? avoidFromView : ["Do not take on risk you cannot measure yet"],
     proofToCollect: steps.map((s) => s.proofType),
-    howToKnowItWorked: "the most urgent issue's status improves on the next check",
+    howToKnowItWorked: "the signals improve on the next check",
     ifIgnoredConsequence: view.cashDangerStatus === "CRITICAL"
       ? "you may run out of cash without warning"
-      : "the most urgent problem will get worse and harder to fix",
+      : "problems can build up unnoticed",
     dataIsWeak: view.confidenceCapped,
   });
 }
@@ -1126,6 +1376,7 @@ const VERIFICATION_CLASS_LABELS: Record<string, string> = {
   FAILURE: "Did not work",
   NEGATIVE_IMPACT: "Made things worse",
   INCONCLUSIVE: "Inconclusive",
+  EXTERNAL_EVENT_INTERFERENCE: "External event interfered",
   OBSERVATION_WINDOW_OPEN: "Observation window open",
   INSUFFICIENT_EVIDENCE: "Insufficient evidence",
 };
@@ -1306,6 +1557,7 @@ async function buildBusinessOperatingSystem(
   workspaceId: string,
   businessId: string | null,
   db: GuidanceDeps["db"],
+  objectiveGoalAlignmentFn?: GuidanceDeps["objectiveGoalAlignmentFn"],
 ): Promise<BusinessOperatingSystemView | null> {
   try {
     // GuidanceDb is deliberately a minimal interface (see its own doc comment); this function
@@ -1455,6 +1707,15 @@ async function buildBusinessOperatingSystem(
       ? Math.round(((linkedSpend as number) / (totalSpend as number)) * 100)
       : null;
 
+    // Goal-link alignment re-evaluated at read time: a link to a replaced goal follows its successor,
+    // and only an ACTIVE goal in the objective's scope counts (the objectives here are all in `businessId`'s scope).
+    const alignedObjectiveIds = objectiveGoalAlignmentFn
+      ? await objectiveGoalAlignmentFn(
+          workspaceId,
+          rawObjectives.map((o) => ({ objectiveId: o.id, objectiveBusinessId: businessId, linkedGoalId: o.linkedGoalId })),
+        )
+      : null;
+
     // Build portfolio view from raw objectives
     const portfolioInputs = rawObjectives.map((obj) => {
       const daysRemaining = obj.deadline
@@ -1477,7 +1738,7 @@ async function buildBusinessOperatingSystem(
         currentValue: obj.currentValue,
         progressPct,
         deadlineDaysRemaining: daysRemaining,
-        linkedGoalAligned: obj.linkedGoalId !== null,
+        linkedGoalAligned: alignedObjectiveIds ? alignedObjectiveIds.has(obj.id) : obj.linkedGoalId !== null,
         hasBlockingDependencies: obj.blockedBy.length > 0,
         resourceBudgetUsedPct: 0,
         childCount: obj._count.children,
@@ -1569,7 +1830,7 @@ async function buildBusinessOperatingSystem(
  * identity — it does not (and cannot, from this input) prove the underlying finding is actually about
  * that business. In a workspace with more than one real business this makes a workspace-wide finding
  * indistinguishable, from the owner's side, from a genuine cross-business leak: switching the selected
- * business does not change this content, so a Cockpit "Top Priority" / "Execution lifecycle" widget can
+ * business does not change this content, so a Cockpit "Governed work" / "Execution lifecycle" widget can
  * silently keep showing one business's evidence under every other business's name.
  *
  * `restrictExecutionToAttributableBusiness: true` closes exactly that display gap using the SAME
@@ -1590,26 +1851,36 @@ async function buildBusinessOperatingSystem(
  */
 export interface GetOwnerNowViewOptions {
   restrictExecutionToAttributableBusiness?: boolean;
+  /**
+   * The ONE canonical owner decision (owner-home service → Spine arbiter). Now View ENRICHES it and
+   * never elects a competing overall target: when supplied, the plain-language headline names this
+   * decision's primary target. (The decision's own change history is recorded by the owner-home
+   * resolver, independent of this route.)
+   */
+  ownerDecision?: CurrentOwnerDecision | null;
+  /**
+   * The owner action gate's constraints the canonical decision was resolved with (same business). The
+   * growth-readiness tier and the Cockpit's do-not-repeat annotation are derived from them (never from a
+   * second lookup); without them no do-not-repeat annotation is shown.
+   */
+  ownerGate?: OwnerGateConstraints | null;
 }
 
-/** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
+/**
+ * Produce the live Owner Now View: assemble, diff vs the prior guidance snapshot, run the orchestrator, and
+ * append a guidance-history row only when the observed state changed. Raises no alerts and emits no audit.
+ */
 export async function getOwnerNowView(
   workspaceId: string,
   businessId: string | null,
   injected?: GuidanceDeps,
-  actorId?: string,
+  _actorId?: string,
   options?: GetOwnerNowViewOptions,
 ): Promise<OwnerNowViewPayload> {
-  // Best-effort overdue risk alert evaluation on every owner now-view load.
-  if (actorId) {
-    import("@/services/owner-mode/business-risk.service")
-      .then(({ evaluateOverdueRiskAlerts }) =>
-        evaluateOverdueRiskAlerts(workspaceId, actorId).catch(() => {})
-      )
-      .catch(() => {});
-  }
+  // Read-only: overdue risk-review alerts are raised by the scheduler's risk-review scan and by the risk
+  // mutations (business-risk.service.ts), never by loading this view.
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag, raw, cashFinanceEffectiveState, avgActiveMargin, pipelineSummary } = await assembleGuidanceContext(workspaceId, businessId, deps);
+  const { ctx, state, ag, raw, cashFinanceEffectiveState, cashSignalState: cashSignalStateForProtection, avgActiveMargin, pipelineSummary, evidenceScope } = await assembleGuidanceContext(workspaceId, businessId, deps, options?.ownerGate);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -1988,8 +2259,9 @@ export async function getOwnerNowView(
     ? buildTrainingAssignments(processIntelligence, processCorrections, sopChecklistCorrections, workspaceId)
     : null;
 
+  // The guidance history this view appends to is keyed exactly as it is written (businessId or null).
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
-    where: businessId ? { workspaceId, businessId } : { workspaceId },
+    where: { workspaceId, businessId: businessId ?? null },
     orderBy: { createdAt: "desc" },
   });
   const changes: DetectedChange[] = prev ? detectChanges(prevState(prev), state) : [];
@@ -2051,14 +2323,14 @@ export async function getOwnerNowView(
         // state→day/percent bucket constants as a metric implied a precision OpsIQ does not have (e.g. a
         // "CRITICAL" state rendered as "7 days runway"). Pass no measured figure and let the domain fire the
         // risk qualitatively from the categorical state (metricValue stays null — no false precision).
-        cashRunwayDays: null,
+        cashRunwayDays: cashFinanceEffectiveState != null && !SAFE_STATES.has(cashFinanceEffectiveState) ? raw.financeFacts?.cashRunwayDays ?? null : null,
         netMarginPct: null,
         // Arbitrated (see resolveCashFinanceSignal / cashFinanceEffectiveState above), never
         // raw.cashState directly -- using the raw, un-arbitrated cashflow-cycle reading here was
         // the exact bug a real human usability test reproduced: Home presented a superseded
         // AT_RISK/INSOLVENT_RISK cash reading as the top priority action while the newer finance
         // diagnosis was SAFE.
-        cashRunwayState: cashFinanceEffectiveState as CashRiskState | null,
+        cashRunwayState: cashSignalStateForProtection,
         netMarginState: (raw.finState ?? null) as CashRiskState | null,
         lowMarginJobCount: 0,
         pricingLeakCount: 0,
@@ -2069,7 +2341,13 @@ export async function getOwnerNowView(
         b2bUnderpricedCount: 0,
         overdueReceivableCount: 0,
         hasUnitEconomics: false,
-        financialDataComplete: raw.cashState != null && raw.finState != null,
+        // Profit is assessed from the CURRENT Finance diagnosis's own figures (revenue, costs, margin) — the
+        // Cash-flow cycle is a separate module and its absence is not a profit-data gap. A gap is named only
+        // when the current Finance snapshot genuinely lacks a figure the assessment needs.
+        financialDataComplete: raw.finState != null && (raw.financeFacts?.missingFinancialFields.length ?? 0) === 0,
+        missingFinancialFields: raw.finState != null ? raw.financeFacts?.missingFinancialFields ?? [] : [],
+        // Enrichment for an already-raised cash risk only (the arbitrated state still decides).
+        financeCashDaysOfCosts: raw.financeFacts?.cashDaysOfCosts ?? null,
         supportingProofIds: [],
         supportingOperationalEventIds: [],
         supportingFinancialSnapshotIds: [],
@@ -2119,7 +2397,7 @@ export async function getOwnerNowView(
           const s = statusByKey.get(r.taskKey);
           if (s) {
             r.status = s;
-            r.canStart = computeCanStart(r.executionRoute, s);
+            r.canStart = computeCanStart(r.executionRoute, s, r.approvalLevel);
           }
         }
         const TERMINAL = new Set(["COMPLETED", "REJECTED", "OUTCOME_RECORDED", "OUTCOME_DISPUTED", "OUTCOME_VERIFIED"]);
@@ -2139,7 +2417,7 @@ export async function getOwnerNowView(
     ? await deps.externalOpportunitySignals(workspaceId).catch(() => [])
     : [];
   const nowMs = deps.now();
-  const cashProfitRiskActive = Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL"));
+  const cashProfitRiskActive = cashProfitRiskIsActive(cashProfitProtection, cashFinanceEffectiveState as CashRiskState | null);
 
   // External Opportunity Intelligence v1 — evidence-backed candidates from live structured intake PLUS the
   // internal customer-complaint→retention family, each filtered through cash/profit protection, the
@@ -2179,7 +2457,7 @@ export async function getOwnerNowView(
     ? buildOpportunityValidationPlan(
         externalOpportunityIntelligence.candidates,
         {
-          cashProfitRiskActive: Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")),
+          cashProfitRiskActive: cashProfitRiskIsActive(cashProfitProtection, cashFinanceEffectiveState as CashRiskState | null),
           capabilityGapPresent: capabilityGaps != null,
         },
         workspaceId,
@@ -2210,7 +2488,7 @@ export async function getOwnerNowView(
         externalOpportunityIntelligence.candidates,
         opportunityValidationWithOutcomes,
         {
-          cashProfitRiskActive: Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")),
+          cashProfitRiskActive: cashProfitRiskIsActive(cashProfitProtection, cashFinanceEffectiveState as CashRiskState | null),
           capabilityGapPresent: capabilityGaps != null,
         },
         workspaceId,
@@ -2243,9 +2521,13 @@ export async function getOwnerNowView(
   // Only available on the live path (goalTrajectoryFn present). Absent on fake-DI unit tests → null.
   // When function is present but returns null: NO_GOAL state (workspace has no active goal set).
   const hasGoalFn = typeof deps.goalTrajectoryFn === "function";
-  const goalTrajectoryRaw = hasGoalFn
-    ? await deps.goalTrajectoryFn!(workspaceId).catch(() => null)
+  // Scoped to the selected business: another business's goal is never shown here, and a legacy
+  // workspace goal only in a single-business workspace (goal.service.ts resolveHomeGoal).
+  const goalResolved = hasGoalFn
+    ? await deps.goalTrajectoryFn!(workspaceId, businessId).catch(() => null)
     : null;
+  const goalTrajectoryRaw = goalResolved && goalResolved.goal ? goalResolved : null;
+  const noGoalScopeLabel = goalResolved && !goalResolved.goal ? goalResolved.scopeLabel : null;
   let goalAttentionSignal: GoalAttentionSignal | null = null;
   if (hasGoalFn && !goalTrajectoryRaw) {
     goalAttentionSignal = {
@@ -2261,26 +2543,40 @@ export async function getOwnerNowView(
       confidence: null,
       trajectoryMiss: null,
       assumptions: [],
-      beginnerExplanation: "No active goal is set. Add a goal to track your progress.",
+      beginnerExplanation: `${noGoalScopeLabel ?? "No active goal is set"}. Add a goal to track your progress.`,
+      scopeLabel: noGoalScopeLabel,
+      goalScope: null,
+      unavailableReason: null,
     };
   }
   if (goalTrajectoryRaw) {
     const { goal, trajectory } = goalTrajectoryRaw;
+    const unavailableReason = "unavailableReason" in goalTrajectoryRaw ? goalTrajectoryRaw.unavailableReason ?? null : null;
     const goalTitle = GOAL_TYPE_LABEL[goal.targetType] ?? goal.targetType.toLowerCase().replace(/_/g, " ");
     const ownerMonths = (goal.targetDate.getTime() - Date.now()) / (30.44 * 24 * 60 * 60 * 1000);
 
     let goalState: GoalAttentionSignal["state"];
     let beginnerExplanation: string;
 
-    if (trajectory.confidence === "LOW") {
+    if (unavailableReason) {
+      goalState = "INSUFFICIENT_DATA";
+      beginnerExplanation = unavailableReason;
+    } else if (trajectory.confidence === "LOW") {
       goalState = "INSUFFICIENT_DATA";
       beginnerExplanation = "Not enough data yet to project your goal. Keep recording results.";
     } else if (trajectory.confidence === "MEDIUM" && trajectory.confidenceRationale.includes("days old")) {
       goalState = "STALE";
       beginnerExplanation = "Your last result was recorded more than 60 days ago. Update your numbers to get a fresh projection.";
-    } else if (trajectory.projectedMonthsToGoal === null) {
+    } else if (trajectory.projectedMonthsToGoal === null && trajectory.trajectoryMiss) {
+      goalState = "AT_RISK";
+      beginnerExplanation = "At the current rate your goal is decades away. Growth needs to speed up substantially.";
+    } else if (trajectory.projectedMonthsToGoal === null && trajectory.onTrack !== null) {
       goalState = "NO_GROWTH";
       beginnerExplanation = "At the current rate, your goal cannot be reached. Growth needs to turn positive.";
+    } else if (trajectory.projectedMonthsToGoal === null) {
+      // e.g. results crossing from a loss into profit: no compound rate exists, so no projection.
+      goalState = "INSUFFICIENT_DATA";
+      beginnerExplanation = "Your results cross zero, so OpsIQ can't project a date yet. Keep recording results.";
     } else if (trajectory.trajectoryMiss) {
       goalState = "AT_RISK";
       const behindMonths = trajectory.projectedMonthsToGoal - Math.max(0, ownerMonths);
@@ -2298,12 +2594,18 @@ export async function getOwnerNowView(
       targetDateIso: goal.targetDate.toISOString(),
       gapToClose: trajectory.gapToClose,
       projectedMonthsToGoal: trajectory.projectedMonthsToGoal,
-      currentTrajectoryDateIso: trajectory.currentTrajectoryDate?.toISOString() ?? null,
+      currentTrajectoryDateIso:
+        trajectory.currentTrajectoryDate && Number.isFinite(trajectory.currentTrajectoryDate.getTime())
+          ? trajectory.currentTrajectoryDate.toISOString()
+          : null,
       requiredMonthlyImprovement: trajectory.requiredMonthlyImprovement,
       confidence: trajectory.confidence as "LOW" | "MEDIUM" | "HIGH",
       trajectoryMiss: trajectory.trajectoryMiss,
       assumptions: trajectory.assumptions,
       beginnerExplanation,
+      scopeLabel: "scopeLabel" in goalTrajectoryRaw ? goalTrajectoryRaw.scopeLabel ?? null : null,
+      goalScope: goal.scope ?? null,
+      unavailableReason,
     };
   }
 
@@ -2347,9 +2649,11 @@ export async function getOwnerNowView(
   // Trend Alerts — pairwise directional alerts from the last two ownerMetricSnapshot periods.
   // Null when fewer than 2 snapshots are available or period timestamps are identical.
   let trendAlerts: TrendAlert[] | null = null;
-  if (deps.db.ownerMetricSnapshot.findMany) {
+  if (deps.db.ownerMetricSnapshot.findMany && evidenceScope) {
+    // One business's periods only: comparing business A's period with business B's is not a trend.
+    // Completed periods only: an in-progress (partial) or future period compared with a full one is not a trend.
     const snapshots = await deps.db.ownerMetricSnapshot.findMany({
-      where: { workspaceId },
+      where: { ...evidenceScope, periodEnd: { lte: new Date(deps.now()) } },
       select: {
         periodEnd: true, revenue: true, grossProfit: true, netProfit: true,
         newCustomers: true, averageOrderValue: true, refundAmount: true, rewashCount: true,
@@ -2418,9 +2722,13 @@ export async function getOwnerNowView(
   // Derive the 11 business-condition risk dimensions from snapshot data already in memory.
   // Pure function — no extra DB query. Produces "unknown" only when the source record was absent.
   const derivedBusinessCondition = deriveBusinessConditionSignals({
-    cashState: raw.cashState,
+    // An incomplete cash position is UNKNOWN to the business-condition signals (never a proxy state / resilience).
+    cashState: state.cashRunwayMeasured === false ? undefined : raw.cashState,
     finState: raw.finState,
-    cashRunwayDays: state.cashRunwayDays,
+    // The current Finance diagnosis's own driver (canonical financeSurvivalDriver): null when its findings are only
+    // evidence conditions (liquidity unconfirmed, data quality) — then the state is not a margin reading.
+    financeDriver: raw.financeDriver,
+    cashRunwayDays: state.cashRunwayMeasured === false ? 0 : state.cashRunwayDays,
     supplierInventoryRiskScore: state.supplierInventoryRiskScore,
     ownerLoadPct: state.ownerLoadPct,
     staffOverloadPct: state.staffOverloadPct,
@@ -2435,35 +2743,58 @@ export async function getOwnerNowView(
     growthReadinessTier: state.growthReadinessTier,
   });
 
-  const view = buildOwnerNowView({ ...ctx, changes });
+  const builtView = buildOwnerNowView({ ...ctx, changes });
+  // Now View's avoid list never vetoes the owner's canonical main target (see reconcileAvoidsWithOwnerDecision).
+  const view = options?.ownerDecision
+    ? { ...builtView, actionsToAvoid: reconcileAvoidsWithOwnerDecision(builtView.actionsToAvoid, options.ownerDecision) }
+    : builtView;
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
-  const beginnerExplanation = buildBeginner(view, stepByStep);
+  const beginnerExplanation = buildBeginner(view, stepByStep, options?.ownerDecision);
 
-  // Do-Not-Repeat Annotation — check if the top priority guidance action is blocked by a DNR rule.
-  const topActionCategory = view.topOwnerActions[0]?.category;
-  const topActionImpactArea = topActionCategory ? (ISSUE_CATEGORY_TO_IMPACT_AREA[topActionCategory] ?? null) : null;
-  const [doNotRepeatAnnotation, executionLifecycle, businessOperatingSystem] = await Promise.all([
-    topActionImpactArea
-      ? checkDoNotRepeatForGuidance(workspaceId, topActionImpactArea, null, deps.db).catch(() => null)
-      : Promise.resolve(null),
+  // Do-Not-Repeat Annotation — the canonical main target, against the SAME gate constraints the decision was
+  // resolved with (ownerDnrAnnotationFromGate: business attribution, opt-out, lifted rules and this
+  // business's Owner overrides). A step the gate allows is never claimed to be held.
+  const canonicalPrimary = options?.ownerDecision?.primaryTarget ?? null;
+  const doNotRepeatAnnotation: DoNotRepeatAnnotation | null = canonicalPrimary
+    ? ownerDnrAnnotationFromGate(options?.ownerGate ?? null, {
+        source: canonicalPrimary.source,
+        domain: canonicalPrimary.domain,
+        findingId: canonicalPrimary.findingId,
+        findingCode: canonicalPrimary.findingCode,
+        intent: ownerTargetIntent(canonicalPrimary),
+        ruleId: canonicalPrimary.ruleId ?? null,
+      })
+    : null;
+  const [executionLifecycle, businessOperatingSystem] = await Promise.all([
     buildExecutionLifecycle(workspaceId, deps.db, businessId, executionAttributionAmbiguous),
-    buildBusinessOperatingSystem(workspaceId, businessId, deps.db),
+    buildBusinessOperatingSystem(workspaceId, businessId, deps.db, deps.objectiveGoalAlignmentFn),
   ]);
 
-  await deps.db.ownerGuidanceSnapshot.create({
-    data: {
-      id: deps.uuid(), workspaceId, businessId: businessId ?? null,
-      classification: view.classification, cashSafe: ctx.cashSafe, growthGatePassed: ctx.growthGatePassed,
-      staffOverloaded: ctx.staffOverloaded, ownerOverloaded: ctx.ownerOverloaded, dataConfidence: ctx.dataConfidence,
-      topIssueCount: view.topOwnerActions.length, missingDataCount: view.missingDataRequests.length,
-      cashRunwayDays: state.cashRunwayDays, netMarginPct: state.netMarginPct, complaintsCount: state.complaintsCount,
-      reworkCount: state.reworkCount, capacityUtilizationPct: state.capacityUtilizationPct,
-      staffOverloadPct: state.staffOverloadPct, ownerLoadPct: state.ownerLoadPct, churnRiskScore: state.churnRiskScore,
-      supplierInventoryRiskScore: state.supplierInventoryRiskScore, overdueProofCount: state.overdueProofCount,
-      outcomeChecksDue: state.outcomeChecksDue, growthReadinessTier: state.growthReadinessTier,
-      payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype } as unknown as Record<string, unknown>,
-    },
-  });
+  // Guidance history ("what changed since the last check", and the SOP-effectiveness baseline) is only
+  // appended when the observed state differs from the latest recorded one: re-reading an unchanged business
+  // — repeatedly or concurrently — writes nothing. (Reads never raise alerts or audit events.)
+  const guidanceState = {
+    classification: view.classification, cashSafe: ctx.cashSafe, growthGatePassed: ctx.growthGatePassed,
+    staffOverloaded: ctx.staffOverloaded, ownerOverloaded: ctx.ownerOverloaded, dataConfidence: ctx.dataConfidence,
+    topIssueCount: view.topOwnerActions.length, missingDataCount: view.missingDataRequests.length,
+    cashRunwayDays: state.cashRunwayDays, netMarginPct: state.netMarginPct, complaintsCount: state.complaintsCount,
+    reworkCount: state.reworkCount, capacityUtilizationPct: state.capacityUtilizationPct,
+    staffOverloadPct: state.staffOverloadPct, ownerLoadPct: state.ownerLoadPct, churnRiskScore: state.churnRiskScore,
+    supplierInventoryRiskScore: state.supplierInventoryRiskScore, overdueProofCount: state.overdueProofCount,
+    outcomeChecksDue: state.outcomeChecksDue, growthReadinessTier: state.growthReadinessTier,
+  };
+  const prevRecord = prev as unknown as Record<string, unknown> | null;
+  const unchangedSincePrev = prevRecord !== null &&
+    (Object.keys(guidanceState) as Array<keyof typeof guidanceState>).every((k) => (prevRecord[k] ?? null) === (guidanceState[k] ?? null));
+  if (!unchangedSincePrev) {
+    await deps.db.ownerGuidanceSnapshot.create({
+      data: {
+        id: deps.uuid(), workspaceId, businessId: businessId ?? null,
+        ...guidanceState,
+        payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype, cashRunwayMeasured: state.cashRunwayMeasured !== false } as unknown as Record<string, unknown>,
+      },
+    });
+  }
 
   return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution, salesPipelineSummary: pipelineSummary, goalAttentionSignal, policyAttentionSignal, trendAlerts, doNotRepeatAnnotation, activeEscalations, derivedBusinessCondition, executionLifecycle, businessOperatingSystem };
 }
@@ -2781,7 +3112,8 @@ function deriveExternalOpportunitySignals(
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
   return {
-    cashRunwayDays: row.cashRunwayDays, netMarginPct: row.netMarginPct, complaintsCount: row.complaintsCount,
+    cashRunwayDays: row.cashRunwayDays,
+    cashRunwayMeasured: (row.payload as { cashRunwayMeasured?: unknown } | null | undefined)?.cashRunwayMeasured !== false, netMarginPct: row.netMarginPct, complaintsCount: row.complaintsCount,
     reworkCount: row.reworkCount, capacityUtilizationPct: row.capacityUtilizationPct, staffOverloadPct: row.staffOverloadPct,
     ownerLoadPct: row.ownerLoadPct, churnRiskScore: row.churnRiskScore, supplierInventoryRiskScore: row.supplierInventoryRiskScore,
     overdueProofCount: row.overdueProofCount, outcomeChecksDue: row.outcomeChecksDue, growthReadinessTier: row.growthReadinessTier,

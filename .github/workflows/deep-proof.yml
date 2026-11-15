@@ -123,6 +123,7 @@ jobs:
     needs: guard
     if: github.event.inputs.proof_target == 'owner-pilot-db-only'
     env:
+      OPSIQ_DB_TARGET: ci
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
       DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public

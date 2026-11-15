@@ -1,171 +1,81 @@
+/**
+ * POST /api/diagnosis — consultant quick-intake diagnosis (ENGAGEMENT_CREATE).
+ *
+ * Creates a governed consulting engagement and returns the evidence-grounded answer
+ * (src/domain/generic-diagnosis/answer.ts). This is a consultant tool: self-serve owners do not
+ * hold ENGAGEMENT_CREATE and use their Owner diagnosis instead; the /diagnosis page applies the
+ * same capability check so page visibility and API permission always agree.
+ *
+ * Errors propagate to withCanonicalEnforcement, which returns the real status (400/403/404/409/
+ * 5xx) with an owner-safe message; nothing raw (stack, SQL, Prisma metadata) is returned.
+ */
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { diagnoseBusiness, validateBusinessProblem } from "@/services/diagnosis";
+import { diagnoseBusiness, validateBusinessProblem, MAX_DIAGNOSIS_FIGURE } from "@/services/diagnosis";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { canonicalJson } from "@/lib/canonical-json-response";
+import { BadRequestError, ConflictError } from "@/infra/errors";
+import { GENERIC_DIAGNOSIS_MAIN_ISSUES } from "@/domain/generic-diagnosis/answer";
 import { z } from "zod/v4";
-import { UnauthorizedError } from "@/infra/errors";
-import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+// Optional figures: omitted = not known (never coerced to 0); 0 = reported as zero.
 const diagnosisSchema = z.object({
-  businessName: z.string().min(1, "Business name is required"),
-  businessType: z.string().min(1, "Business type is required"),
-  problemStatement: z.string().min(1, "Problem statement is required"),
-  mainIssue: z.enum([
-    "low_sales",
-    "high_costs",
-    "cash_flow",
-    "customer_retention",
-    "operations",
-    "unclear",
-  ]),
-  monthlyRevenue: z.number().min(0).optional(),
-  monthlyCosts: z.number().min(0).optional(),
-  customerCount: z.number().min(0).optional(),
+  businessName: z.string().trim().min(1, "Business name is required").max(200),
+  businessType: z.string().trim().min(1, "Business type is required").max(200),
+  problemStatement: z.string().trim().min(1, "Problem statement is required").max(5000),
+  mainIssue: z.enum(GENERIC_DIAGNOSIS_MAIN_ISSUES),
+  monthlyRevenue: z.number().finite().min(0).max(MAX_DIAGNOSIS_FIGURE, "Monthly revenue is too large").optional(),
+  monthlyCosts: z.number().finite().min(0).max(MAX_DIAGNOSIS_FIGURE, "Monthly costs are too large").optional(),
+  customerCount: z.number().int("Customer count must be a whole number").min(0).max(MAX_DIAGNOSIS_FIGURE, "Customer count is too large").optional(),
 });
 
 export const POST = withCanonicalEnforcement(
-  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
-    const hasDiagnosticAccess = ctx.request ? verifyDiagnosticKeyFromRequest(ctx.request) : false;
+  async (ctx: CanonicalAuthContext) => {
+    const rawIdempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!rawIdempotencyKey) {
+      throw new BadRequestError("idempotency-key header required");
+    }
+    const body = await parseRequestBody(ctx.request!, diagnosisSchema);
+    // Idempotency records are looked up by key alone, so the key is namespaced to this workspace
+    // and actor: another tenant's (or user's) key can never replay or probe this record.
+    const idempotencyKey = `diagnosis:${ctx.verifiedWorkspaceId}:${ctx.verifiedActorId}:${rawIdempotencyKey}`;
 
-    let currentOperation = "parse_request";
-    let body: any = {};
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "diagnoseBusiness",
+      actorId: ctx.verifiedActorId,
+      workspaceId: ctx.verifiedWorkspaceId,
+      payload: body,
+    });
+    if (!idempotencyCheck.isNew) {
+      if (idempotencyCheck.cachedResponse) {
+        return canonicalJson(idempotencyCheck.cachedResponse.body, { status: idempotencyCheck.cachedResponse.status });
+      }
+      // A previously failed attempt with this key: never silently re-run it.
+      throw new ConflictError("This diagnosis request already failed. Submit the form again to retry.");
+    }
 
     try {
-      const idempotencyKey = ctx.request?.headers.get("idempotency-key");
-      if (!idempotencyKey) {
-        throw new UnauthorizedError("idempotency-key header required");
-      }
-
-      body = await parseRequestBody(ctx.request!, diagnosisSchema);
-
-      // Check idempotency with verified workspace and actor context
-      currentOperation = "idempotency_check";
-      const idempotencyCheck = await checkIdempotencyKey({
-        idempotencyKey,
-        operationName: "diagnoseBusiness",
-        actorId: ctx.verifiedActorId,
-        workspaceId: ctx.verifiedWorkspaceId,
-        payload: body,
-      });
-
-      if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-        return idempotencyCheck.cachedResponse.body;
-      }
-
-      currentOperation = "validateBusinessProblem";
       validateBusinessProblem(body);
-
-      currentOperation = "diagnoseBusiness";
-      const result = await diagnoseBusiness(body, ctx, workspaceId);
-
-      currentOperation = "idempotency_record_success";
-      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>, workspaceId);
-
-      currentOperation = "response_return";
+      const result = await diagnoseBusiness(body, ctx, ctx.verifiedWorkspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>, ctx.verifiedWorkspaceId);
       return canonicalJson(result, { status: 201 });
     } catch (error) {
-      const err = error instanceof Error ? error : new Error("Unknown error");
-
-      // Always include full error message (sanitize secrets if needed)
-      const fullMessage = err.message;
-      const sanitizedMessage = fullMessage
-        .replace(/postgres:\/\/[^\s]+/g, "postgres://***")
-        .replace(/password[=:]\S+/gi, "password=***")
-        .replace(/token[=:]\S+/gi, "token=***")
-        .replace(/key[=:]\S+/gi, "key=***");
-
-      // Build error response with guaranteed safeMessage
-      const errorResponse: any = {
-        error: "Diagnosis request failed",
-        stage: "handler_invocation",
-        classification: "diagnosis_handler_failed",
-        errorName: err.name,
-        failingOperation: currentOperation,
-        safeMessage: sanitizedMessage || "(empty error message)",
-      };
-
-      // Extract Prisma-specific details if available
-      const errorObj = err as any;
-      if (errorObj.code) {
-        errorResponse.prismaCode = errorObj.code;
-      }
-      if (errorObj.meta) {
-        errorResponse.prismaMeta = errorObj.meta;
-      }
-      if (errorObj.clientVersion) {
-        errorResponse.prismaClientVersion = errorObj.clientVersion;
-      }
-
-      // Try to record idempotency error, but don't let it block error response
-      const idempotencyKey = ctx.request?.headers.get("idempotency-key");
-      if (idempotencyKey) {
-        try {
-          currentOperation = "idempotency_record_error";
-          await recordIdempotencyError(idempotencyKey, err, workspaceId);
-        } catch (idempotencyError) {
-          // Log but don't throw - user should see the primary error, not idempotency infrastructure failure
-          const idempotencyErr = idempotencyError instanceof Error ? idempotencyError : new Error(String(idempotencyError));
-          errorResponse.idempotencyRecordingFailed = {
-            errorName: idempotencyErr.name,
-            errorMessage: idempotencyErr.message.substring(0, 200),
-          };
-        }
-      }
-
-      // If diagnostic key is valid, include detailed diagnostic fields
-      if (hasDiagnosticAccess) {
-        errorResponse.diagnostics = {
-          routeWrapper: "withCanonicalEnforcement",
-          requireWorkspaceConfigured: false,
-          ctxKeys: {
-            verifiedActorIdPresent: !!ctx.verifiedActorId,
-            verifiedActorType: ctx.verifiedActorType,
-            verifiedWorkspaceIdPresent: !!ctx.verifiedWorkspaceId,
-            verifiedCapabilitiesPresent: !!(ctx.verifiedCapabilities && ctx.verifiedCapabilities.size > 0),
-            requestPresent: !!ctx.request,
-            sessionPresent: !!ctx.session,
-            policyPresent: !!ctx.policy,
-          },
-          workspaceIdSource: {
-            verifiedWorkspaceIdValue: workspaceId ? `${workspaceId.substring(0, 4)}...${workspaceId.substring(workspaceId.length - 4)}` : null,
-            verifiedWorkspaceIdPresent: !!workspaceId,
-            verifiedWorkspaceIdType: workspaceId ? typeof workspaceId : "missing",
-          },
-          actorIdSource: {
-            verifiedActorIdValue: ctx.verifiedActorId ? `${ctx.verifiedActorId.substring(0, 4)}...${ctx.verifiedActorId.substring(ctx.verifiedActorId.length - 4)}` : null,
-            verifiedActorIdPresent: !!ctx.verifiedActorId,
-            verifiedActorIdType: ctx.verifiedActorId ? typeof ctx.verifiedActorId : "missing",
-          },
-          bodyContext: {
-            bodyPresent: !!body,
-            bodyHasWorkspaceId: !!(body && "workspaceId" in body),
-          },
-          diagnosisServiceInputContext: {
-            willReceiveBody: !!body,
-            willReceiveCtx: !!ctx,
-            willReceiveWorkspaceId: !!workspaceId,
-            workspaceIdValueWillBePassed: workspaceId ? `${workspaceId.substring(0, 4)}...` : null,
-          },
-          errorDetails: {
-            errorName: err.name,
-            errorMessage: fullMessage,
-            sanitizedMessage: sanitizedMessage,
-            prismaCode: errorObj.code || null,
-            prismaClientVersion: errorObj.clientVersion || null,
-            prismaMeta: errorObj.meta || null,
-            failingOperation: currentOperation,
-          },
-        };
-      }
-
-      // Return error response with proper HTTP 500 status (not HTTP 200 with body.status=500)
-      return canonicalJson(errorResponse, { status: 500 });
+      await recordIdempotencyError(
+        idempotencyKey,
+        error instanceof Error ? error : new Error(String(error)),
+        ctx.verifiedWorkspaceId
+      ).catch(() => undefined); // never mask the primary error
+      throw error;
     }
   },
   {
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_CREATE],
+    requireWorkspace: true,
+    operationName: "diagnoseBusiness",
   }
 );

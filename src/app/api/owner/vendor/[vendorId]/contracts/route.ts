@@ -1,3 +1,4 @@
+import { endNotBeforeStart } from "@/validation/date-range";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -15,7 +16,8 @@ const recordContractSchema = z.object({
   termsDaysNet: z.number().int().min(0).max(365).nullable().optional(),
   scope: z.string().max(500).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
-});
+})
+  .superRefine(endNotBeforeStart("startDate", "endDate", "The contract end date must be on or after its start date"));
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {

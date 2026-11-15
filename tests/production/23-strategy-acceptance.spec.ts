@@ -26,7 +26,7 @@
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { writeFileSync } from "fs";
-import { authenticateProductionOwner } from "./helpers/production-auth";
+import { newSharedAuthenticatedContext } from "./helpers/shared-auth";
 import {
   startEvidenceCollection,
   captureOnFailure,
@@ -34,10 +34,18 @@ import {
   finalizeEvidence,
   timedApiCall,
 } from "./helpers/evidence";
-import { runDomainDiagnosisAndAwaitResult } from "./helpers/domain-diagnosis";
 import { registerActionDialogHandler } from "./helpers/dialog-handler";
 import { createJourneyWatch } from "./helpers/journey-watchers";
 import { resolveOrCreateDomainBusiness } from "./helpers/domain-business";
+import { bindFixtureTarget, type FixtureBusinessTarget } from "./helpers/fixture-target";
+import {
+  saveFixtureSnapshot,
+  runFixtureDiagnosis,
+  assertFixtureNotOnOwnerDashboard,
+  readFixtureCycle,
+  cycleOrdinal,
+  driveFixtureActionLifecycle,
+} from "./helpers/fixture-domain-loop";
 
 const SPEC_NAME = "phase23-strategy";
 const { networkFailures, watchPage, fatalErrors } = createJourneyWatch();
@@ -46,16 +54,18 @@ test.describe("PROD-23 — Strategy Owner journey live production acceptance", (
   let context: BrowserContext;
   let page: Page;
   let acceptanceBusinessId = "";
+  let fx: FixtureBusinessTarget;
+  let snapshotId = "";
+  let lastCycleOrdinal = 0;
   let trinityBusinessId: string | null = null;
   let trinityFound = false;
   let blockedUpstreamReason: string | null = null;
 
   test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
-    page = await context.newPage();
+    // One login for the whole run (global-setup); this spec never logs in again. See helpers/shared-auth.ts.
+    ({ context, page } = await newSharedAuthenticatedContext(browser));
     watchPage(page);
     registerActionDialogHandler(page);
-    await authenticateProductionOwner(page);
     await startEvidenceCollection(context, page, SPEC_NAME);
 
     // Strategy gets its OWN dedicated acceptance business -- never the
@@ -63,6 +73,8 @@ test.describe("PROD-23 — Strategy Owner journey live production acceptance", (
     // See helpers/domain-business.ts's header for the root cause this fixes.
     try {
       acceptanceBusinessId = await resolveOrCreateDomainBusiness(context, page, "strategy");
+      // Created-and-hidden is not enough: bind the id so every mutation can only target THIS fixture.
+      fx = await bindFixtureTarget(context, page, "strategy", acceptanceBusinessId);
     } catch (e) {
       blockedUpstreamReason = `BLOCKED_SETUP: could not create Strategy's dedicated acceptance business: ${
         e instanceof Error ? e.message : String(e)
@@ -125,134 +137,78 @@ test.describe("PROD-23 — Strategy Owner journey live production acceptance", (
       expect(typeof rec.priorityScore, "PRIORITIZATION: must carry a numeric priority score").toBe("number");
       expect(typeof rec.expectedImpactScore, "DATA_GROUNDING: must carry a numeric impact score").toBe("number");
       expect(rec.verificationMetric, "VERIFIABILITY: must name how it will be verified").toBeTruthy();
-      await page.goto(`/owner/strategy?businessId=${trinityBusinessId}`, { waitUntil: "networkidle" });
+      // READ-ONLY: select Trinity in the page's own business selector (client-side state only) -- the page does not
+      // read ?businessId=, so a query parameter would not show Trinity.
+      await page.goto("/owner/strategy", { waitUntil: "networkidle" });
+      await page.locator('select[name="businessSelector"]').selectOption(trinityBusinessId!);
+      await page.waitForLoadState("networkidle");
       await checkpointScreenshot(context, page, SPEC_NAME, "trinity-strategy-recommendation");
     });
   });
-
-  test.describe("Strategy closed loop (acceptance business)", () => {
+  // ─── Acceptance fixture: full Strategy closed loop (governed API, bound to the verified fixture) ──
+  //
+  // Production run #17 root cause: the previous version drove the ordinary Strategy UI at
+  // /owner/strategy?businessId=<fixture>. The page ignores that parameter and takes its business from the
+  // fixture-free owner list, so every UI save/diagnosis hit an ORDINARY business. Every mutation below goes through
+  // fixture-domain-loop.ts, which is refused unless it targets the bound fixture (or one of its own actions). The UI
+  // is read-only here.
+  test.describe("Strategy closed loop (acceptance fixture)", () => {
     test.describe.configure({ mode: "serial" });
 
-    test("23-03 — navigate to Strategy for the dedicated acceptance business", async () => {
-      await page.goto(`/owner/strategy?businessId=${acceptanceBusinessId}`, { waitUntil: "networkidle" });
-      await expect(page.locator('select[name="businessSelector"]')).toBeVisible();
+    test("23-03 — the fixture is addressable by its own id and is NOT offered by the ordinary Strategy UI (positive isolation)", async () => {
+      await assertFixtureNotOnOwnerDashboard(context, page, fx);
+      // Hidden from ordinary owners: the page's own selector must not list it.
+      await page.goto("/owner/strategy", { waitUntil: "networkidle" });
+      const select = page.locator('select[name="businessSelector"]');
+      if ((await select.count()) > 0) {
+        const values = await select.locator("option").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+        expect(values, "a hidden fixture must never appear in the ordinary owner business selector").not.toContain(acceptanceBusinessId);
+      }
     });
 
-    test("23-04 — real UI: add a strategic option with a deliberately weak, high-risk scenario", async () => {
-      await page.getByRole("button", { name: "+ Add scenario" }).click();
-      const today = new Date();
-      const periodEnd = today.toISOString().slice(0, 10);
-      const periodStart = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
-        .toISOString()
-        .slice(0, 10);
-      await page.locator('input[name="optionName"]').fill("Acceptance test: risky expansion");
-      await page.locator('select[name="riskLevel"]').selectOption("high");
-      await page.locator('input[name="periodStart"]').fill(periodStart);
-      await page.locator('input[name="periodEnd"]').fill(periodEnd);
-      // Deliberately weak scenario -- negative net monthly gain, large
-      // upfront investment, poor affordability (cash << investment) -->
-      // guarantees a critical ROI/affordability/payback finding set.
-      // Synthetic data on the dedicated acceptance business only.
-      await page.locator('input[name="currentRevenue"]').fill("100000");
-      await page.locator('input[name="expectedRevenueChange"]').fill("2000");
-      await page.locator('input[name="costChange"]').fill("5000");
-      await page.locator('input[name="investmentRequired"]').fill("200000");
-      await page.locator('input[name="timeToImpactMonths"]').fill("12");
-      await page.locator('input[name="cashAvailable"]').fill("50000");
-      await page.locator('input[name="capacityImpactPct"]').fill("20");
-      await page.locator('input[name="staffImpact"]').fill("5");
-      await page.getByRole("button", { name: /Save scenario/ }).click();
-      await page.waitForLoadState("networkidle");
-      await checkpointScreenshot(context, page, SPEC_NAME, "scenario-saved");
+    test("23-04 — governed API: save a strategic scenario with deliberately stressed synthetic inputs on the fixture", async () => {
+      // Deliberately weak scenario -- negative net monthly gain, large upfront investment, poor affordability (cash << investment) --> guarantees a critical ROI/affordability/payback finding set. Synthetic data on the bound fixture only.
+      const saved = await saveFixtureSnapshot(context, page, fx, {
+        optionName: "Acceptance test: risky expansion",
+        riskLevel: "high",
+        currentRevenue: 100000,
+        expectedRevenueChange: 2000,
+        costChange: 5000,
+        investmentRequired: 200000,
+        timeToImpactMonths: 12,
+        cashAvailable: 50000,
+        capacityImpactPct: 20,
+        staffImpact: 5,
+      });
+      snapshotId = saved.id;
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("23-05 — real UI: evaluate the scenario and see a visible go/no-go result (not merely a 200 response)", async () => {
-      await runDomainDiagnosisAndAwaitResult(
-        page,
-        `/api/owner/strategy/businesses/${acceptanceBusinessId}/diagnoses`,
-        "Evaluate scenario",
-        /Latest evaluation|Findings \(/
-      );
-      await checkpointScreenshot(context, page, SPEC_NAME, "evaluation-result");
+    test("23-05 — governed API: run scenario evaluation on the fixture and see a real result on its own dashboard", async () => {
+      const cycle = await runFixtureDiagnosis(context, page, fx, snapshotId);
+      const stored = await readFixtureCycle(context, page, fx, String(cycle.id));
+      expect(stored.id, "the fixture's own cycle must read back by its id").toBe(cycle.id);
+      lastCycleOrdinal = cycleOrdinal(fx, cycle);
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("23-06 — action lifecycle: Assign -> Start -> Complete -> Verify outcome, each step's owner-visible status confirmed", async () => {
-      const actionsSection = page.locator("section", { hasText: "Strategy actions" });
-      const count = await actionsSection.locator(".border.rounded.p-3").count();
-      test.skip(count === 0, "SKIPPED_NO_ACTIONS_GENERATED: this evaluation produced zero findings/actions for the synthetic scenario -- not a defect, but not exercisable this run.");
-
-      // Capture this action's own id AND title before any mutation, and
-      // locate its card by title from here on -- never by position. When
-      // multiple actions tie at the priorityScore [0,100] clamp ceiling (a
-      // real, common occurrence for a "deliberately stressed" scenario with
-      // several simultaneous critical findings), a plain `.first()` locator
-      // can silently resolve to a DIFFERENT, untouched action after any
-      // mutation reorders the tied rows (workflow run 32953759246) -- the
-      // dashboard query's ordering was made fully deterministic to fix
-      // that, but this test also stops relying on card position at all, so
-      // it verifies "this exact action transitioned" independently of
-      // whether the list's order is stable.
-      const dashboardBefore = await timedApiCall(context, "GET", "/api/owner/strategy/dashboard", () =>
-        page.request.get(`/api/owner/strategy/dashboard?businessId=${acceptanceBusinessId}`)
-      );
-      const targetAction = (await dashboardBefore.json()).latestCycle.actions[0];
-      const actionId: string = targetAction.id;
-      const actionTitle: string = targetAction.title;
-      const card = actionsSection.locator(".border.rounded.p-3", { hasText: actionTitle });
-      await expect(card, "exactly one action card must match the captured title").toHaveCount(1);
-
-      await card.getByRole("button", { name: "Assign" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(card).toContainText("assigned");
-
-      await card.getByRole("button", { name: "Start" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(card).toContainText("in_progress");
-
-      await card.getByRole("button", { name: "Complete" }).click();
-      await page.waitForLoadState("networkidle");
-      await expect(async () => {
-        const res = await timedApiCall(context, "GET", "/api/owner/strategy/actions/:actionId", () =>
-          page.request.get(`/api/owner/strategy/actions/${actionId}`)
-        );
-        expect(res.status()).toBe(200);
-        expect((await res.json()).status).toBe("completed");
-      }).toPass({ timeout: 15000 });
-      await checkpointScreenshot(context, page, SPEC_NAME, "action-completed");
-
-      const verifyRes = await timedApiCall(context, "POST", "/api/owner/strategy/actions/:actionId/verify", () =>
-        page.request.post(`/api/owner/strategy/actions/${actionId}/verify`, {
-          data: { beforeValue: 100, afterValue: 50, targetDirection: "down" },
-        })
-      );
-      expect(verifyRes.ok(), `Verify outcome request failed: ${verifyRes.status()}`).toBe(true);
-      const verified = await timedApiCall(context, "GET", "/api/owner/strategy/actions/:actionId", () =>
-        page.request.get(`/api/owner/strategy/actions/${actionId}`)
-      );
-      const verifiedBody = await verified.json();
-      expect(verifiedBody.status).toBe("completed");
-      expect(
-        ["verified_improved", "verified_not_improved", "inconclusive", "disputed"]
-      ).toContain(verifiedBody.verifications?.[0]?.status);
-      await checkpointScreenshot(context, page, SPEC_NAME, "action-verified");
+    test("23-06 — action lifecycle on the fixture: Assign -> Start -> Complete -> Verify outcome, each step read back by the action's own id", async () => {
+      const outcome = await driveFixtureActionLifecycle(context, page, fx);
+      test.skip(outcome.skippedReason !== null, outcome.skippedReason ?? undefined);
       expect(fatalErrors()).toHaveLength(0);
     });
 
-    test("23-07 — reassessment: evaluating again produces a second, owner-visible entry in evaluation history", async () => {
-      await runDomainDiagnosisAndAwaitResult(
-        page,
-        `/api/owner/strategy/businesses/${acceptanceBusinessId}/diagnoses`,
-        "Evaluate scenario",
-        /#2|Evaluation history/
-      );
+    test("23-07 — reassessment: running scenario evaluation again leaves at least two cycles in the fixture's history", async () => {
+      const again = await runFixtureDiagnosis(context, page, fx, snapshotId);
+      expect(cycleOrdinal(fx, again), "the fixture's cycle history must have grown (a later cycle ordinal)").toBeGreaterThan(lastCycleOrdinal);
       expect(fatalErrors()).toHaveLength(0);
     });
-  });
+  }); // end Strategy closed loop (acceptance fixture)
+
 
   test("23-08 — no 5xx responses were observed anywhere in this journey", () => {
     expect(networkFailures).toEqual([]);
+    expect(fx?.serverErrors ?? []).toEqual([]);
   });
 
   test("23-09 — record findings for the acceptance report", () => {

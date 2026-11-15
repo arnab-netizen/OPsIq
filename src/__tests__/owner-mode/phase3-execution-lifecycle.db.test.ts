@@ -134,13 +134,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
 
     // ── 1. Complete SUCCESS journey ──────────────────────────────────────────
 
-    it("1. SUCCESS journey: PROPOSED→ACKNOWLEDGED→IN_PROGRESS→COMPLETED→OUTCOME_RECORDED→OUTCOME_VERIFIED", async () => {
+    it("1. SUCCESS journey: PROPOSED→ACKNOWLEDGED→APPROVED→IN_PROGRESS→COMPLETED→OUTCOME_RECORDED→OUTCOME_VERIFIED", async () => {
       const key = `p3_success_${randomUUID().slice(0, 8)}`;
       await seedTask(key);
 
       const ack = await action(key, "ACKNOWLEDGE");
       expect(ack.ok).toBe(true);
       expect(ack.status).toBe("ACKNOWLEDGED");
+
+      // Owner-approval work is approval-first: ACKNOWLEDGED → APPROVED → IN_PROGRESS.
+      const approve = await action(key, "APPROVE");
+      expect(approve.ok).toBe(true);
+      expect(approve.status).toBe("APPROVED");
 
       const start = await action(key, "START");
       expect(start.ok).toBe(true);

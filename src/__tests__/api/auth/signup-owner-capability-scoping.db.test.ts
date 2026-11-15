@@ -78,16 +78,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           email,
-          password: "password123",
           workspaceName,
-          acceptTerms: true,
-          acceptPrivacy: true,
-          acceptBetaNotice: true,
         }),
       });
       const res = await (POST(req as never) as Promise<Response>);
       expect(res.status).toBe(201);
-      const json = await res.json();
+      // The signup response discloses no identifiers; resolve the graph from the DB.
+      const createdUser = await db.user.findUniqueOrThrow({ where: { email } });
+      const createdMembership = await db.workspaceMembership.findFirstOrThrow({ where: { userId: createdUser.id } });
+      const json = { user: { id: createdUser.id }, workspace: { id: createdMembership.workspaceId } };
       createdUserIds.push(json.user.id);
       createdWorkspaceIds.push(json.workspace.id);
 

@@ -1,21 +1,19 @@
 /**
- * Duplicate-email race, consent edge case [db].
+ * Duplicate-email race with a smuggled credential [db].
  *
  * signup-account-graph.db.test.ts already proves the general concurrent
- * double-submit case (two requests, same email, both otherwise valid — the
- * User.email unique constraint lets exactly one win). This file covers a
- * genuinely new edge case specific to the open-beta hardening's mandatory
- * consent fields: what happens when the SAME email is double-submitted
- * concurrently, but only ONE of the two callers actually provides valid
- * consent (`acceptTerms`/`acceptPrivacy`/`acceptBetaNotice` all exactly
- * `true`) and the other omits/falsifies one of them.
+ * double-submit case (two requests, same email, both otherwise valid — one
+ * durable account graph). This file covers the edge case specific to email
+ * ownership before credential trust: the SAME email is double-submitted
+ * concurrently, but one caller also tries to smuggle a password and consent
+ * flags into the body (the pre-fix signup accepted both).
  *
- * The consent schema check (`z.literal(true, ...)`) runs during body
- * validation, strictly before the account-graph transaction / unique-email
- * race even begins — so the invalid-consent caller must be rejected with a
- * validation error regardless of arrival order relative to the valid caller,
- * and must never itself create a row, whichever caller's request the runtime
- * happens to schedule first.
+ * Signup's schema is { email, workspaceName } only and rejects unknown
+ * fields during body validation, strictly before the account-graph
+ * transaction / unique-email race even begins — so the smuggling caller must
+ * be rejected with a validation error regardless of arrival order relative to
+ * the clean caller, must never create a row, and no credential or consent may
+ * ever be stored for the account the clean caller created.
  *
  * Requires TEST_WITH_DB=true.
  */
@@ -58,27 +56,20 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] duplicate-email race with only one c
     return POST(signupRequest(body) as never);
   }
 
-  it("[db] the valid-consent caller wins and the invalid-consent caller is rejected at validation, regardless of race outcome", async () => {
+  it("[db] the clean caller wins and the credential-smuggling caller is rejected at validation, regardless of race outcome", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const email = `race-consent-${stamp}@example.com`;
     createdEmails.push(email);
 
-    const validBody = {
-      email,
-      password: "password123",
-      workspaceName: "Valid Consent Co",
-      acceptTerms: true,
-      acceptPrivacy: true,
-      acceptBetaNotice: true,
-    };
-    // Omits acceptBetaNotice entirely — must be rejected outright, not
-    // defaulted to acceptance.
+    const validBody = { email, workspaceName: "Valid Consent Co" };
+    // Tries to plant a password and consents — must be rejected outright, never stored.
     const invalidBody = {
       email,
       password: "password123",
-      workspaceName: "Missing Consent Co",
+      workspaceName: "Smuggled Credential Co",
       acceptTerms: true,
       acceptPrivacy: true,
+      acceptBetaNotice: true,
     };
 
     const results = await Promise.allSettled([signup(validBody), signup(invalidBody)]);
@@ -117,14 +108,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] duplicate-email race with only one c
       // the invalid-consent body's data must never have reached persistence.
       expect(workspaces[0].name).toBe("Valid Consent Co");
 
+      // No credential and no consent exist before the mailbox is proven.
+      expect(users[0].hashedPassword).toBeNull();
       const acceptances = await db.policyAcceptance.findMany({ where: { userId: users[0].id } });
-      expect(acceptances.map((a: { policyType: string }) => a.policyType).sort()).toEqual(
-        ["BETA_NOTICE", "PRIVACY", "TERMS"]
-      );
+      expect(acceptances).toHaveLength(0);
     }
   });
 
-  it("[db] an invalid-consent request never creates a row even when it is the ONLY request (no race needed to prove the base rejection holds)", async () => {
+  it("[db] a credential-smuggling request never creates a row even when it is the ONLY request (no race needed to prove the base rejection holds)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const email = `solo-invalid-consent-${stamp}@example.com`;
 
@@ -132,9 +123,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] duplicate-email race with only one c
       email,
       password: "password123",
       workspaceName: "Solo Invalid Co",
-      acceptTerms: true,
-      acceptPrivacy: false,
-      acceptBetaNotice: true,
     });
     expect(res.status).toBe(400);
 

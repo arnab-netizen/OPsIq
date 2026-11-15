@@ -43,7 +43,6 @@ function addIntegrity(
 
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   let decisionResult: DecisionResult | null = null;
-  let workspace;
   let userId: string | null = null;
   let logger: ReturnType<typeof createEventLogger> | null = null;
   const startTime = Date.now();
@@ -52,7 +51,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const executedValidations: string[] = ["variable_registry"];
 
   // Get workspace context from canonical auth
-  workspace = { workspaceId: ctx.verifiedWorkspaceId };
+  const workspace = { workspaceId: ctx.verifiedWorkspaceId };
 
     // Initialize logger once workspace is available
     logger = createEventLogger("api_run", workspace.workspaceId);
@@ -84,7 +83,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         entityType: "Decision",
         entityId: "system-run",
         actorType: "user",
-        workspaceId: workspace?.workspaceId,
+        workspaceId: workspace.workspaceId,
         payload: {
           reason: "Session not found or invalid",
         },
@@ -314,7 +313,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     const inputCurrency = currency || "INR";
 
     // 2a. FAIL-CLOSED: Require FX rates for non-base currencies
-    let fxRatesInput = fxRates || {};
+    const fxRatesInput = fxRates || {};
     if (inputCurrency !== "INR" && !fxRatesInput[inputCurrency]) {
       const baseResult = createDecisionResult(
         {
@@ -1103,9 +1102,10 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     // 13. CONTROL LAYER: Verify all validations were executed (bypass prevention)
     try {
       enforceControlLayer("/api/run", executedValidations);
-    } catch (enforceError: any) {
+    } catch (caught: unknown) {
+      const enforceError = caught as { reason?: unknown; skippedValidations?: unknown; requiredValidations?: unknown };
       // Control layer bypass detected - log and throw
-      const governed = classifyOperatorError(enforceError instanceof Error ? enforceError : new Error(String(enforceError.reason || enforceError)), { context: "load" });
+      const governed = classifyOperatorError(caught instanceof Error ? caught : new Error(String(enforceError.reason || caught)), { context: "load" });
       const bypasMsg = `CONTROL_LAYER_BYPASS: ${governed.operatorMessage}`;
       if (logger) {
         logger.error(bypasMsg, {
@@ -1144,4 +1144,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     }
 
   return responsePayload;
-}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_CREATE] });
+}, { requireCommercial: "continuation_action", requireWorkspace: true, requireCapabilities: [CAPABILITIES.ACTION_CREATE] });

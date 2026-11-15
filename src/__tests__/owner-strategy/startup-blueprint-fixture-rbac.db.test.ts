@@ -121,7 +121,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] isFixtureRecord blueprint create-fla
   beforeEach(async () => { s = await seedApprovedIdea(); });
   afterEach(async () => { await cleanup(s); vi.clearAllMocks(); });
 
-  it("[db] an ordinary owner (OWNER_MANAGE, no SYSTEM_ADMIN) requesting isFixtureRecord:true is silently ignored", async () => {
+  it("[db] an ordinary owner (OWNER_MANAGE, no SYSTEM_ADMIN) requesting isFixtureRecord:true is refused (403) and nothing is created", async () => {
     actAs(s.actorId, ownerRole(s.workspaceId));
     const res = await postCreateBlueprint(s.sessionId, {
       ideaId: s.ideaId,
@@ -129,10 +129,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] isFixtureRecord blueprint create-fla
       objectiveTitle: "Self-serve fixture attempt",
       isFixtureRecord: true,
     });
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    const objective = await db.businessObjective.findUnique({ where: { id: body.objectiveId } });
-    expect(objective?.isFixtureRecord).toBe(false);
+    expect(res.status).toBe(403);
+    expect(await db.businessObjective.count({ where: { workspaceId: s.workspaceId } })).toBe(0);
+    expect(await db.startupExecutionBlueprint.count({ where: { workspaceId: s.workspaceId } })).toBe(0);
   });
 
   it("[db] a SYSTEM_ADMIN actor requesting isFixtureRecord:true is honored across the blueprint output", async () => {

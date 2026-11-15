@@ -30,6 +30,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import type { BrowserContext, Page } from "@playwright/test";
 import { timedApiCall } from "./evidence";
+import { assertFixtureCreationCapable, assertBusinessIsFixture, ACCEPTANCE_FIXTURE_ENDPOINTS } from "./fixture-isolation";
 
 export const MUTATING_DOMAINS = [
   "finance",
@@ -95,22 +96,22 @@ export async function resolveOrCreateDomainBusiness(
     }
   }
 
+  // Stop BEFORE creating anything if this actor cannot create fixtures.
+  await assertFixtureCreationCapable(context, page);
+
   const name = `OPSIQ Acceptance - ${domainDisplayName(domain)} - ${runId}`;
-  const res = await timedApiCall(context, "POST", "/api/owner/recovery/businesses", () =>
-    page.request.post("/api/owner/recovery/businesses", {
+  // Dedicated fixture-only route: the fixture flag is hard-wired server-side (not a request field), so
+  // this can never create an ordinary business, and it requires the narrow ACCEPTANCE_FIXTURE_WRITE
+  // authority rather than SYSTEM_ADMIN. Without it the route answers 401/403 and creates nothing, and
+  // the preflight above stops the run first.
+  const res = await timedApiCall(context, "POST", ACCEPTANCE_FIXTURE_ENDPOINTS.business, () =>
+    page.request.post(ACCEPTANCE_FIXTURE_ENDPOINTS.business, {
       data: {
         name,
         businessType: "generic_local_service",
         currency: "INR",
         b2cSupported: true,
         b2bSupported: false,
-        // Marks this as synthetic acceptance data at creation time (see
-        // OwnerBusiness.isFixtureBusiness), rather than relying on the
-        // "OPSIQ Acceptance - ..." name to keep it out of ordinary owners'
-        // views. Requires the acceptance account to hold SYSTEM_ADMIN in the
-        // target environment -- the route silently ignores this flag
-        // otherwise, so it is not sufficient on its own without that grant.
-        isFixtureBusiness: true,
       },
     })
   );
@@ -124,6 +125,9 @@ export async function resolveOrCreateDomainBusiness(
   if (!businessId) {
     throw new Error(`Dedicated ${domain} acceptance business creation returned no id.`);
   }
+
+  // 201 alone is not proof of isolation: prove the row is a fixture before anything uses it.
+  await assertBusinessIsFixture(context, page, businessId);
 
   mkdirSync(EVIDENCE_DIR, { recursive: true });
   const record: DomainBusinessRecord = { domain, businessId, name, runId };

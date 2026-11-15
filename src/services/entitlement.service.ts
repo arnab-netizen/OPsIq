@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { resolveAccess } from "@/domain/billing/paddle";
 
 export interface WorkspacePlan {
   id: string;
@@ -64,6 +65,7 @@ export async function getWorkspacePlan(
         },
       },
       status: true,
+      currentPeriodEnd: true,
     },
   });
 
@@ -81,7 +83,8 @@ export async function getWorkspacePlan(
     );
   }
 
-  if (subscription.status !== "active") {
+  // Paid ("active") or in the bounded past-due grace window (resolveAccess); everything else denied.
+  if (!resolveAccess(subscription).entitled) {
     throw new ForbiddenError(
       `Workspace subscription is ${subscription.status}, not active`
     );

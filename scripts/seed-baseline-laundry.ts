@@ -18,6 +18,8 @@
  *  - EMERGENCY budget     → a committed statutory-payroll obligation due in days (mode flips, growth BLOCKed)
  *  - reassessment         → diagnosis cadence recorded by the real services
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import {
@@ -143,7 +145,7 @@ async function main() {
     { periodId: period.id, label: "Payroll + PF/ESI (committed)", category: "statutory_payroll_tax", amount: 130000, state: "committed", obligationKind: "payroll", dueInDays: 4, requestedByUserId: USER_ID, ownerApprovalThreshold: 50000 },
     USER_ID, WORKSPACE_ID
   );
-  console.log(`[baseline] budget: period ${period.id}, mode ${spend.plan.mode}, decision ${spend.plan.decisionType}`);
+  console.log(`[baseline] budget: period ${period.id}, mode ${spend.plan?.mode}, decision ${spend.plan?.decisionType}`);
 
   // ── Capacity bottleneck: a down dryer + an over-utilised washer ───────────────────────────────
   const { recordEquipment } = await import("../src/services/owner-mode/equipment.service");

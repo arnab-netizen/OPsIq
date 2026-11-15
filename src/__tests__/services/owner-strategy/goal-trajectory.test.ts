@@ -239,3 +239,100 @@ describe("scoreGoalAcceleration", () => {
     expect(score.resourceContention).toHaveLength(0);
   });
 });
+
+describe("goal-trajectory — every numeric output is finite or null (beta integrity BIV-05)", () => {
+  const numericKeys = ["projectedMonthsToGoal", "requiredMonthlyImprovement", "gapToClose", "currentValue", "percentComplete"] as const;
+  function assertFiniteOrNull(result: ReturnType<typeof computeGoalTrajectory>) {
+    for (const k of numericKeys) {
+      const v = result[k];
+      expect(v === null || Number.isFinite(v), `${k}=${String(v)}`).toBe(true);
+    }
+  }
+
+  it("no recorded data: gap, current value and progress are unknown (null), not 0", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 500000, targetDate: monthsAhead(12), periods: [], now });
+    assertFiniteOrNull(r);
+    expect(r.currentValue).toBeNull();
+    expect(r.gapToClose).toBeNull();
+    expect(r.percentComplete).toBeNull();
+    expect(r.onTrack).toBeNull();
+    expect(r.requiredMonthlyImprovement).toBeNull();
+  });
+
+  it("past target date: required monthly improvement is null (never Infinity) and flagged", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 500000, targetDate: new Date("2020-01-01T00:00:00Z"), periods: growingPeriods.slice(-1), now });
+    assertFiniteOrNull(r);
+    expect(r.targetDatePassed).toBe(true);
+    expect(r.requiredMonthlyImprovement).toBeNull();
+    expect(r.gapToClose).toBeGreaterThan(0);
+  });
+
+  it("past target date with a full projection is not reported on track", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 100000, targetDate: new Date("2020-01-01T00:00:00Z"), periods: growingPeriods, now });
+    assertFiniteOrNull(r);
+    expect(r.targetDatePassed).toBe(true);
+    expect(r.onTrack).toBe(false);
+  });
+
+  it("percentComplete uses the declared baseline: (current − baseline)/(target − baseline)", () => {
+    const last = growingPeriods[growingPeriods.length - 1].netProfit;
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 10000, baselineAmount: 2000, targetDate: monthsAhead(24), periods: growingPeriods, now });
+    expect(r.currentValue).toBeCloseTo(last, 5);
+    expect(r.percentComplete).toBeCloseTo(Math.round(((last - 2000) / 8000) * 1000) / 10, 5);
+  });
+
+  it("target not above baseline makes progress uncomputable (null), not a division by zero", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 2000, baselineAmount: 2000, targetDate: monthsAhead(6), periods: growingPeriods, now });
+    assertFiniteOrNull(r);
+    expect(r.percentComplete).toBeNull();
+  });
+
+  it("serialises without losing meaning (no Infinity → null coercion surprise)", () => {
+    const r = computeGoalTrajectory({ targetType: "REVENUE", targetAmount: 1e6, targetDate: new Date("2020-01-01T00:00:00Z"), periods: [], now });
+    expect(JSON.parse(JSON.stringify(r))).toMatchObject({ requiredMonthlyImprovement: null, targetDatePassed: true });
+  });
+});
+
+describe("goal-trajectory — values crossing zero (final hostile audit P1-2)", () => {
+  const series = (vals: number[]) =>
+    vals.map((v, i) => ({ periodStart: monthsAgo(vals.length - i), periodEnd: monthsAgo(vals.length - i - 1), revenue: null, netProfit: v }));
+
+  it("profit falling into a loss: no NaN anywhere and never 'on track'", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 5000, targetDate: monthsAhead(12), periods: series([1000, 800, -500]), now });
+    for (const v of [r.projectedMonthsToGoal, r.requiredMonthlyImprovement, r.gapToClose, r.currentValue, r.percentComplete]) {
+      expect(v === null || Number.isFinite(v)).toBe(true);
+    }
+    expect(r.currentTrajectoryDate === null || Number.isFinite(r.currentTrajectoryDate.getTime())).toBe(true);
+    expect(r.onTrack).toBe(false);
+    expect(r.projectedMonthsToGoal).toBeNull();
+    expect(r.assumptions.join(" ")).not.toMatch(/NaN/);
+    expect(JSON.stringify(r)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("an improving loss (−1000 → −500) is not reported on track and has no NaN", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 5000, targetDate: monthsAhead(12), periods: series([-1000, -800, -500]), now });
+    expect(r.onTrack).not.toBe(true);
+    expect(JSON.stringify(r)).not.toMatch(/NaN|Infinity/);
+  });
+});
+
+describe("goal-trajectory — horizon and reached-goal edges (round-2 audit)", () => {
+  const series = (vals: number[]) =>
+    vals.map((v, i) => ({ periodStart: monthsAgo(vals.length - i), periodEnd: monthsAgo(vals.length - i - 1), revenue: null, netProfit: v }));
+
+  it("growth too slow to reach the target within 100 years: no Invalid Date, not on track, a miss", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 10_000_000, targetDate: monthsAhead(12), periods: series([1_000_000, 1_000_000, 1_000_001]), now });
+    expect(r.projectedMonthsToGoal).toBeNull();
+    expect(r.currentTrajectoryDate).toBeNull();
+    expect(r.onTrack).toBe(false);
+    expect(r.trajectoryMiss).toBe(true);
+    expect(JSON.stringify(r)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("a goal already reached is never a miss, even after its target date", () => {
+    const r = computeGoalTrajectory({ targetType: "PROFIT", targetAmount: 1000, targetDate: new Date("2020-01-01T00:00:00Z"), periods: series([1500, 1800, 2000]), now });
+    expect(r.onTrack).toBe(true);
+    expect(r.trajectoryMiss).toBe(false);
+    expect(r.percentComplete).toBe(200);
+  });
+});

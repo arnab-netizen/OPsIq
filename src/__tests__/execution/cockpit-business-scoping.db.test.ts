@@ -246,7 +246,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Cockpit business-scoping contaminati
     const ws = randomUUID();
     const bizA = randomUUID();
     const bizB = randomUUID();
-    const NOW = new Date("2026-09-11T00:00:00Z");
+    // Relative (not a frozen calendar date): the cockpit applies a real-clock freshness window, so a fixed NOW rots.
+  const NOW = new Date(Date.now() - 60 * 60 * 1000);
     const PERIOD_START = new Date(NOW.getTime() - 30 * 86_400_000);
 
     beforeAll(async () => {

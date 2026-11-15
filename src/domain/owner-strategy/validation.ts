@@ -6,6 +6,7 @@
  * may be negative (a cost cut or a revenue dip is a valid scenario); other
  * quantities are non-negative (fail closed). Missing data stays missing.
  */
+import { businessCurrencySchema } from "@/domain/founder-recovery/currency";
 import { z } from "zod/v4";
 import { STRATEGY_BUSINESS_MODELS, STRATEGY_RISK_LEVELS } from "./types";
 import { RECOVERY_ACTION_STATUSES } from "@/domain/founder-recovery/action-status";
@@ -19,7 +20,7 @@ export const strategySnapshotCreateSchema = z
   .object({
     periodStart: z.string().min(1, "Reporting period start is required"),
     periodEnd: z.string().min(1, "Reporting period end is required"),
-    currency: z.string().min(1, "Currency is required").max(8),
+    currency: businessCurrencySchema,
     businessModel: z.enum(STRATEGY_BUSINESS_MODELS).optional(),
     industryTemplate: z.string().max(100).optional(),
     optionName: z.string().max(200).optional(),

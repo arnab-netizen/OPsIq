@@ -139,7 +139,7 @@ describe("registerConnector", () => {
     const row = { ...activeRow, businessId: "biz-1" };
     mockDb.ownerConnector.create.mockResolvedValue(row);
 
-    await registerConnector({ workspaceId: WS, actorId: ACTOR, provider: "QUICKBOOKS", businessId: "biz-1" });
+    await registerConnector({ workspaceId: WS, actorId: ACTOR, provider: "XERO", businessId: "biz-1" });
 
     expect(mockDb.ownerConnector.create).toHaveBeenCalledWith(
       expect.objectContaining({

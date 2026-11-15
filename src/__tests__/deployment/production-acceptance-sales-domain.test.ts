@@ -29,6 +29,11 @@ import type { Page } from "@playwright/test";
 import { registerActionDialogHandler } from "../../../tests/production/helpers/dialog-handler";
 import { createJourneyWatch } from "../../../tests/production/helpers/journey-watchers";
 
+// The closed-loop lifecycle now lives in ONE typed helper that can only mutate a bound fixture (Production run #17
+// remediation), so the exact-id properties below are asserted against that implementation.
+const LOOP_SRC = readFileSync(join(process.cwd(), "tests/production/helpers/fixture-domain-loop.ts"), "utf-8");
+const LIFECYCLE_BODY = LOOP_SRC.slice(LOOP_SRC.indexOf("export async function driveFixtureActionLifecycle"));
+
 const SALES_SPEC_SRC = readFileSync(
   join(process.cwd(), "tests/production/21-sales-acceptance.spec.ts"),
   "utf-8"
@@ -38,28 +43,27 @@ const SALES_SPEC_SRC = readFileSync(
 // (a) Action completion verified by exact id, not a `.first()` card
 // ---------------------------------------------------------------------------
 describe("(a) 21-06 verifies Sales action completion by id, not by re-reading a .first() card", () => {
-  it("captures the action's own id from the dashboard before clicking Complete", () => {
+  it("takes the action's own id from the fixture's own diagnosis cycle before any mutation, and the spec drives the lifecycle through the bound helper", () => {
     const idx = SALES_SPEC_SRC.indexOf('test("21-06');
     expect(idx).toBeGreaterThan(-1);
-    const clickIdx = SALES_SPEC_SRC.indexOf('name: "Complete"', idx);
-    expect(clickIdx).toBeGreaterThan(idx);
-    const setup = SALES_SPEC_SRC.slice(idx, clickIdx);
-    expect(setup).toMatch(/const actionId: string = /);
+    expect(SALES_SPEC_SRC.slice(idx, idx + 900)).toContain("driveFixtureActionLifecycle(context, page, fx)");
+    const adoptIdx = LIFECYCLE_BODY.indexOf("fx.latestCycleActions");
+    const firstPatchIdx = LIFECYCLE_BODY.indexOf("patchFixtureAction(");
+    expect(adoptIdx).toBeGreaterThan(-1);
+    expect(firstPatchIdx).toBeGreaterThan(adoptIdx);
+    expect(LIFECYCLE_BODY).toMatch(/const actionId = actions\[0\]\.id;/);
   });
 
   it("polls the action's own id via a direct GET to confirm 'completed', using expect(...).toPass for auto-retry", () => {
-    const idx = SALES_SPEC_SRC.indexOf('test("21-06');
-    const block = SALES_SPEC_SRC.slice(idx, idx + 3700);
-    expect(block).toMatch(/await expect\(async \(\) => \{[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
-    expect(block).toMatch(/\/api\/owner\/sales\/actions\/\$\{actionId\}/);
+    expect(LIFECYCLE_BODY).toMatch(/await expect\(async \(\) => \{[\s\S]*?readFixtureAction\(context, page, fx, actionId\)\)\.status\)\.toBe\("completed"\);[\s\S]*?\}\)\.toPass\(\{ timeout: \d+ \}\)/);
   });
 
-  it("does not assert the completed status via card.toContainText('completed') (only 'assigned'/'in_progress' use the card)", () => {
-    const idx = SALES_SPEC_SRC.indexOf('test("21-06');
-    const block = SALES_SPEC_SRC.slice(idx, idx + 3700);
-    expect(block).not.toMatch(/expect\(card\)\.toContainText\(["']completed["']\)/);
-    expect(block).toMatch(/expect\(card\)\.toContainText\(["']assigned["']\)/);
-    expect(block).toMatch(/expect\(card\)\.toContainText\(["']in_progress["']\)/);
+  it("has no action-card UI assertions at all (the Production UI is read-only; every transition is read back by id)", () => {
+    expect(SALES_SPEC_SRC).not.toMatch(/expect\(card\)|\.border\.rounded|locator\("section", \{ hasText/);
+    for (const status of ["assigned", "in_progress", "completed"]) {
+      expect(LIFECYCLE_BODY).toContain(status);
+    }
+    expect(LIFECYCLE_BODY).toMatch(/\(await readFixtureAction\(context, page, fx, actionId\)\)\.status\)\.toBe\(status\)/);
   });
 });
 
@@ -88,8 +92,9 @@ describe("(b) every page.request.* call site in the Sales spec is wrapped in tim
 // (c) Reuses the shared helpers rather than redefining Finance-specific logic
 // ---------------------------------------------------------------------------
 describe("(c) the Sales spec reuses shared harness helpers, not Finance-specific duplicates", () => {
-  it("imports the generic domain-diagnosis/dialog-handler/journey-watchers helpers", () => {
-    expect(SALES_SPEC_SRC).toContain('from "./helpers/domain-diagnosis"');
+  it("imports the generic fixture-domain-loop/dialog-handler/journey-watchers helpers (the UI diagnosis helper is gone)", () => {
+    expect(SALES_SPEC_SRC).toContain('from "./helpers/fixture-domain-loop"');
+    expect(SALES_SPEC_SRC).not.toContain('from "./helpers/domain-diagnosis"');
     expect(SALES_SPEC_SRC).toContain('from "./helpers/dialog-handler"');
     expect(SALES_SPEC_SRC).toContain('from "./helpers/journey-watchers"');
   });

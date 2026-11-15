@@ -1,4 +1,4 @@
-/** GET /api/owner/portfolio/risks — portfolio risk alerts + investment recommendation (OWNER_VIEW) */
+/** GET /api/owner/portfolio/risks — portfolio risk alerts + investment recommendation and its visible abstention (OWNER_VIEW) */
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getPortfolio } from "@/services/owner-portfolio/portfolio.service";
@@ -13,6 +13,7 @@ export const GET = withCanonicalEnforcement(
       hasData: view.hasData,
       riskAlerts: view.riskAlerts,
       investmentRecommendation: view.investmentRecommendation,
+      investmentAssessment: view.investmentAssessment,
       generatedAt: view.generatedAt,
     };
   },

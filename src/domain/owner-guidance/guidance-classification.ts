@@ -2,8 +2,12 @@
  * Module 41 — Guidance classification (pure).
  *
  * The terminal classification of a guidance evaluation. Tells the owner surface
- * whether guidance is safe to act on, needs a decision, is blocked on data/safety,
- * or has rolled forward into an outcome/rollback/redesign state.
+ * where this guidance is in ITS OWN workflow: ready to review, needs a decision, blocked on data/safety,
+ * or rolled forward into an outcome/rollback/redesign state.
+ *
+ * It is NOT the owner's permission to commit money, capacity or a plan. That statement comes only from the canonical
+ * advice policy (CurrentOwnerDecision.advicePolicy, owner-spine/owner-advice-policy.ts); a "ready" guidance classification
+ * never overrides `advicePolicy.canMakeMaterialCommitment`.
  *
  * Pure + deterministic.
  */

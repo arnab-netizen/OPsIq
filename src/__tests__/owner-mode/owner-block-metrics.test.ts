@@ -125,4 +125,36 @@ describe("getOwnerBlockMetrics", () => {
     expect(m.blockedRecommendations).toBe(1);
     expect(m.financeBlocked).toBe(1); // matched by owner-action gate code
   });
+
+  it("D-P2-3 — with a business scope, every block counter is that business's only (another business's never constrain its advice)", async () => {
+    const events = [
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { code: "CASH_SAFETY_BLOCKED", businessId: "A" } },
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { code: "MARGIN_SAFETY_BLOCKED", businessId: "B" } },
+      // a consulting recommendation's promotion block: no business on the event
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { errorName: "CashSafetyGateError" } },
+    ];
+    const forB = await getOwnerBlockMetrics("ws1", depsWith(events), { businessId: "B", unscopedAttributable: false });
+    expect(forB.financeBlocked).toBe(1);
+    // B's own block only: A's block and the unattributable business-less block are not B's.
+    expect(forB.blockedRecommendations).toBe(1);
+    // The business-less event counts only when attributable to the business (the workspace's only one).
+    const onlyA = await getOwnerBlockMetrics("ws1", depsWith(events), { businessId: "A", unscopedAttributable: true });
+    expect(onlyA.financeBlocked).toBe(2);
+    expect(onlyA.blockedRecommendations).toBe(2);
+    // Without a scope: the workspace-wide aggregate (unchanged contract).
+    expect((await getOwnerBlockMetrics("ws1", depsWith(events))).financeBlocked).toBe(3);
+  });
+
+  it("P3 — proof (task-completion) blocks and do-not-repeat blocks are business-scoped too; auto-handled approvals stay workspace-level", async () => {
+    const events = [
+      { eventName: AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED, payload: { reason: "proof not cleared" } },
+      { eventName: AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_BLOCKED, payload: { matchedKeys: ["scope:x"] } },
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { code: "CAPACITY_BLOCKED", businessId: "A" } },
+      { eventName: AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED, payload: {} },
+    ];
+    const b = await getOwnerBlockMetrics("ws1", depsWith(events), { businessId: "B", unscopedAttributable: false });
+    expect(b).toEqual({ blockedRecommendations: 0, financeBlocked: 0, proofBlocked: 0, approvalsAvoided: 1 });
+    const sole = await getOwnerBlockMetrics("ws1", depsWith(events), { businessId: "A", unscopedAttributable: true });
+    expect(sole).toEqual({ blockedRecommendations: 2, financeBlocked: 0, proofBlocked: 1, approvalsAvoided: 1 });
+  });
 });

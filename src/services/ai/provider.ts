@@ -68,6 +68,8 @@ export interface AiContext {
   items: AiContextItem[];
   /** The closed set of evidence ids the model may cite. Anything else in output = hallucination. */
   allowedEvidenceIds: string[];
+  /** Declared origins of the data in `items` (e.g. "QUICKBOOKS"). Intuit / QuickBooks-derived data is NEVER sent to an AI provider. */
+  dataOrigins?: readonly string[];
   /** Deterministic gate snapshot the AI must not contradict/bypass (advisory context only). */
   gates: {
     diagnosisPermission?: string;
@@ -126,6 +128,11 @@ export interface AiProvider {
  * Default provider when no key/config is present. ALWAYS returns AI_UNAVAILABLE —
  * the system must degrade to its deterministic path, never to fabricated output.
  */
+/** Intuit user data must not reach a third-party model: a context that declares a QuickBooks origin is served by the unavailable provider. */
+export function excludeIntuitData(provider: AiProvider, context: AiContext): AiProvider {
+  return (context.dataOrigins ?? []).some((o) => /quickbooks|intuit|qbo/i.test(o)) ? new UnavailableAiProvider() : provider;
+}
+
 export class UnavailableAiProvider implements AiProvider {
   readonly name = "unavailable";
   async generate(): Promise<AiProviderResult> {

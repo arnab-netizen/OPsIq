@@ -109,7 +109,7 @@ export interface PublicDecisionDTO {
 export interface PublicWorkspaceHealthDTO {
   workspaceId: string;
   assessedAt: string;
-  overallStatus: "critical" | "at_risk" | "healthy" | "improving";
+  overallStatus: "critical" | "at_risk" | "healthy" | "improving" | "needs_data";
   engagementCount: number;
   activeEngagements: number;
   completedEngagements: number;

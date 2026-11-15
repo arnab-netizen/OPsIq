@@ -11,6 +11,7 @@
  * never re-derives a risk, and shows no fraud/theft/negligence wording or hidden score.
  */
 
+import { ownerMissingItems } from "@/domain/owner-spine/owner-field-labels";
 import { useState } from "react";
 import { Badge, Button, Textarea, Select } from "@/ui/primitives";
 
@@ -137,7 +138,7 @@ export function AdjudicationQueue({ items, outcomeOptions, onAdjudicate }: Adjud
 
             {item.missingData.length > 0 && (
               <p style={{ margin: 0, fontSize: 13, color: "#b45309" }} data-testid="item-missing-data">
-                Missing data: {item.missingData.join("; ")}
+                Missing data: {ownerMissingItems(item.missingData).join("; ")}
               </p>
             )}
 

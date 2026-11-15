@@ -57,5 +57,5 @@ export const POST = withCanonicalEnforcement(
       message: "Decision executed successfully",
     };
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
+  { requireCommercial: "approval_resolution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.DECISION_UPDATE] }
 );

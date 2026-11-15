@@ -1,5 +1,10 @@
 "use client";
 
+import { assessScoreAvailability, presentScores } from "@/domain/owner-spine/score-availability";
+import { CurrencySelect } from "@/components/owner/CurrencySelect";
+import { DomainMainTargetContext } from "@/components/owner/DomainMainTargetContext";
+import { VerificationEvidenceText } from "@/components/owner/VerificationEvidenceText";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Input, Select, CardDashboardSkeleton, PageHeader, PageContainer } from "@/ui/primitives";
 import { BUSINESS_TYPE_OPTIONS } from "@/domain/owner-mode/owner-data-hub";
@@ -13,9 +18,12 @@ import {
   type VerificationValues,
 } from "@/components/owner/DomainActionInlineForms";
 import { useActiveBusiness } from "@/context/active-business-context";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { httpResponseErrorFromBody } from "@/lib/operator-safe-errors";
+import { presentDomainError } from "@/lib/owner-domain-error-presentation";
 
 import { humanizeMetricKey, humanizeEvidenceLine } from "@/lib/metric-label";
+import { getVerificationDirection } from "@/domain/owner-mode/verification-direction";
+import { InProgressPeriodNotice } from "@/components/owner/InProgressPeriodNotice";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
 const VERIFY_VARIANT: Record<string, "default-accessible" | "success-accessible" | "warning-accessible" | "destructive-accessible" | "muted-accessible"> = {
@@ -65,7 +73,8 @@ async function api(path: string, init?: RequestInit) {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+  // Keep the HTTP status + server message + field errors (a plain Error loses them).
+  if (!res.ok) throw httpResponseErrorFromBody(res.status, data);
   return data;
 }
 
@@ -180,7 +189,7 @@ export default function OwnerSalesPage() {
       if (loadGenerationRef.current !== generation) return;
       // UX-04B: governed classification, never the raw fetch/exception text -- mirrors Money's
       // already-shipped pattern (see UX-04A Section Q item 4).
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to load"), { context: "load" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to load"), "load"));
     } finally {
       // A stale request's completion must never toggle the loading flag for a request that's no
       // longer current.
@@ -227,7 +236,7 @@ export default function OwnerSalesPage() {
       if (activeBusinessIdRef.current !== created.id) return;
       await load(created.id);
     } catch (e) {
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to create business"), { context: "save" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to create business"), "save"));
     } finally {
       setBusy(false);
     }
@@ -265,7 +274,7 @@ export default function OwnerSalesPage() {
       await load(targetBusinessId);
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to save snapshot"), { context: "save" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to save snapshot"), "save"));
     } finally {
       setBusy(false);
     }
@@ -286,7 +295,7 @@ export default function OwnerSalesPage() {
       await load(targetBusinessId);
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to run diagnosis"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to run diagnosis"), "action"));
     } finally {
       setBusy(false);
     }
@@ -305,7 +314,7 @@ export default function OwnerSalesPage() {
       await load(targetBusinessId);
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to update action"), "action"));
     } finally {
       setBusy(false);
     }
@@ -334,7 +343,7 @@ export default function OwnerSalesPage() {
     } catch (e) {
       if (activeBusinessIdRef.current !== targetBusinessId) return;
       // Failure must never clear the open inline form.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to update action"), { context: "action" }).operatorMessage);
+      setError(presentDomainError(e instanceof Error ? e : new Error("Failed to update action"), "action"));
     } finally {
       setBusy(false);
       actionMutationInFlightRef.current = false;
@@ -343,8 +352,8 @@ export default function OwnerSalesPage() {
 
   // UX-06 Wave B1: replaces the three native-dialog calls previously inlined in verifyAction().
   // Same POST endpoint/body shape -- the inline form already validated/typed the values.
-  async function verifyActionSubmit(action: any, values: VerificationValues) {
-    if (actionMutationInFlightRef.current) return;
+  async function verifyActionSubmit(action: any, values: VerificationValues): Promise<string | null> {
+    if (actionMutationInFlightRef.current) return null;
     actionMutationInFlightRef.current = true;
     const targetBusinessId = selected;
     setBusy(true);
@@ -358,13 +367,17 @@ export default function OwnerSalesPage() {
           targetDirection: values.targetDirection,
         }),
       });
-      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return; }
+      if (activeBusinessIdRef.current !== targetBusinessId) { setEditingAction(null); return null; }
       setEditingAction(null);
       await load(targetBusinessId);
+      return null;
     } catch (e) {
-      if (activeBusinessIdRef.current !== targetBusinessId) return;
+      if (activeBusinessIdRef.current !== targetBusinessId) return null;
       // Failure must never clear the open inline form.
-      setError(classifyOperatorError(e instanceof Error ? e : new Error("Failed to verify"), { context: "action" }).operatorMessage);
+      const message = presentDomainError(e instanceof Error ? e : new Error("Failed to verify"), "action");
+      setError(message);
+      // Also returned so the open inline form shows it next to the fields.
+      return message;
     } finally {
       setBusy(false);
       actionMutationInFlightRef.current = false;
@@ -411,7 +424,7 @@ export default function OwnerSalesPage() {
               options={[...BUSINESS_TYPE_OPTIONS]}
             />
             <Input name="location" label="Location" />
-            <Input name="currency" label="Currency" defaultValue="INR" required />
+            <CurrencySelect />
             <Select name="b2cSupported" label="B2C supported" options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
             <Select name="b2bSupported" label="B2B supported" options={[{ value: "no", label: "No" }, { value: "yes", label: "Yes" }]} />
           </div>
@@ -440,8 +453,8 @@ export default function OwnerSalesPage() {
             <Button onClick={() => setShowSnapshotForm((s) => !s)} disabled={!selected}>
               + Add sales snapshot
             </Button>
-            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy}>
-              Run sales diagnosis
+            <Button onClick={runDiagnosis} disabled={!selected || !dashboard?.latestSnapshot || busy} title={dashboard?.latestSnapshotDiagnosis?.current ? "These figures were already diagnosed. Re-run if something changed." : undefined}>
+              {dashboard?.latestSnapshotDiagnosis?.current ? "Re-run sales diagnosis" : "Run sales diagnosis"}
             </Button>
           </div>
 
@@ -484,10 +497,14 @@ export default function OwnerSalesPage() {
             </form>
           )}
 
+          <InProgressPeriodNotice periodState={dashboard?.latestSnapshotPeriodState} periodEnd={dashboard?.latestSnapshot?.periodEnd} hasCompletedReading={Boolean(dashboard?.hasData)} diagnosis={dashboard?.latestSnapshotDiagnosis ?? null} />
+          <DomainMainTargetContext domain="sales" businessId={dashboard?.selectedBusinessId} revision={dashboard} />
+
           {!dashboard?.hasData ? (
             <DiagnosisEmptyState
               domainLabel="sales"
               hasSnapshot={Boolean(dashboard?.latestSnapshot)}
+              inProgressDiagnosis={dashboard?.latestSnapshotDiagnosis?.current ? dashboard.latestSnapshotDiagnosis : null}
               snapshotLabel="sales snapshot"
               diagnosisLabel="Run sales diagnosis"
             />
@@ -535,9 +552,18 @@ function SalesCycleView({
   onEditingActionChange: (v: { actionId: string; mode: "complete" | "verify" } | null) => void;
   onUpdateAction: (a: any, s: string) => void;
   onCompleteAction: (a: any, values: CompletionValues) => void;
-  onVerifyAction: (a: any, values: VerificationValues) => void;
+  onVerifyAction: (a: any, values: VerificationValues) => Promise<string | null>;
 }) {
   const state = score?.salesState ?? cycle.salesState;
+  // UNKNOWN is never healthy / zero-risk: the one spine rule decides whether these are shown as scores.
+  const presentedScores = presentScores(
+    {
+      health: Number(score?.healthScore ?? cycle.healthScore ?? 0),
+      risk: Number(score?.riskScore ?? cycle.riskScore ?? 0),
+      opportunity: Number(score?.opportunityScore ?? cycle.opportunityScore ?? 0),
+    },
+    assessScoreAvailability({ dataConfidenceScore: score?.dataConfidenceScore ?? cycle.dataConfidenceScore ?? 0, missingCritical: missing }),
+  );
   // Keyed by action id, one entry per row, so Cancel can return focus to the exact trigger that
   // opened its form (confirmed production accessibility finding) -- never a different row's
   // trigger, even with multiple actions open/closed in sequence.
@@ -549,13 +575,16 @@ function SalesCycleView({
         <div>
           <div className="text-xs uppercase text-muted-foreground">Latest diagnosis · cycle #{cycle.sequenceNumber}</div>
           <div className="text-lg font-semibold tabular-nums">
-            Health {Math.round(score?.healthScore ?? cycle.healthScore)}/100 · Risk {Math.round(score?.riskScore ?? cycle.riskScore)}/100 · Opportunity {Math.round(score?.opportunityScore ?? cycle.opportunityScore)}/100
+            {presentedScores.scores.map((s) => `${s.label} ${s.value}`).join(" · ")}
           </div>
+          {presentedScores.note && (
+            <p className="mt-1 text-sm font-normal text-foreground" data-testid="score-availability-note">{presentedScores.note}</p>
+          )}
         </div>
         <div className="text-right">
           <Badge variant={STATE_VARIANT[state] || "muted-accessible"}>{STATE_LABEL[state] ?? state}</Badge>
           <div className="text-xs text-muted-foreground mt-1">
-            data confidence {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
+            data completeness {Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100
           </div>
         </div>
       </div>
@@ -568,12 +597,14 @@ function SalesCycleView({
 
       {recommended && (
         <div className="border rounded-lg p-4 bg-card">
-          <div className="text-xs uppercase text-muted-foreground">Recommended next sales action</div>
+          <div className="text-xs uppercase text-muted-foreground">Next step within Sales (local to this area — your overall main target is on Home)</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
-          <p className="text-xs text-muted-foreground">
-            priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {humanizeMetricKey(recommended.verificationMetric)}
-          </p>
+          {recommended.localStepSource === "domain_action" && (
+            <p className="text-xs text-muted-foreground">
+              priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)}{recommended.verificationMetric ? ` · verify via ${humanizeMetricKey(recommended.verificationMetric)}` : ""}
+            </p>
+          )}
         </div>
       )}
 
@@ -605,6 +636,12 @@ function SalesCycleView({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-semibold">{a.title}</div>
+                    {a.carriedFromCycleSequence != null && (
+                      <div className="text-xs text-muted-foreground">{a.completedEarlier ? "Completed in cycle #" : "Still open from cycle #"}{a.carriedFromCycleSequence}
+                        {a.stillFlaggedByLatestDiagnosis === false && " — the latest diagnosis no longer flags this; finish or cancel it"}
+                        {a.completedEarlier && " — a newer proposal for the same step is not shown as new work until newer figures show it is needed again"}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {a.ownerRole} · priority {Math.round(a.priorityScore)} · ~{a.expectedTimeframeDays}d
                     </div>
@@ -630,6 +667,7 @@ function SalesCycleView({
                     </Button>
                   )}
                   {a.status === "in_progress" && <Button onClick={() => onUpdateAction(a, "blocked")} disabled={busy}>Block</Button>}
+                  {canRecordOutcome(a.status) && (
                   <Button
                     ref={(el) => { verifyTriggerRefs.current[a.id] = el; }}
                     aria-expanded={isVerifyOpen}
@@ -639,15 +677,14 @@ function SalesCycleView({
                   >
                     Verify outcome
                   </Button>
+                  )}
                 </div>
                 {latestVerification && (
                   <div className="mt-2 text-xs">
                     <Badge variant={VERIFY_VARIANT[latestVerification.status] || "muted-accessible"}>
                       {VERIFY_LABEL[latestVerification.status] ?? latestVerification.status}
                     </Badge>{" "}
-                    <span className="text-muted-foreground">
-                      before {String(latestVerification.beforeValue)} → after {String(latestVerification.afterValue)} ({latestVerification.targetDirection})
-                    </span>
+                    <VerificationEvidenceText verification={latestVerification} />
                   </div>
                 )}
                 {isCompleteOpen && (
@@ -665,8 +702,9 @@ function SalesCycleView({
                   <VerificationActionForm
                     formId={verifyFormId}
                     busy={busy}
-                    defaultDirection="up"
+                    defaultDirection={getVerificationDirection(a.verificationMetric, a.findingCode)}
                     metricLabel={humanizeMetricKey(a.verificationMetric)}
+                    measuredBaseline={a.measuredBaseline ?? null}
                     onCancel={() => {
                       onEditingActionChange(null);
                       verifyTriggerRefs.current[a.id]?.focus();

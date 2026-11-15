@@ -42,6 +42,12 @@ export interface ProfitLeakSignals {
   revenue?: number | null;
   discountAmount?: number | null;
   discountLeak?: boolean;
+  /**
+   * True when the caller measured discounting by some means other than `discountAmount` (e.g. a price-deviation
+   * reading), so a false `discountLeak` means "measured, no leak" rather than "no reading". Without any of
+   * discountAmount / discountLeak=true / this flag, discounting is UNKNOWN — never treated as zero.
+   */
+  discountMeasured?: boolean;
   marginPct?: number | null; // 0..1
   marginSafe?: boolean | null;
   lowMarginB2BAccount?: boolean;
@@ -163,7 +169,8 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
   // DISCOUNT_LEAK — real discount amount is data; recoverable portion is owner judgment.
   const discount = s.discountAmount ?? null;
   const rev = s.revenue ?? null;
-  if (s.discountLeak || (discount != null && rev != null && rev > 0 && discount / rev >= 0.05)) {
+  const discountIsLeak = Boolean(s.discountLeak) || (discount != null && rev != null && rev > 0 && discount / rev >= 0.05);
+  if (discountIsLeak) {
     const ratio = discount != null && rev != null && rev > 0 ? discount / rev : null;
     const marginKnown = s.marginPct != null;
     const tier: ImpactTier = discount == null ? (marginKnown ? "MEDIUM" : "NEEDS_DATA")
@@ -370,14 +377,28 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
     });
   }
 
-  // PRICING_UNDERCHARGE (margin unsafe but not a discount issue → likely underpricing).
-  if (s.marginSafe === false && !s.discountLeak) {
+  // PRICING_UNDERCHARGE (margin unsafe, and discounting is a KNOWN non-cause → likely underpricing).
+  // Three discount states: measured > 0 (a leak, handled above, or a below-leak-threshold amount), measured = 0,
+  // and UNKNOWN. Unknown is never zero: without a discount reading the absence of a discount signal proves
+  // nothing, so this rule stays silent and lets independent evidence (e.g. the pricing-complaint rule above)
+  // raise a pricing leak on its own.
+  const discountMeasuredAmount = s.discountAmount ?? null;
+  const discountKnown = s.discountLeak === true || discountMeasuredAmount !== null || s.discountMeasured === true;
+  if (s.marginSafe === false && !discountIsLeak && discountKnown) {
+    const discountMeasuredZero = discountMeasuredAmount === 0;
     F({
       leakType: "PRICING_UNDERCHARGE", domain: "pricing", severity: "HIGH", confidence: "MEDIUM",
-      evidence: ["margin below safe level with no discount signal"], missingData: s.marginPct == null ? ["gross margin by line/segment"] : [],
-      estimatedImpact: { tier: "MEDIUM", note: "Thin margin with no discounting points to underpricing on at least one line." },
+      evidence: [discountMeasuredZero
+        ? "margin below safe level; measured discounting this period is zero"
+        : "margin below safe level; measured discounting is not high enough to explain it"],
+      missingData: s.marginPct == null ? ["gross margin by line/segment"] : [],
+      estimatedImpact: { tier: "MEDIUM", note: discountMeasuredZero
+        ? "Thin margin with measured zero discounting points to underpricing (or cost) on at least one line."
+        : "Thin margin that discounting does not explain points to underpricing (or cost) on at least one line." },
       cashImpact: "Thin margin means little cash per job.", marginImpact: "Below-target margin directly.",
-      ownerExplanation: "Margin is thin but you are not discounting — a line is likely underpriced.",
+      ownerExplanation: discountMeasuredZero
+        ? "Margin is thin and no discounting was recorded this period — a line is likely underpriced."
+        : "Margin is thin and the discounting recorded does not explain it — a line is likely underpriced.",
       recommendedAction: "Identify the lowest-margin line and reprice it to the margin floor this month.",
       ownerApprovalRequired: true, riskLevel: "MEDIUM", operationalBurden: "Low — reprice one line.",
       successMetric: "The underpriced line clears the margin floor and blended margin recovers.",
@@ -448,12 +469,18 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
 
   // DATA_INSUFFICIENT.
   if (out.length === 0) {
-    const missing = s.missingCriticalData && s.missingCriticalData.length > 0
+    const baseMissing = s.missingCriticalData && s.missingCriticalData.length > 0
       ? s.missingCriticalData
       : ["revenue + discount amount", "gross margin %", "customer new/repeat counts", "complaint/rework counts"];
+    // Margin is thin but discounting was never provided: say so, instead of implying either "discounting" or
+    // "no discounting" — the discount amount is the missing fact that decides whether pricing is the cause.
+    const discountUnknownOnThinMargin = s.marginSafe === false && !discountKnown;
+    const missing = discountUnknownOnThinMargin
+      ? ["discount amount (margin is thin, but discounting was not provided, so a discount or pricing cause cannot be ruled in or out)", ...baseMissing]
+      : baseMissing;
     F({
       leakType: "DATA_INSUFFICIENT", domain: "data", severity: "LOW", confidence: "NEEDS_DATA",
-      evidence: ["no profit-leak signal present"], missingData: missing,
+      evidence: [discountUnknownOnThinMargin ? "margin below safe level, discounting not provided" : "no profit-leak signal present"], missingData: missing,
       estimatedImpact: { tier: "NEEDS_DATA", note: "Cannot size any leak without the listed data." },
       cashImpact: "Unknown until data is available.", marginImpact: "Unknown until data is available.",
       ownerExplanation: "No clear profit-leak signal yet — OpsIQ needs the listed data before it can point to a leak.",
@@ -540,6 +567,7 @@ export function detectProfitLeaks(input: SimpleProfitLeakInput): DetectProfitLea
     marginPct,
     marginSafe: input.grossMarginPct != null ? !marginUnsafe : null,
     discountLeak,
+    discountMeasured: input.priceDeviationPct != null,
     lowMarginB2BAccount: lowMargin,
     reworkCount,
     evaluatedAt: new Date().toISOString(),

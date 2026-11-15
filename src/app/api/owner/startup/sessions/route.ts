@@ -10,6 +10,7 @@ import { parseRequestBody } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createStartupSession, listStartupSessions } from "@/services/owner-strategy/startup-session.service";
 import { startupIntakeSchema, startupIdeaSchema } from "@/domain/owner-strategy/startup-mode.validation";
+import { resolveFixtureRequest } from "@/policies/fixture-creation.policy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,11 +25,10 @@ const createSessionSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const body = await parseRequestBody(ctx.request!, createSessionSchema);
-    // isFixtureBusiness is only ever honored for a SYSTEM_ADMIN-capable actor (acceptance/QA
-    // tooling) -- a self-serve owner can never mark their own startup session a fixture. See
-    // docs/opsiq-governance/ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md and the matching gate in
-    // POST /api/owner/recovery/businesses.
-    const isFixtureBusiness = body.isFixtureBusiness === true && ctx.verifiedCapabilities.has(CAPABILITIES.SYSTEM_ADMIN);
+    // Fail closed (see POST /api/owner/recovery/businesses and
+    // docs/opsiq-governance/ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md): an explicit fixture request
+    // without SYSTEM_ADMIN is a 403 and creates nothing.
+    const isFixtureBusiness = resolveFixtureRequest(body.isFixtureBusiness, ctx.verifiedCapabilities, "startup session", CAPABILITIES.SYSTEM_ADMIN);
     const sessionId = await createStartupSession({
       workspaceId: ctx.verifiedWorkspaceId,
       actorId: ctx.verifiedActorId,

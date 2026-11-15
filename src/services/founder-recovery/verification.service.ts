@@ -12,6 +12,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { verifyOutcome } from "@/domain/founder-recovery/verification";
+import { canRecordOutcome } from "@/domain/founder-recovery/verification-evidence";
 
 export interface RecordVerificationInput {
   afterValue: number | null;
@@ -29,6 +30,13 @@ export async function recordVerification(
     where: { id: actionId, workspaceId },
   });
   if (!action) throw new NotFoundError("RecoveryAction", actionId);
+
+  // An outcome is observable only once work has started (see verification-evidence.ts).
+  if (!canRecordOutcome(action.status)) {
+    throw new ValidationError("Start this action before recording its outcome.", {
+      fieldErrors: [{ path: "status", message: `Outcome cannot be recorded while the action is ${action.status}` }],
+    });
+  }
 
   if (action.baselineValue === null || action.baselineValue === undefined) {
     throw new ValidationError(
@@ -86,7 +94,7 @@ export async function recordVerification(
   if (result.reachedTarget) {
     try {
       const latestSnapshot = await db.ownerMetricSnapshot.findFirst({
-        where: { businessId: action.businessId, workspaceId },
+        where: { businessId: action.businessId, workspaceId, periodEnd: { lte: new Date() } },
         orderBy: { periodEnd: "desc" },
         select: { id: true },
       });

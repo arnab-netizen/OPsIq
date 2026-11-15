@@ -3,6 +3,8 @@
  * lanes. Reuses the E2E owner identity + the deterministic `oodBusinessId`. Idempotent; does NOT touch the
  * chaos scenario businesses.
  */
+// Fail closed unless DATABASE_URL is a guarded test database (see scripts/lib/assert-test-database.ts).
+import "./lib/assert-test-database";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { E2E_OWNER, E2E_WORKSPACE_ID } from "../tests/browser/e2e-fixtures";

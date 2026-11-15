@@ -84,8 +84,9 @@
 | `HUBSPOT_REDIRECT_URI` | `OPTIONAL_FEATURE` | Must match |
 | `QUICKBOOKS_CLIENT_ID` | `OPTIONAL_FEATURE` | Absent → QuickBooks connector disabled |
 | `QUICKBOOKS_CLIENT_SECRET` | `OPTIONAL_FEATURE` | Same |
-| `QUICKBOOKS_REDIRECT_URI` | `OPTIONAL_FEATURE` | Must match |
-| `QUICKBOOKS_ENVIRONMENT` | `OPTIONAL_FEATURE` | `sandbox` or `production` |
+| `QUICKBOOKS_REDIRECT_URI` | `OPTIONAL_FEATURE` | Must equal the redirect URI registered in the Intuit portal: `https://<host>/owner/integrations/quickbooks/callback` (the callback PAGE) |
+| `QUICKBOOKS_ENVIRONMENT` | `OPTIONAL_FEATURE` | `sandbox` or `production` (explicit; no default) |
+| `QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN` | `OPTIONAL_FEATURE` | Intuit webhook verifier token; absent → `/api/webhooks/quickbooks` answers 401 (fail closed). QuickBooks also needs `OAUTH_TOKEN_ENCRYPTION_KEY` and `CRON_SECRET` |
 | `SLACK_BOT_TOKEN` | `OPTIONAL_FEATURE` | Absent → Slack alert delivery disabled |
 | `SLACK_DEFAULT_CHANNEL` | `OPTIONAL_FEATURE` | Same |
 

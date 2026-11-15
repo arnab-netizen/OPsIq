@@ -51,12 +51,20 @@ async function seedTestDb() {
     // Dynamically import PrismaClient to avoid top-level await issues
     const { PrismaClient } = await import("../src/generated/prisma/client");
 
+    // Fail closed: fixture rows may only be written to a guarded test database (loopback
+    // throwaway, or a remote TEST database declared with OPSIQ_ALLOW_REMOTE_TEST_DB=true).
+    const { resolveTestDatabase } = await import("../src/infra/test-database-guard");
+    resolveTestDatabase({
+      ...process.env,
+      TEST_WITH_DB: "true",
+      DATABASE_URL: process.env.DATABASE_URL || process.env.TEST_DATABASE_URL,
+    });
     const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
     if (!databaseUrl) {
       throw new Error("DATABASE_URL or TEST_DATABASE_URL environment variable is not set");
     }
 
-    let prisma: any;
+    let prisma;
 
     // Use appropriate adapter based on database URL
     if (databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1")) {
@@ -71,7 +79,7 @@ async function seedTestDb() {
       const { Pool, neonConfig } = await import("@neondatabase/serverless");
       const { PrismaNeon } = await import("@prisma/adapter-neon");
       const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-      // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+      // @ts-expect-error - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
       const adapter = new PrismaNeon(pool);
       prisma = new PrismaClient({ adapter });
     }

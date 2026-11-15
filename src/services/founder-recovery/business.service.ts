@@ -6,16 +6,18 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
+import { normalizeBusinessCurrency } from "@/domain/founder-recovery/currency";
 import type { BusinessCreateInput, BusinessUpdateInput } from "@/domain/founder-recovery/validation";
 
 export async function createBusiness(
   input: BusinessCreateInput,
   actorId: string,
   workspaceId: string,
-  opts?: { isFixtureBusiness?: boolean }
+  opts?: { isFixtureBusiness?: boolean; client?: Prisma.TransactionClient }
 ) {
   // isFixtureBusiness is NEVER read from the ordinary business-create request body/schema — it
   // is only ever passed by the route layer after an explicit SYSTEM_ADMIN capability check (see
@@ -23,14 +25,24 @@ export async function createBusiness(
   // business. See docs/opsiq-governance/ACCEPTANCE_FIXTURE_ISOLATION_PLAN.md.
   const isFixtureBusiness = opts?.isFixtureBusiness === true;
 
-  const business = await db.ownerBusiness.create({
+  // Service-level guard (callers other than the Zod routes, e.g. seeds, reach this directly): a business is never
+  // persisted with a currency outside the supported canonical set.
+  const currency = normalizeBusinessCurrency(input.currency);
+  if (!currency) {
+    throw new ValidationError("Choose a supported currency code", { fieldErrors: [{ path: "currency", message: "Not a supported currency code" }] });
+  }
+
+  // An enclosing transaction (e.g. the first-run advisory-lock section) passes its client so the row and its
+  // audit event commit or roll back together and no second pool connection is needed.
+  const client = opts?.client ?? db;
+  const business = await client.ownerBusiness.create({
     data: {
       id: randomUUID(),
       workspaceId,
       name: input.name,
       businessType: input.businessType,
       location: input.location ?? null,
-      currency: input.currency,
+      currency,
       operatingModel: input.operatingModel ?? null,
       b2cSupported: input.b2cSupported ?? true,
       b2bSupported: input.b2bSupported ?? false,
@@ -47,7 +59,7 @@ export async function createBusiness(
     entityType: "OwnerBusiness",
     entityId: business.id,
     payload: { name: business.name, businessType: business.businessType, currency: business.currency, isFixtureBusiness },
-  });
+  }, opts?.client);
 
   return business;
 }
@@ -138,8 +150,11 @@ export async function updateBusiness(
   // Ensure ownership before update (workspace-scoped).
   const before = await getBusiness(businessId, workspaceId);
 
-  const updated = await db.ownerBusiness.update({
-    where: { id: businessId },
+  // Compare-and-set on the version read above: the audit records `before` values (the archetype and
+  // isActive transitions that attribution and "what changed" rely on), so a concurrent update in between
+  // must not be recorded as a transition from a state that no longer existed. A lost race is a 409.
+  const guarded = await db.ownerBusiness.updateMany({
+    where: { id: businessId, workspaceId, version: before.version },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.businessType !== undefined ? { businessType: input.businessType } : {}),
@@ -151,6 +166,10 @@ export async function updateBusiness(
       version: { increment: 1 },
     },
   });
+  if (guarded.count !== 1) {
+    throw new ConflictError("This business was changed by another request. Reload and retry.");
+  }
+  const updated = await getBusiness(businessId, workspaceId);
 
   // Changing the SMB archetype changes owner-pilot input requirements, readiness, and guidance
   // downstream (see smb-archetype.ts) — recording before/after values on this one field, not just
@@ -159,6 +178,9 @@ export async function updateBusiness(
   // derived fresh every time); this update never triggers diagnosis/reassessment.
   const businessTypeChanged =
     input.businessType !== undefined && input.businessType !== before.businessType;
+  // Archiving/restoring changes which businesses workspace-level records can be attributed to: record
+  // the actual transition (before/after), so a repeated no-op request is never read as an archival.
+  const isActiveChanged = input.isActive !== undefined && input.isActive !== before.isActive;
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_BUSINESS_UPDATED,
@@ -171,6 +193,7 @@ export async function updateBusiness(
       ...(businessTypeChanged
         ? { businessTypeChange: { field: "businessType", from: before.businessType, to: input.businessType } }
         : {}),
+      ...(isActiveChanged ? { isActiveChange: { field: "isActive", from: before.isActive, to: input.isActive } } : {}),
     },
   });
 

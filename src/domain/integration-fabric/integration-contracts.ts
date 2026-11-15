@@ -27,6 +27,26 @@ export const CONNECTOR_PROVIDERS = [
 
 export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];
 
+/**
+ * Providers whose ONLY connection path is a dedicated, governed integration. QuickBooks Online is connected exclusively through
+ * the business-scoped OAuth flow (src/services/quickbooks; POST /api/owner/integrations/quickbooks/connect). It stays in
+ * CONNECTOR_PROVIDERS only so historical OwnerConnector rows remain readable and listable; the generic registry can no longer
+ * register, activate or ingest events for it — a PENDING_AUTH -> ACTIVE "QuickBooks connector" with no OAuth would be a
+ * second, misleading QuickBooks architecture.
+ */
+export const RETIRED_CONNECTOR_PROVIDERS = ["QUICKBOOKS"] as const;
+
+export function isRetiredConnectorProvider(p: string): boolean {
+  return (RETIRED_CONNECTOR_PROVIDERS as readonly string[]).includes(p);
+}
+
+export const REGISTRABLE_CONNECTOR_PROVIDERS = CONNECTOR_PROVIDERS.filter(
+  (p): p is Exclude<ConnectorProvider, (typeof RETIRED_CONNECTOR_PROVIDERS)[number]> => !isRetiredConnectorProvider(p),
+) as [Exclude<ConnectorProvider, "QUICKBOOKS">, ...Array<Exclude<ConnectorProvider, "QUICKBOOKS">>];
+
+export const RETIRED_CONNECTOR_MESSAGE =
+  "QuickBooks is connected from My Business → Connected accounts, not through the generic connector registry.";
+
 export const CONNECTOR_STATUSES = [
   "ACTIVE",
   "DISCONNECTED",

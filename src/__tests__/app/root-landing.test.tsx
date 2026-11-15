@@ -1,17 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 
-// The root route is a server component that depends on session + redirect.
+// The root route is a server component that depends on the root-decision service + redirect.
 // Mock both so we can exercise its routing decision deterministically.
+// F-AUTH-ROOT-SINGLE-TX: the session validation, policy check, and owner-login-href decision all
+// live in resolveAuthenticatedRootDecision() (root-redirect.service.ts) -- mocked directly here
+// (this page no longer calls @/services/auth at all) so this suite exercises the REAL decision the
+// page makes (call the service once, redirect only for `kind: "redirect"`) instead of accidentally
+// passing via an unrelated thrown-error fail-closed path.
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
-vi.mock("@/services/auth", () => ({ getSession: vi.fn() }));
+vi.mock("@/services/root-redirect.service", () => ({ resolveAuthenticatedRootDecision: vi.fn() }));
 
 import HomePage, { metadata } from "@/app/page";
 import LandingPage from "@/components/landing/LandingPage";
-import { getSession } from "@/services/auth";
+import { resolveAuthenticatedRootDecision } from "@/services/root-redirect.service";
 import { redirect } from "next/navigation";
 
-const getSessionMock = vi.mocked(getSession);
+const resolveAuthenticatedRootDecisionMock = vi.mocked(resolveAuthenticatedRootDecision);
 const redirectMock = vi.mocked(redirect);
 
 beforeEach(() => {
@@ -24,7 +29,7 @@ afterEach(() => {
 
 describe("root route (/) landing behavior", () => {
   it("renders the public landing page (not a redirect) for logged-out visitors", async () => {
-    getSessionMock.mockResolvedValue(null);
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "anonymous" });
 
     const element = await HomePage();
 
@@ -38,16 +43,29 @@ describe("root route (/) landing behavior", () => {
     expect(types).toContain("script");
   });
 
-  it("still redirects authenticated visitors to /dashboard", async () => {
-    getSessionMock.mockResolvedValue({
-      user: { id: "u1" } as never,
-      sessionId: "s1",
-      expiresAt: new Date(Date.now() + 60_000),
-    });
+  it("redirects an authenticated visitor to whatever destination the root-decision service resolves", async () => {
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "redirect", href: "/dashboard" });
 
     await HomePage();
 
+    expect(resolveAuthenticatedRootDecisionMock).toHaveBeenCalled();
     expect(redirectMock).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("redirects a proven self-serve owner to the owner destination the decision resolves, not a hardcoded /dashboard", async () => {
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "redirect", href: "/owner/first-run" });
+
+    await HomePage();
+
+    expect(redirectMock).toHaveBeenCalledWith("/owner/first-run");
+  });
+
+  it("renders the public landing page (not a redirect) when the decision is anonymous, even if a cookie existed", async () => {
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "anonymous" });
+
+    await HomePage();
+
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });
 
@@ -61,7 +79,7 @@ describe("root route (/) structured data", () => {
   }
 
   it("renders exactly two JSON-LD script tags, each parsing as valid, distinct JSON", async () => {
-    getSessionMock.mockResolvedValue(null);
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "anonymous" });
 
     const element = await HomePage();
     const scripts = getJsonLdScripts(element);
@@ -73,7 +91,7 @@ describe("root route (/) structured data", () => {
   });
 
   it("gives both entities a stable @id and links the application to the organization as publisher", async () => {
-    getSessionMock.mockResolvedValue(null);
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "anonymous" });
 
     const element = await HomePage();
     const scripts = getJsonLdScripts(element);
@@ -87,7 +105,7 @@ describe("root route (/) structured data", () => {
   });
 
   it("references the real, existing logo asset and canonical domain -- no invented URLs", async () => {
-    getSessionMock.mockResolvedValue(null);
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "anonymous" });
 
     const element = await HomePage();
     const scripts = getJsonLdScripts(element);
@@ -107,7 +125,7 @@ describe("root route (/) structured data", () => {
   });
 
   it("never invents a rating or review to satisfy rich-result eligibility", async () => {
-    getSessionMock.mockResolvedValue(null);
+    resolveAuthenticatedRootDecisionMock.mockResolvedValue({ kind: "anonymous" });
 
     const element = await HomePage();
     const scripts = getJsonLdScripts(element);
@@ -182,13 +200,15 @@ describe("LandingPage content", () => {
   it("introduces no Product Hunt copy or asset dependency", () => {
     const { container } = render(<LandingPage />);
     expect(container.textContent ?? "").not.toMatch(/product hunt/i);
-    // The only image the landing page renders is the real OpsIQ brand logo (header) -- no
-    // Product-Hunt-specific badge/screenshot asset, and no script tags.
+    // The landing page renders exactly two images: the real OpsIQ brand logo (header) and the one
+    // real-product screenshot (fictional demo data). No Product-Hunt-specific badge/screenshot
+    // asset, and no script tags.
     const imgs = container.querySelectorAll("img");
-    expect(imgs.length).toBe(1);
+    expect(imgs.length).toBe(2);
     // The logo is an image-only link to "/" -- its alt text is the link's sole accessible
     // name, so it must describe the destination ("home"), not just restate the brand.
     expect(imgs[0].getAttribute("alt")).toBe("OpsIQ home");
+    expect(imgs[1].getAttribute("src") ?? "").toContain("opsiq-owner-priority-demo.png");
     expect(container.querySelectorAll("script").length).toBe(0);
   });
 });

@@ -89,16 +89,32 @@ export interface VerificationValues {
 
 export interface VerificationActionFormProps {
   busy?: boolean;
-  /** Freezes each domain's own pre-existing default (Money: down; Sales/Operations/Execution: up). */
-  defaultDirection: "up" | "down";
+  /**
+   * The metric's canonical direction ("up" = higher is better, "down" = lower is
+   * better), sourced by the caller from getVerificationDirection() /
+   * VERIFICATION_METRIC_DIRECTION (domain/owner-mode/verification-direction.ts) --
+   * never a page-level constant. `null` means that metric's own verification text
+   * does not state an unambiguous direction (e.g. a comparison-to-a-threshold or a
+   * presence/validity check): no option is pre-selected in that case, and the
+   * owner must choose explicitly before saving rather than risk a silently wrong
+   * default in either direction.
+   */
+  defaultDirection: "up" | "down" | null;
   /** Humanized metric text shown as "Metric: <this>". */
   metricLabel: string;
   /** DOM id for the <form> element itself, so a caller's trigger button can point its
    *  aria-controls at this exact instance. Optional -- omitting it only omits the id attribute,
    *  it does not affect the form's own accessible name (see headingId below). */
   formId?: string;
+  /**
+   * Value the diagnosis measured for this metric (server-derived `measuredBaseline`), or null.
+   * When present a blank "Before value" means "use the measured baseline"; when absent the
+   * owner must enter one (the server rejects a verification with no baseline).
+   */
+  measuredBaseline?: number | null;
   onCancel: () => void;
-  onSave: (values: VerificationValues) => void;
+  /** May resolve to an owner-safe error message, which is shown inside this form. */
+  onSave: (values: VerificationValues) => void | Promise<string | null | void>;
 }
 
 /**
@@ -146,33 +162,59 @@ export function VerificationActionForm({
   defaultDirection,
   metricLabel,
   formId,
+  measuredBaseline = null,
   onCancel,
   onSave,
 }: VerificationActionFormProps) {
   const [beforeRaw, setBeforeRaw] = useState("");
   const [afterRaw, setAfterRaw] = useState("");
-  const [targetDirection, setTargetDirection] = useState<"up" | "down">(defaultDirection);
+  const [targetDirection, setTargetDirection] = useState<"up" | "down" | null>(defaultDirection);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [beforeError, setBeforeError] = useState<string | null>(null);
   // useId() guarantees a unique id per mounted instance (unlike a static string), so the form's
   // accessible name never collides even if more than one of these were ever mounted at once.
   const headingId = useId();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // The form is noValidate (persistent inline messages instead of the transient native
+    // bubble), so an unparseable entry the browser flagged as badInput -- whose value reads as
+    // "" -- must be rejected here rather than silently submitted as blank.
+    const hasBadInput = ["beforeValue", "afterValue"].some((name) => {
+      const el = e.currentTarget.elements.namedItem(name);
+      return el instanceof HTMLInputElement && el.validity.badInput;
+    });
     const before = parseOptionalNumericField(beforeRaw);
     const after = parseOptionalNumericField(afterRaw);
-    if (!before.valid || !after.valid) {
-      setValidationError("Enter a valid number or leave the field blank.");
+    if (hasBadInput || !before.valid || !after.valid) {
+      setBeforeError(null);
+      setValidationError("Enter a valid number.");
+      return;
+    }
+    if (before.value === null && measuredBaseline === null) {
+      // Mirrors the server rule: without a measured baseline the owner must report one.
+      setBeforeError("Enter the before value — this metric was not measured by the diagnosis.");
+      setValidationError(null);
+      return;
+    }
+    setBeforeError(null);
+    // No canonical direction exists for this metric (defaultDirection was null) and the owner
+    // hasn't explicitly picked one either -- block rather than silently guess either way.
+    if (targetDirection === null) {
+      setValidationError("Select whether higher or lower is the improvement for this metric before saving.");
       return;
     }
     setValidationError(null);
-    onSave({ beforeValue: before.value, afterValue: after.value, targetDirection });
+    const serverMessage = await onSave({ beforeValue: before.value, afterValue: after.value, targetDirection });
+    if (typeof serverMessage === "string" && serverMessage) setValidationError(serverMessage);
   }
 
   return (
     <form
       id={formId}
       aria-labelledby={headingId}
+      // Validation is shown inline and persistently by handleSubmit; the native bubble is transient.
+      noValidate
       onSubmit={handleSubmit}
       className="mt-3 rounded-md border border-border bg-card p-3 space-y-3"
     >
@@ -184,9 +226,16 @@ export function VerificationActionForm({
           label="Before value"
           type="number"
           step="any"
+          required={measuredBaseline === null}
           value={beforeRaw}
           onChange={(e) => setBeforeRaw(e.target.value)}
           disabled={busy}
+          error={beforeError ?? undefined}
+          hint={
+            measuredBaseline === null
+              ? "Not measured by the diagnosis — enter the value before the change."
+              : `Measured by the diagnosis: ${measuredBaseline}. Leave blank to use it; a different value is recorded as owner-reported.`
+          }
         />
         <Input
           name="afterValue"
@@ -201,9 +250,10 @@ export function VerificationActionForm({
       <Select
         name="targetDirection"
         label="Target direction"
-        value={targetDirection}
-        onChange={(e) => setTargetDirection(e.target.value === "up" ? "up" : "down")}
+        value={targetDirection ?? ""}
+        onChange={(e) => setTargetDirection(e.target.value === "up" ? "up" : e.target.value === "down" ? "down" : null)}
         disabled={busy}
+        placeholder={defaultDirection === null ? "Select direction" : undefined}
         options={[
           { value: "up", label: "Up" },
           { value: "down", label: "Down" },

@@ -10,5 +10,5 @@ export const POST = withCanonicalEnforcement(
     const vendor = await approveVendor(ctx.verifiedWorkspaceId, params.vendorId, ctx.verifiedActorId);
     return canonicalJson(vendor, { status: 200 });
   },
-  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_MANAGE] }
+  { requireCommercial: "approval_resolution", requireWorkspace: true, requireCapabilities: [CAPABILITIES.OWNER_MANAGE] }
 );

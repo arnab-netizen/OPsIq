@@ -9,9 +9,11 @@
  * underlying domain reads and the audit query is workspace-scoped.
  */
 import { buildExplanations, TRUST_DOMAINS, type ExplanationCard } from "@/domain/owner-trust";
+import { CURRENT_DIAGNOSIS_CYCLE_ORDER, CURRENT_STRATEGY_CYCLE_ORDER, currentEvidenceWhere } from "@/services/owner-spine/current-diagnosis-cycle";
 import type { TrustDomain } from "@/domain/owner-trust";
-import type { OwnerAction, OwnerFinding, OwnerDomain } from "@/domain/owner-spine/contracts";
+import { rankOwnerFindingsBySeverity, type OwnerAction, type OwnerFinding, type OwnerDomain } from "@/domain/owner-spine/contracts";
 import { db } from "@/lib/db";
+import { presentStoredStrategyFinding } from "@/domain/owner-strategy/action-arbitration";
 import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { queryAuditEvents } from "@/infra/audit";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
@@ -89,7 +91,11 @@ export async function getCycleExplanations(
   workspaceId: string
 ): Promise<CycleExplanations> {
   const cycle = await DIAGNOSIS_READERS[domain](cycleId, workspaceId); // throws NotFound if absent / cross-workspace
-  const findings = (cycle.findings ?? []).map((f: any) => rowToFinding(f, domain));
+  // Canonical severity order for every domain's explanations (the DB severity column is a plain
+  // string, so readers that order by it return critical, high, low, medium).
+  const findings = rankOwnerFindingsBySeverity<OwnerFinding>(
+    (cycle.findings ?? []).map((f: any) => rowToFinding(domain === "strategy" ? presentStoredStrategyFinding(f) : f, domain))
+  );
   const actions = (cycle.actions ?? []).map((a: any) => rowToAction(a, domain));
   const explanations = buildExplanations(findings, actions);
   return {
@@ -125,8 +131,8 @@ export interface BusinessTrustOverview {
 }
 
 /**
- * Read-only: for a business, the latest diagnosis cycle in every trust domain
- * that has one. Lets the owner pick a real cycle to explain without typing UUIDs.
+ * Read-only: for a business, the current diagnosis cycle (shared current-cycle order) in every trust
+ * domain that has one. Lets the owner pick a real cycle to explain without typing UUIDs.
  */
 export async function getBusinessTrustOverview(
   workspaceId: string,
@@ -140,7 +146,7 @@ export async function getBusinessTrustOverview(
     selectedBusinessId = requestedBusinessId;
   }
   // Unambiguous only when exactly one real business exists — see hasExactlyOneRealBusiness()
-  // and cockpit-finance-priority.service.ts for the same rule. With 0 businesses this falls
+  // and owner-home/home.service.ts for the same rule. With 0 businesses this falls
   // through to the existing empty-state return below; with 2+, it now also falls through
   // (selectedBusinessId stays null) rather than silently guessing businesses[0] — the exact
   // server-side "wrong business" mechanism the controlled-beta launch-blocker audit flagged.
@@ -152,9 +158,11 @@ export async function getBusinessTrustOverview(
   const cycles: TrustCycleRef[] = [];
   for (const domain of TRUST_DOMAINS) {
     const delegate = (db as any)[CYCLE_DELEGATES[domain]];
+    // The CURRENT cycle (current-diagnosis-cycle.ts): latest evidence period, never merely the latest run.
     const row = await delegate.findFirst({
-      where: { businessId: selectedBusinessId, workspaceId },
-      orderBy: { sequenceNumber: "desc" },
+      // Strategy scenarios are plans (forward periods are their nature); evidence domains: ended periods only.
+      where: { businessId: selectedBusinessId, workspaceId, ...(domain === "strategy" ? {} : currentEvidenceWhere(new Date())) },
+      orderBy: domain === "strategy" ? CURRENT_STRATEGY_CYCLE_ORDER : CURRENT_DIAGNOSIS_CYCLE_ORDER,
       select: { id: true, sequenceNumber: true, generatedAt: true },
     });
     if (row) {

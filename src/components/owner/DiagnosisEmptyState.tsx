@@ -12,6 +12,7 @@ export function DiagnosisEmptyState({
   hasSnapshot,
   snapshotLabel,
   diagnosisLabel,
+  inProgressDiagnosis = null,
 }: {
   /** "financial" | "operations" -- used only in prose, never rendered as a raw token. */
   domainLabel: string;
@@ -20,7 +21,26 @@ export function DiagnosisEmptyState({
   snapshotLabel: string;
   /** e.g. "Run finance diagnosis" / "Run operations diagnosis" -- the exact button label above. */
   diagnosisLabel: string;
+  /**
+   * The in-progress figures were already diagnosed (and have not changed since): there is nothing to run —
+   * the result is provisional until the period ends, and no completed reading exists yet.
+   */
+  inProgressDiagnosis?: { diagnosedAt: string; state: string | null } | null;
 }) {
+  if (inProgressDiagnosis) {
+    return (
+      <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>
+        <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--accent-ink)" }}>
+          Diagnosed — period still in progress
+        </span>
+        <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
+          <p><span className="font-medium text-foreground">What OpsIQ can assess now:</span> a provisional read of this period&rsquo;s in-progress {snapshotLabel}, diagnosed on {inProgressDiagnosis.diagnosedAt.slice(0, 10)}{inProgressDiagnosis.state ? ` (${inProgressDiagnosis.state.replace(/_/g, " ").toLowerCase()})` : ""}.</p>
+          <p><span className="font-medium text-foreground">What is missing:</span> a completed period — the in-progress figures are used only to flag a worsening, never to clear a problem or approve growth.</p>
+          <p><span className="font-medium text-foreground">One obvious next step:</span> nothing to re-run; enter corrected figures if they changed, and the completed reading appears here once the period ends and is diagnosed.</p>
+        </div>
+      </div>
+    );
+  }
   const article = /^[aeiou]/i.test(snapshotLabel) ? "an" : "a";
   return (
     <div className="border-l-2 pl-5 py-1" style={{ borderColor: "var(--accent-ink)" }}>

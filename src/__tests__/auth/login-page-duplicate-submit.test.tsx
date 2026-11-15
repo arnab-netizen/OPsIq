@@ -163,3 +163,16 @@ describe("Login page — password visibility control (UX-06 Wave A1)", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+describe("LoginPage — guidance for an owner who confirmed their email but never chose a password", () => {
+  it("shows static copy next to the Forgot your password link (no request, no account lookup)", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LoginPage />);
+    expect(screen.getByRole("link", { name: /forgot your password/i }).getAttribute("href")).toBe("/forgot-password");
+    expect(screen.getByTestId("login-never-chose-password-hint").textContent).toBe(
+      "If you confirmed your email but never chose a password, use Forgot your password to get a new link."
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

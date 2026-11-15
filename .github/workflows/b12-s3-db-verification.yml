@@ -23,6 +23,7 @@ jobs:
           - 5432:5432
 
     env:
+      OPSIQ_DB_TARGET: ci
       DATABASE_URL: postgresql://postgres@localhost:5432/opsiq_test
       TEST_WITH_DB: "true"
 

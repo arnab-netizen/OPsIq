@@ -10,10 +10,13 @@
  * pure decision logic lives in `@/domain/owner-budget`; this layer only assembles
  * inputs, persists results atomically/idempotently, and emits audit events.
  */
+import { COMMERCIAL_CAPABILITIES } from "@/domain/commercial/commercial-capability";
+import { canPerformCommercialCapability } from "@/services/billing/commercial-policy.service";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { getBusiness } from "@/services/founder-recovery/business.service";
-import { rowToFinanceInput } from "@/services/owner-finance/snapshot.service";
+import { loadFinanceEngineInput } from "@/services/owner-finance/liquidity.service";
+import { resolveLiquidity } from "@/domain/owner-finance/liquidity";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { toAuditActor } from "@/domain/owner-budget/system-actor";
@@ -53,6 +56,7 @@ import { deriveArchetypeSignalsForReassessment } from "@/services/owner-budget/a
  */
 const CASH_OBLIGATION_STATES = ["committed", "approved", "requested", "pending_owner_approval"] as const;
 import { routeReassessmentSignals } from "@/services/owner-budget/signal-router.service";
+import { currentEffectiveFinancialSnapshotQuery } from "@/services/owner-finance/financial-snapshot-selection";
 
 const ALLOCATION_CATEGORIES: ReadonlySet<string> = new Set<AllocationCategory>([
   "statutory_payroll_tax", "cash_survival", "critical_fixed_obligations",
@@ -207,10 +211,18 @@ export interface RecordSpendInput {
   ownerOverrideReason?: string | null;
 }
 
+/** Present only when the spend was captured but the paid reassessment was not run (enforcement ON, not entitled). */
+export interface SpendReassessmentDeferred {
+  status: "REQUIRES_SUBSCRIPTION";
+  capability: "reassessment";
+  reason: string;
+}
+
 export interface RecordSpendResult {
   spend: any;
   governance: SpendGovernanceResult;
-  plan: UpdatedOwnerPlan;
+  plan: UpdatedOwnerPlan | null;
+  reassessment?: SpendReassessmentDeferred;
 }
 
 export async function recordSpendEntry(
@@ -293,6 +305,13 @@ export async function recordSpendEntry(
     });
   }
 
+  // Commercial split: capturing the spend is free; the reassessment (new plan snapshot + actions) is paid
+  // continuation. No-op, and the result shape is unchanged, when enforcement is OFF.
+  const commercial = await canPerformCommercialCapability(workspaceId, COMMERCIAL_CAPABILITIES.REASSESSMENT);
+  if (!commercial.allowed) {
+    return { spend, governance, plan: null, reassessment: { status: "REQUIRES_SUBSCRIPTION", capability: "reassessment", reason: commercial.reason } };
+  }
+
   const plan = await reassessBudget(businessId, workspaceId, {
     actorId, kind: "spend_entry_added", triggerEventId: `spend:${spend.id}`,
     change: { field: "spendEntry", newValue: `${input.label}:${input.amount}` },
@@ -367,17 +386,26 @@ export async function updateSpendReconciliation(
 }
 
 /** Rolling 13-week cash forecast (base / downside / cash-stress) for the business. */
-export async function getBudgetForecast(workspaceId: string, businessId: string): Promise<ForecastResult & { hasData: boolean }> {
+export async function getBudgetForecast(workspaceId: string, businessId: string): Promise<ForecastResult & { hasData: boolean; liquidityComplete: boolean }> {
   await getBusiness(businessId, workspaceId);
   const period = await db.budgetPeriod.findFirst({ where: { workspaceId, businessId, status: "active" }, orderBy: { createdAt: "desc" } });
-  const snap = await db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } });
+  // Current (never amended/superseded) version only, deterministic order.
+  const snap = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }));
   const committed = await db.spendEntry.findMany({
     where: { workspaceId, businessId, voidedAt: null, state: { in: [...CASH_OBLIGATION_STATES] }, dueInDays: { not: null } },
   });
   const obligations = committed.map((s: any) => ({ label: s.label, amount: s.amount, dueInDays: s.dueInDays as number, kind: (s.obligationKind as any) ?? "other" }));
 
   const WEEKS_PER_MONTH = 4.345;
-  const cashOnHand = snap?.cashOnHand ?? 0;
+  // Starting cash is total liquid funds on the shared basis (cash in hand + usable bank balance). When the
+  // position is incomplete the forecast starts from the known cash in hand (a lower bound) and says so.
+  let cashOnHand = 0;
+  let liquidityComplete = false;
+  if (snap) {
+    const liquidity = resolveLiquidity(await loadFinanceEngineInput(snap, workspaceId));
+    liquidityComplete = liquidity.status === "COMPLETE";
+    cashOnHand = liquidity.totalLiquidFunds ?? liquidity.physicalCash ?? liquidity.bankCash ?? 0;
+  }
   const monthlyRevenue = snap?.revenue ?? 0;
   const monthlyOutflow = (snap?.costOfGoods ?? 0) + (snap?.fixedCosts ?? 0) + (snap?.variableCosts ?? 0);
   const reserveRequired = Math.max(0, period?.statutoryReserveRequired ?? 0, period?.cashReserveTarget ?? 0);
@@ -389,7 +417,7 @@ export async function getBudgetForecast(workspaceId: string, businessId: string)
     obligations,
     reserveRequired,
   });
-  return { ...forecast, hasData: snap !== null };
+  return { ...forecast, hasData: snap !== null, liquidityComplete };
 }
 
 // ---------------------------------------------------------------------------
@@ -420,12 +448,10 @@ async function assembleAssessment(
   if (financeOverride) {
     finance = financeOverride;
   } else {
-    const snap = await db.ownerFinancialSnapshot.findFirst({
-      where: { workspaceId, businessId },
-      orderBy: { periodEnd: "desc" },
-    });
+    const snap = await db.ownerFinancialSnapshot.findFirst(currentEffectiveFinancialSnapshotQuery({ workspaceId, businessId }));
     if (snap) {
-      finance = rowToFinanceInput(snap);
+      // Same liquidity basis as the Finance diagnosis (lineage-resolved semantics + usable bank; unknown stays unknown).
+      finance = await loadFinanceEngineInput(snap, workspaceId);
     } else {
       finance = {
         periodStart: period?.periodStart?.toISOString() ?? new Date(0).toISOString(),

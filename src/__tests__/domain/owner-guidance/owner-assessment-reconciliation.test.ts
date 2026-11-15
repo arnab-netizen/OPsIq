@@ -73,6 +73,7 @@ function baseInput(
     growthReadinessStatus: "OK",
     topOwnerActions: [],
     urgentRisks: [],
+    canonicalPrimaryClass: null,
     conditionDimensions: ALL_KNOWN_CONDITION_DIMENSIONS,
     ...overrides,
   };
@@ -162,19 +163,17 @@ describe("owner-assessment-reconciliation — UX-02A canonical structured truth"
     }
   });
 
-  it("9. primaryIssue is exactly topOwnerActions[0]", () => {
+  it("9. primaryConcernClass is exactly the canonical decision's class — never topOwnerActions[0]", () => {
     const first = issue("first", IssueCategory.CASH_DANGER, "CRITICAL");
-    const second = issue("second", IssueCategory.GROWTH_OPPORTUNITY, "LOW");
-    const result = reconcileOwnerAssessment(baseInput({ topOwnerActions: [first, second] }));
-    expect(result.primaryIssue).toBe(first);
+    const result = reconcileOwnerAssessment(baseInput({ topOwnerActions: [first], canonicalPrimaryClass: "PROFIT_LOSS" }));
+    expect(result.primaryConcernClass).toBe("PROFIT_LOSS");
+    expect(result).not.toHaveProperty("primaryIssue");
   });
 
-  it("10. primaryIssue ordering is preserved — not reranked by severity", () => {
-    const lowSeverityFirst = issue("low-first", IssueCategory.GROWTH_OPPORTUNITY, "LOW");
-    const criticalSecond = issue("critical-second", IssueCategory.CASH_DANGER, "CRITICAL");
-    const result = reconcileOwnerAssessment(baseInput({ topOwnerActions: [lowSeverityFirst, criticalSecond] }));
-    expect(result.primaryIssue).toBe(lowSeverityFirst);
-    expect(result.primaryIssue).not.toBe(criticalSecond);
+  it("10. without a canonical decision there is no primary concern, whatever Now View ranks first", () => {
+    const criticalFirst = issue("critical-first", IssueCategory.CASH_DANGER, "CRITICAL");
+    const result = reconcileOwnerAssessment(baseInput({ topOwnerActions: [criticalFirst], canonicalPrimaryClass: null }));
+    expect(result.primaryConcernClass).toBeNull();
   });
 
   it("11. urgentRisks ordering is preserved", () => {
