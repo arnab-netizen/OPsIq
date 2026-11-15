@@ -552,8 +552,10 @@ export interface AccountOverviewBucket {
 
 export interface CohortAccountOverview {
   generatedAt: Date;
+  /** Every admitted account found, INCLUDING any with an unresolved creator below. Never silently undercounted. */
   totalAccounts: number;
   bySignupSource: { publicBeta: number; controlledBetaInvite: number };
+  /** verified + unverified + unresolvedCreatorAccounts === totalAccounts, always. */
   verified: number;
   unverified: number;
   /** Accounts on an internal (@opsiq.solutions) address: can only ever be QA_MECHANICS, never REAL_OWNER. */
@@ -564,13 +566,44 @@ export interface CohortAccountOverview {
   unclassifiedNote: string;
   classifiedMilestones: AccountOverviewBucket;
   unclassifiedMilestones: AccountOverviewBucket;
-  /** True when the account scan hit its row bound; counts below are then a lower bound, not exact. */
-  truncated: boolean;
+  /**
+   * Admitted accounts whose creator user record could not be resolved (e.g. the referenced user id no longer
+   * exists). Counted in totalAccounts but deliberately excluded from verified/unverified/classified/unclassified/
+   * milestones below -- their state is unknown, never guessed or silently dropped. classified + unclassified +
+   * unresolvedCreatorAccounts === totalAccounts, always.
+   */
+  unresolvedCreatorAccounts: number;
+  /** Non-empty only when unresolvedCreatorAccounts > 0. */
+  unresolvedCreatorNote: string;
+  /** True when the admitted-account scan itself hit its row bound; totalAccounts and everything below it are then a lower bound, not exact. */
+  accountListTruncated: boolean;
+  /**
+   * True when the milestone-event query hit its row bound. Several of the 4 milestone events are deduped per
+   * (workspace, business) or per diagnosis cycle, not per workspace (see PRODUCT_FIRST_DIAGNOSIS_COMPLETED /
+   * PRODUCT_FIRST_EVIDENCE_SAVED / PRODUCT_FIRST_RESULT_VIEWED emission sites), so a single long-lived, multi-
+   * business workspace can contribute many rows -- this is a real, not merely theoretical, way to exhaust the
+   * bound well before every admitted account's full history is captured. When true, every milestone count in
+   * BOTH buckets below is a lower bound, never exact: some accounts may have reached a milestone whose audit
+   * row simply didn't make it into the scanned set.
+   */
+  milestoneEvidenceTruncated: boolean;
+  /** Non-empty only when milestoneEvidenceTruncated is true. */
+  milestoneEvidenceNote: string;
 }
 
 const UNCLASSIFIED_NOTE =
   "Unclassified means this account's cohort status is UNKNOWN -- it is not evidence that the account is QA, " +
   "and it is not evidence that it is a genuine external owner. Classify it in the table below to find out which.";
+
+const UNRESOLVED_CREATOR_NOTE =
+  "One or more admitted accounts have no resolvable creator user record. They are counted in totalAccounts but " +
+  "excluded from every other count below -- their verification, classification and milestone state is UNKNOWN, " +
+  "never guessed.";
+
+const MILESTONE_EVIDENCE_NOTE =
+  "The milestone-event scan hit its row bound before covering every admitted account's full history. The " +
+  "milestone counts above are a lower bound, not exact: some accounts may have reached a milestone whose audit " +
+  "row simply wasn't included in this scan.";
 
 function emptyBucket(): AccountOverviewBucket {
   return { count: 0, emailVerified: 0, firstRunStarted: 0, firstEvidenceSaved: 0, firstDiagnosisCompleted: 0, firstResultViewed: 0 };
@@ -585,8 +618,25 @@ function addToBucket(bucket: AccountOverviewBucket, row: AccountOverviewRow): vo
   if (row.firstResultViewed) bucket.firstResultViewed += 1;
 }
 
-/** Pure aggregation: turns already-resolved rows into counts only. No identity of any kind ever appears here. */
-export function buildAccountOverview(rows: readonly AccountOverviewRow[], now: Date, truncated: boolean): CohortAccountOverview {
+export interface AccountOverviewCompleteness {
+  /** Count of admitted accounts found whose creator user record could not be resolved (excluded from `rows`). */
+  unresolvedCreatorAccounts: number;
+  /** True when the admitted-account scan itself hit its row bound. */
+  accountListTruncated: boolean;
+  /** True when the milestone-event query hit its row bound. */
+  milestoneEvidenceTruncated: boolean;
+}
+
+/**
+ * Pure aggregation: turns already-resolved rows (plus the caller's completeness facts) into counts only. No
+ * identity of any kind ever appears here. `rows` must contain only accounts with a resolved creator -- unresolved
+ * ones are reported solely via `completeness.unresolvedCreatorAccounts`, never added to `rows` with guessed facts.
+ */
+export function buildAccountOverview(
+  rows: readonly AccountOverviewRow[],
+  now: Date,
+  completeness: AccountOverviewCompleteness,
+): CohortAccountOverview {
   const classifiedMilestones = emptyBucket();
   const unclassifiedMilestones = emptyBucket();
   let publicBeta = 0;
@@ -608,9 +658,11 @@ export function buildAccountOverview(rows: readonly AccountOverviewRow[], now: D
     }
   }
 
+  const { unresolvedCreatorAccounts, accountListTruncated, milestoneEvidenceTruncated } = completeness;
+
   return {
     generatedAt: now,
-    totalAccounts: rows.length,
+    totalAccounts: rows.length + unresolvedCreatorAccounts,
     bySignupSource: { publicBeta, controlledBetaInvite },
     verified,
     unverified: rows.length - verified,
@@ -620,7 +672,11 @@ export function buildAccountOverview(rows: readonly AccountOverviewRow[], now: D
     unclassifiedNote: UNCLASSIFIED_NOTE,
     classifiedMilestones,
     unclassifiedMilestones,
-    truncated,
+    unresolvedCreatorAccounts,
+    unresolvedCreatorNote: unresolvedCreatorAccounts > 0 ? UNRESOLVED_CREATOR_NOTE : "",
+    accountListTruncated,
+    milestoneEvidenceTruncated,
+    milestoneEvidenceNote: milestoneEvidenceTruncated ? MILESTONE_EVIDENCE_NOTE : "",
   };
 }
 

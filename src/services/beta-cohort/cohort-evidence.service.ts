@@ -355,6 +355,15 @@ const ACCOUNT_OVERVIEW_MILESTONE_EVENTS = [
   AUDIT_EVENTS.PRODUCT_FIRST_RESULT_VIEWED,
 ] as const;
 const MAX_OVERVIEW_ACCOUNTS = 500;
+/**
+ * PRODUCT_FIRST_DIAGNOSIS_COMPLETED and PRODUCT_FIRST_EVIDENCE_SAVED are deduped per (workspace, business) --
+ * see recordProductEventOnce's call sites in diagnoses/route.ts and snapshots/route.ts, which both pass
+ * businessId -- and PRODUCT_FIRST_RESULT_VIEWED is deduped per diagnosis cycle (insertInteractionOnce's
+ * idempotencyKey is `viewed:${cycleId}`), not per workspace. A single multi-business, long-lived workspace can
+ * therefore contribute many rows for the SAME milestone, so this bound is a real, not merely theoretical,
+ * completeness risk -- see MILESTONE_EVIDENCE_NOTE in the domain module for how it's surfaced.
+ */
+const MAX_MILESTONE_EVIDENCE_ROWS = 20_000;
 
 /**
  * Read-only aggregate: of every admitted account (the same signupSource-tagged set
@@ -364,15 +373,22 @@ const MAX_OVERVIEW_ACCOUNTS = 500;
  *
  * Does NOT write anything, does NOT classify anything, and does NOT change evaluateExpansionGate's criteria,
  * capacity, or any account's permissions.
+ *
+ * `maxAccounts`/`maxMilestoneRows` are test seams for the two row bounds below (defaults are the real production
+ * bounds); production callers never need to pass them.
  */
-export async function getAccountClassificationOverview(now: Date = new Date()): Promise<CohortAccountOverview> {
+export async function getAccountClassificationOverview(
+  now: Date = new Date(),
+  maxAccounts: number = MAX_OVERVIEW_ACCOUNTS,
+  maxMilestoneRows: number = MAX_MILESTONE_EVIDENCE_ROWS,
+): Promise<CohortAccountOverview> {
   const workspaces = await db.workspace.findMany({
     where: { signupSource: { in: [PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE] } },
     select: { id: true, createdBy: true, signupSource: true },
-    take: MAX_OVERVIEW_ACCOUNTS + 1,
+    take: maxAccounts + 1,
   });
-  const truncated = workspaces.length > MAX_OVERVIEW_ACCOUNTS;
-  const scoped = truncated ? workspaces.slice(0, MAX_OVERVIEW_ACCOUNTS) : workspaces;
+  const accountListTruncated = workspaces.length > maxAccounts;
+  const scoped = accountListTruncated ? workspaces.slice(0, maxAccounts) : workspaces;
 
   const createdByValues: Array<string | null> = scoped.map((w: { createdBy: string | null }) => w.createdBy);
   const creatorIds = [...new Set(createdByValues.filter((id): id is string => Boolean(id)))];
@@ -387,9 +403,10 @@ export async function getAccountClassificationOverview(now: Date = new Date()): 
     ? await audit.findMany({
         where: { workspaceId: { in: workspaceIds }, eventName: { in: [...ACCOUNT_OVERVIEW_MILESTONE_EVENTS] } },
         select: { workspaceId: true, eventName: true },
-        take: 20_000,
+        take: maxMilestoneRows,
       })
     : [];
+  const milestoneEvidenceTruncated = milestoneRows.length >= maxMilestoneRows;
   const reached = new Set(milestoneRows.map((r) => `${r.workspaceId}:${r.eventName}`));
   const has = (workspaceId: string, name: string) => reached.has(`${workspaceId}:${name}`);
 
@@ -409,12 +426,17 @@ export async function getAccountClassificationOverview(now: Date = new Date()): 
   const assignedRequestIds = new Set(assignedRows.map((r) => r.entityId));
 
   const rows: AccountOverviewRow[] = [];
+  let unresolvedCreatorAccounts = 0;
   for (const w of scoped) {
     const creator = w.createdBy ? creatorById.get(w.createdBy) : undefined;
     // No resolvable creator user: cannot be verified, classified or milestone-checked without guessing -- excluded
-    // rather than reported as a false "unverified/unclassified" fact. Should not occur for a real signup (the
-    // account graph is created atomically), so this never silently hides a real account in practice.
-    if (!creator) continue;
+    // from `rows` (never reported as a false "unverified/unclassified" fact) but still counted explicitly via
+    // unresolvedCreatorAccounts, so it is never silently dropped from totalAccounts. Should not occur for a real
+    // signup (the account graph is created atomically), but this is reported rather than assumed away.
+    if (!creator) {
+      unresolvedCreatorAccounts += 1;
+      continue;
+    }
     const email = creator.email.toLowerCase();
     const requestId = requestIdByEmail.get(email);
     rows.push({
@@ -429,5 +451,5 @@ export async function getAccountClassificationOverview(now: Date = new Date()): 
     });
   }
 
-  return buildAccountOverview(rows, now, truncated);
+  return buildAccountOverview(rows, now, { unresolvedCreatorAccounts, accountListTruncated, milestoneEvidenceTruncated });
 }

@@ -31,7 +31,8 @@ const accountOverview = (over: Record<string, unknown> = {}) => ({
   internalAddressAccounts: 1, classified: 1, unclassified: 7,
   unclassifiedNote: "Unclassified means this account's cohort status is UNKNOWN -- it is not evidence that the account is QA, and it is not evidence that it is a genuine external owner. Classify it in the table below to find out which.",
   classifiedMilestones: { ...emptyBucket(), count: 1 }, unclassifiedMilestones: { ...emptyBucket(), count: 7 },
-  truncated: false, ...over,
+  unresolvedCreatorAccounts: 0, unresolvedCreatorNote: "",
+  accountListTruncated: false, milestoneEvidenceTruncated: false, milestoneEvidenceNote: "", ...over,
 });
 const view = (owners: unknown[], overviewOver: Record<string, unknown> = {}) => ({
   cohortId: "CB1", generatedAt: "2026-10-21T00:00:00Z", owners,
@@ -99,6 +100,42 @@ describe("beta cohort page", () => {
     render(<BetaCohortPage />);
     await screen.findByTestId("account-overview");
     expect(screen.queryByText(/not evidence that the account is QA/i)).toBeNull();
+  });
+
+  it("shows an explicit unresolved-creator count and note when some admitted accounts have no resolvable creator", async () => {
+    fetchMock.mockImplementation(() => ok(view([owner()], {
+      totalAccounts: 10, unresolvedCreatorAccounts: 2,
+      unresolvedCreatorNote: "One or more admitted accounts have no resolvable creator user record.",
+    })));
+    render(<BetaCohortPage />);
+    const section = await screen.findByTestId("account-overview");
+    expect(section.textContent).toMatch(/10 admitted account/);
+    expect(section.textContent).toMatch(/Unresolved creator: 2/);
+    expect(screen.getByTestId("account-overview-unresolved-creator-note")).toBeTruthy();
+  });
+
+  it("omits the unresolved-creator note when there is nothing unresolved", async () => {
+    fetchMock.mockImplementation(() => ok(view([owner()])));
+    render(<BetaCohortPage />);
+    await screen.findByTestId("account-overview");
+    expect(screen.queryByTestId("account-overview-unresolved-creator-note")).toBeNull();
+  });
+
+  it("flags milestone counts as a lower bound when the milestone-evidence scan was truncated", async () => {
+    fetchMock.mockImplementation(() => ok(view([owner()], {
+      milestoneEvidenceTruncated: true,
+      milestoneEvidenceNote: "The milestone-event scan hit its row bound before covering every admitted account's full history.",
+    })));
+    render(<BetaCohortPage />);
+    await screen.findByTestId("account-overview");
+    expect(screen.getByTestId("account-overview-milestone-truncated-note")).toBeTruthy();
+  });
+
+  it("omits the milestone-truncation note when the scan was complete", async () => {
+    fetchMock.mockImplementation(() => ok(view([owner()])));
+    render(<BetaCohortPage />);
+    await screen.findByTestId("account-overview");
+    expect(screen.queryByTestId("account-overview-milestone-truncated-note")).toBeNull();
   });
 
   it("an invalid form is explained from the shared schema and makes NO request", async () => {

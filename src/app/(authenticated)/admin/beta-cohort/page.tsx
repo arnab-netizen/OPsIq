@@ -56,7 +56,9 @@ interface AccountOverview {
   verified: number; unverified: number; internalAddressAccounts: number;
   classified: number; unclassified: number; unclassifiedNote: string;
   classifiedMilestones: AccountOverviewBucket; unclassifiedMilestones: AccountOverviewBucket;
-  truncated: boolean;
+  unresolvedCreatorAccounts: number; unresolvedCreatorNote: string;
+  accountListTruncated: boolean;
+  milestoneEvidenceTruncated: boolean; milestoneEvidenceNote: string;
 }
 
 interface CohortView {
@@ -189,12 +191,19 @@ export default function BetaCohortPage() {
           {view.accountOverview.totalAccounts} admitted account(s) — {view.accountOverview.bySignupSource.publicBeta} direct OPEN_BETA signup(s),
           {" "}{view.accountOverview.bySignupSource.controlledBetaInvite} invited. Verified: {view.accountOverview.verified} · Unverified: {view.accountOverview.unverified}
           {view.accountOverview.internalAddressAccounts > 0 && ` · Internal address (QA-only): ${view.accountOverview.internalAddressAccounts}`}
-          {view.accountOverview.truncated && " · (truncated — counts below are a lower bound)"}
+          {view.accountOverview.unresolvedCreatorAccounts > 0 && ` · Unresolved creator: ${view.accountOverview.unresolvedCreatorAccounts}`}
+          {view.accountOverview.accountListTruncated && " · (account list truncated — totals above are a lower bound)"}
         </p>
+        {view.accountOverview.unresolvedCreatorAccounts > 0 && (
+          <p className="mt-1 text-sm text-amber-700" data-testid="account-overview-unresolved-creator-note">{view.accountOverview.unresolvedCreatorNote}</p>
+        )}
         <p className="mt-2 text-sm text-gray-700" data-testid="account-overview-classified">
           Classified in a cohort: <strong>{view.accountOverview.classified}</strong> · Unclassified: <strong data-testid="account-overview-unclassified">{view.accountOverview.unclassified}</strong>
         </p>
         {view.accountOverview.unclassified > 0 && <p className="mt-1 text-sm text-amber-700">{view.accountOverview.unclassifiedNote}</p>}
+        {view.accountOverview.milestoneEvidenceTruncated && (
+          <p className="mt-1 text-sm text-amber-700" data-testid="account-overview-milestone-truncated-note">{view.accountOverview.milestoneEvidenceNote}</p>
+        )}
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           {([["Classified", view.accountOverview.classifiedMilestones], ["Unclassified", view.accountOverview.unclassifiedMilestones]] as const).map(([label, b]) => (
             <div key={label} className="rounded border border-border p-3 text-xs">

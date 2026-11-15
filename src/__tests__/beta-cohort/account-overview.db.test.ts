@@ -117,4 +117,53 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getAccountClassificationOverview", (
     expect(serialized).not.toContain(account.betaRequestId);
     expect(serialized).not.toMatch(/pii-canary/);
   });
+
+  it("an admitted workspace whose creator user cannot be resolved is counted in totalAccounts, excluded from every other count, and reported via unresolvedCreatorAccounts — never silently dropped", async () => {
+    const before = await getAccountClassificationOverview();
+    // Workspace.createdBy carries no FK constraint (see prisma/schema.prisma) -- a real admitted workspace whose
+    // creator user row no longer exists is representable directly, exactly like the completeness fix is meant to catch.
+    const workspaceId = randomUUID();
+    await db.workspace.create({
+      data: {
+        id: workspaceId, name: "Orphaned Creator WS", slug: `orphan-${workspaceId.slice(0, 8)}`,
+        createdBy: randomUUID(), signupSource: PUBLIC_BETA_SIGNUP_SOURCE,
+      },
+    });
+
+    const after = await getAccountClassificationOverview();
+    expect(after.totalAccounts).toBe(before.totalAccounts + 1);
+    expect(after.unresolvedCreatorAccounts).toBe(before.unresolvedCreatorAccounts + 1);
+    // Excluded from every derived count -- not guessed as verified/unverified or classified/unclassified.
+    expect(after.verified + after.unverified).toBe(after.totalAccounts - after.unresolvedCreatorAccounts);
+    expect(after.classified + after.unclassified).toBe(after.totalAccounts - after.unresolvedCreatorAccounts);
+    expect(after.unresolvedCreatorNote.length).toBeGreaterThan(0);
+  });
+
+  it("the milestone-event scan reports an explicit, honest incompleteness signal once its row bound is hit, instead of silently undercounting", async () => {
+    const account = await seedAccount({ signupSource: PUBLIC_BETA_SIGNUP_SOURCE });
+    await productEvent(account.workspaceId, "PRODUCT_FIRST_RUN_STARTED");
+    await productEvent(account.workspaceId, "PRODUCT_FIRST_EVIDENCE_SAVED");
+
+    // Inject a tiny milestone-row bound (test seam) instead of seeding 20,000 real rows: 1 is already below this
+    // account's 2 real milestone events, so the real production code path for "the bound was hit" is exercised.
+    const truncated = await getAccountClassificationOverview(new Date(), undefined, 1);
+    expect(truncated.milestoneEvidenceTruncated).toBe(true);
+    expect(truncated.milestoneEvidenceNote.length).toBeGreaterThan(0);
+
+    const notTruncated = await getAccountClassificationOverview();
+    expect(notTruncated.milestoneEvidenceTruncated).toBe(false);
+    expect(notTruncated.milestoneEvidenceNote).toBe("");
+  });
+
+  it("a single multi-business workspace can fire the SAME milestone event more than once (per-business dedup), making the 20_000-row bound a real, not theoretical, risk", async () => {
+    // PRODUCT_FIRST_DIAGNOSIS_COMPLETED/PRODUCT_FIRST_EVIDENCE_SAVED are deduped per (workspace, business); emitting
+    // the same event name twice for one workspace (simulating two businesses) must still be read as 2 rows, proving
+    // the bound is consumed per-event-row, not per-workspace.
+    const account = await seedAccount({ signupSource: PUBLIC_BETA_SIGNUP_SOURCE });
+    await productEvent(account.workspaceId, "PRODUCT_FIRST_DIAGNOSIS_COMPLETED");
+    await productEvent(account.workspaceId, "PRODUCT_FIRST_DIAGNOSIS_COMPLETED");
+
+    const o = await getAccountClassificationOverview(new Date(), undefined, 1);
+    expect(o.milestoneEvidenceTruncated).toBe(true);
+  });
 });
