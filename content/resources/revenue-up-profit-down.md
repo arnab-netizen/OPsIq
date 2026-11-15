@@ -26,6 +26,8 @@ The useful question isn't "did revenue grow?" It's "did the *cost of each dollar
 
 These aren't mutually exclusive — it's common for two to be happening at once. But usually one of them is doing most of the work, and you can find out which by looking at gross margin, not just the top and bottom lines.
 
+If you run an agency, these same causes tend to show up as two more specific, measurable patterns: hours quietly running past what a retainer was scoped for (see [Hours Logged vs Hours Scoped](/resources/hours-logged-vs-hours-scoped-overservicing)), or a utilization number that looks fine only because of which denominator it's measured against (see [Agency Utilization Rate](/resources/agency-utilization-rate-denominator)).
+
 ## A worked example (illustrative)
 
 A single-location service business compares this year to last year.

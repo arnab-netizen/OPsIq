@@ -39,7 +39,7 @@ So the lower bound of a "healthy" range can be 60% or 70% depending on the sourc
 
 ## What utilization does not tell you
 
-Utilization counts hours. It does not say whether those hours were paid for. A team can log 85% of its available time on work that was never scoped, and that is an overservicing problem rather than a staffing problem. Hours logged on a client but never billed raise utilization and lower delivery margin at the same time. That is why, in our working order of checks, utilization comes after delivery margin, overhead and cash: a high rate does not help if the hours are not turning into revenue. That ordering is our own heuristic, not something these sources prescribe.
+Utilization counts hours. It does not say whether those hours were paid for. A team can log 85% of its available time on work that was never scoped, and that is an overservicing problem rather than a staffing problem — see [Hours Logged vs Hours Scoped](/resources/hours-logged-vs-hours-scoped-overservicing) for how to catch that before it shows up here. Hours logged on a client but never billed raise utilization and lower delivery margin at the same time. That is why, in our working order of checks, utilization comes after delivery margin, overhead and cash: a high rate does not help if the hours are not turning into revenue. That ordering is our own heuristic, not something these sources prescribe.
 
 ## A decision tree for picking your definition
 
