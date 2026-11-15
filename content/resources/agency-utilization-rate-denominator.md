@@ -1,6 +1,6 @@
 ---
 title: "Agency Utilization Rate: Pick the Denominator Before You Compare the Number"
-description: "Two agencies can run the same team and report different utilization rates. A plain definition of the formula, why the denominator changes the answer, and how published ranges disagree, with an illustrative worked example."
+description: "Two agencies can run the same team and report different utilization rates. A plain look at the formula, why the denominator changes the answer, and how published ranges disagree."
 publishedAt: 2026-10-27
 author: OpsIQ
 authorType: organization
