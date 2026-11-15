@@ -1,10 +1,10 @@
 ---
 title: "Revenue Up, Profit Down? Here's How to Find Out Why"
 description: "Growing revenue with shrinking profit usually has one of three specific causes. A plain-English way to check which one you have, with a worked example."
-publishedAt: 2026-09-25
+publishedAt: 2026-11-15
 author: OpsIQ
 authorType: organization
-status: draft
+status: published
 ---
 Revenue is up over last year. On paper, that should feel good. But the number that actually lands in profit hasn't moved the same way — maybe it's flat, maybe it's smaller than it was on less revenue. Nothing looks obviously broken. There's just more coming in and less left over.
 
