@@ -8,7 +8,7 @@
  *
  * Run: TEST_WITH_DB=true npx vitest run src/__tests__/beta-cohort/account-overview.db.test.ts
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID, randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
@@ -27,6 +27,16 @@ beforeAll(async () => {
   await db.user.create({ data: { id: OPERATOR_ID, email: `overview-operator-${OPERATOR_ID}@example.com`, isActive: true, updatedAt: new Date() } });
 });
 
+// This suite asserts on DELTAS against a live getAccountClassificationOverview() baseline, which reads every
+// signupSource-tagged workspace in the whole database -- a leftover row here silently inflates that global count
+// for every OTHER .db.test.ts file that shares the same CI Postgres instance in the same run (notably
+// beta-cap-race/capacity-alerts/platform-capacity-locking/platform-capacity-increase-guard, which explicitly seed a
+// KNOWN starting count and clean it up themselves). Every workspace/user/betaRequest created below is tracked and
+// deleted in afterAll, matching the cleanup convention those files already use.
+const seededWorkspaceIds: string[] = [];
+const seededUserIds: string[] = [];
+const seededBetaRequestIds: string[] = [];
+
 interface SeededAccount { userId: string; workspaceId: string; email: string; betaRequestId: string }
 
 async function seedAccount(opts: {
@@ -44,8 +54,35 @@ async function seedAccount(opts: {
   });
   await db.workspaceMembership.create({ data: { userId, workspaceId, role: "owner", isActive: true } });
   await db.betaRequest.create({ data: { id: betaRequestId, email, status: "INVITED", invitedAt: new Date(), updatedAt: new Date() } });
+  seededWorkspaceIds.push(workspaceId);
+  seededUserIds.push(userId);
+  seededBetaRequestIds.push(betaRequestId);
   return { userId, workspaceId, email, betaRequestId };
 }
+
+afterAll(async () => {
+  if (!SHOULD_RUN_DB_TESTS) return;
+  await db.auditEvent.deleteMany({
+    where: {
+      OR: [
+        { workspaceId: { in: seededWorkspaceIds.length > 0 ? seededWorkspaceIds : [""] } },
+        { entityId: { in: seededBetaRequestIds.length > 0 ? seededBetaRequestIds : [""] } },
+        { actorId: OPERATOR_ID },
+      ],
+    },
+  });
+  if (seededWorkspaceIds.length > 0) {
+    await db.workspaceMembership.deleteMany({ where: { workspaceId: { in: seededWorkspaceIds } } });
+    await db.workspace.deleteMany({ where: { id: { in: seededWorkspaceIds } } });
+  }
+  if (seededBetaRequestIds.length > 0) {
+    await db.betaRequest.deleteMany({ where: { id: { in: seededBetaRequestIds } } });
+  }
+  if (seededUserIds.length > 0) {
+    await db.user.deleteMany({ where: { id: { in: seededUserIds } } });
+  }
+  await db.user.deleteMany({ where: { id: OPERATOR_ID } });
+});
 
 async function classify(a: SeededAccount, cohortId: string, n: number) {
   await assignCohortOwner(
@@ -137,6 +174,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] getAccountClassificationOverview", (
         createdBy: randomUUID(), signupSource: PUBLIC_BETA_SIGNUP_SOURCE,
       },
     });
+    seededWorkspaceIds.push(workspaceId);
 
     const after = await getAccountClassificationOverview();
     expect(after.totalAccounts).toBe(before.totalAccounts + 1);
