@@ -61,6 +61,19 @@ interface AccountOverview {
   milestoneEvidenceTruncated: boolean; milestoneEvidenceNote: string;
 }
 
+interface AccountActivationRow {
+  workspaceId: string; createdAt: string; signupSource: string; verified: boolean; internalAddress: boolean; classified: boolean;
+  firstRunStarted: boolean; firstEvidenceSaved: boolean; firstDiagnosisCompleted: boolean; firstResultViewed: boolean;
+  lastMilestoneAt: string | null;
+}
+
+interface AccountActivationPage {
+  accounts: AccountActivationRow[];
+  pagination: { limit: number; cursor: string | null; nextCursor: string | null; hasMore: boolean };
+  unresolvedCreatorAccounts: number;
+  milestoneEvidenceTruncated: boolean;
+}
+
 interface CohortView {
   cohortId: string;
   generatedAt: string;
@@ -82,6 +95,11 @@ export default function BetaCohortPage() {
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const [activationPage, setActivationPage] = useState<AccountActivationPage | null>(null);
+  const [activationRows, setActivationRows] = useState<AccountActivationRow[]>([]);
+  const [activationLoading, setActivationLoading] = useState(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
 
   const [assign, setAssign] = useState({ betaRequestId: "", ownerCode: "", kind: "REAL_OWNER" });
   const [ev, setEv] = useState({
@@ -110,6 +128,27 @@ export default function BetaCohortPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Read-only, paginated, per-account activation list (workspaceId is the only identifier). Independent of the main
+  // cohort-view load: it never participates in the assign/evidence mutations above.
+  const loadActivation = useCallback(async (cursor: string | null) => {
+    setActivationLoading(true);
+    setActivationError(null);
+    try {
+      const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+      const res = await fetch(`/api/admin/beta-cohort/accounts${qs}`);
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Could not load account activation");
+      const data: AccountActivationPage = await res.json();
+      setActivationPage(data);
+      setActivationRows((prev) => (cursor ? [...prev, ...(data.accounts ?? [])] : (data.accounts ?? [])));
+    } catch (e) {
+      setActivationError(classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" }).operatorMessage);
+    } finally {
+      setActivationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadActivation(null); }, [loadActivation]);
 
   // Submissions go through the governed mutation hook (duplicate-submit protection, timeout, retry-safe: the idempotency
   // key lives in the payload, so a retry is a replay, never a second entry).
@@ -218,6 +257,45 @@ export default function BetaCohortPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="overflow-x-auto rounded-lg border border-border p-4" data-testid="account-activation-table">
+        <h2 className="text-lg font-semibold">Per-account activation</h2>
+        <p className="text-sm text-gray-700">
+          Workspace id is the only identifier shown — no email, name or beta-request id.
+          {activationPage && activationPage.unresolvedCreatorAccounts > 0 && ` · Unresolved creator (excluded from this page): ${activationPage.unresolvedCreatorAccounts}`}
+          {activationPage?.milestoneEvidenceTruncated && " · Milestone evidence truncated for this page — flags below may be a lower bound."}
+        </p>
+        {activationError && <p className="mt-1 text-sm text-red-700">{activationError}</p>}
+        <table className="mt-2 min-w-full text-left text-xs">
+          <thead className="bg-gray-50 text-gray-700">
+            <tr>{["Workspace", "Signup source", "Verified", "Classified", "Run started", "Evidence saved", "Diagnosis completed", "Result viewed", "Last milestone"].map((h) => <th key={h} className="whitespace-nowrap px-2 py-2 font-medium">{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {activationRows.length === 0 && <tr><td className="px-2 py-3 text-gray-600" colSpan={9}>No admitted accounts.</td></tr>}
+            {activationRows.map((a) => (
+              <tr key={a.workspaceId} className="border-t border-border align-top">
+                <td className="whitespace-nowrap px-2 py-2 font-mono">{a.workspaceId}</td>
+                <td className="px-2 py-2">{a.signupSource}</td>
+                <td className="px-2 py-2">{a.verified ? "YES" : "NO"}</td>
+                <td className="px-2 py-2">{a.classified ? "YES" : "NO"}</td>
+                <td className="px-2 py-2">{a.firstRunStarted ? "YES" : "NO"}</td>
+                <td className="px-2 py-2">{a.firstEvidenceSaved ? "YES" : "NO"}</td>
+                <td className="px-2 py-2">{a.firstDiagnosisCompleted ? "YES" : "NO"}</td>
+                <td className="px-2 py-2">{a.firstResultViewed ? "YES" : "NO"}</td>
+                <td className="px-2 py-2">{day(a.lastMilestoneAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {activationPage?.pagination?.hasMore && (
+          <Button
+            variant="outline" size="sm" className="mt-3" disabled={activationLoading}
+            onClick={() => void loadActivation(activationPage.pagination.nextCursor)}
+          >
+            {activationLoading ? "Loading..." : "Load more"}
+          </Button>
+        )}
       </section>
 
       <section className="rounded-lg border border-border p-4" data-testid="cohort-gate" aria-live="polite">

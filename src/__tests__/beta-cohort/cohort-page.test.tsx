@@ -41,6 +41,16 @@ const view = (owners: unknown[], overviewOver: Record<string, unknown> = {}) => 
   accountOverview: accountOverview(overviewOver),
 });
 
+const activationRow = (over: Record<string, unknown> = {}) => ({
+  workspaceId: "11111111-1111-4111-8111-111111111111", createdAt: "2026-10-20T00:00:00Z", signupSource: "PUBLIC_BETA",
+  verified: true, internalAddress: false, classified: false, firstRunStarted: true, firstEvidenceSaved: false,
+  firstDiagnosisCompleted: false, firstResultViewed: false, lastMilestoneAt: "2026-10-20T01:00:00Z", ...over,
+});
+const activationPage = (accounts: unknown[], over: Record<string, unknown> = {}) => ({
+  accounts, pagination: { limit: 50, cursor: null, nextCursor: null, hasMore: false }, unresolvedCreatorAccounts: 0, milestoneEvidenceTruncated: false, ...over,
+});
+const isAccountsUrl = (url: unknown) => String(url).includes("/beta-cohort/accounts");
+
 beforeEach(() => { fetchMock.mockReset(); vi.stubGlobal("fetch", fetchMock); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -152,5 +162,45 @@ describe("beta cohort page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Record" }));
     await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
     expect(fetchMock.mock.calls.length).toBe(callsBefore); // nothing posted
+  });
+
+  it("shows the per-account activation table keyed only by workspace id, never an email", async () => {
+    fetchMock.mockImplementation((url: unknown) => (isAccountsUrl(url) ? ok(activationPage([activationRow()])) : ok(view([owner()]))));
+    render(<BetaCohortPage />);
+    const section = await screen.findByTestId("account-activation-table");
+    expect(section.textContent).toContain("11111111-1111-4111-8111-111111111111");
+    expect(section.textContent).not.toMatch(/@/);
+  });
+
+  it("an empty activation page says so rather than showing a blank table", async () => {
+    fetchMock.mockImplementation((url: unknown) => (isAccountsUrl(url) ? ok(activationPage([])) : ok(view([owner()]))));
+    render(<BetaCohortPage />);
+    expect(await screen.findByText(/No admitted accounts/)).toBeTruthy();
+  });
+
+  it("loads the next page of account activation via Load more, appending rows without losing the first page", async () => {
+    const page1 = activationPage([activationRow({ workspaceId: "ws-1" })], { pagination: { limit: 1, cursor: null, nextCursor: "cursor-2", hasMore: true } });
+    const page2 = activationPage([activationRow({ workspaceId: "ws-2" })], { pagination: { limit: 1, cursor: "cursor-2", nextCursor: null, hasMore: false } });
+    let accountsCalls = 0;
+    fetchMock.mockImplementation((url: unknown) => {
+      if (!isAccountsUrl(url)) return ok(view([owner()]));
+      accountsCalls += 1;
+      return ok(accountsCalls === 1 ? page1 : page2);
+    });
+    render(<BetaCohortPage />);
+    await screen.findByText("ws-1");
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await screen.findByText("ws-2");
+    expect(screen.getByText("ws-1")).toBeTruthy();
+  });
+
+  it("shows an unresolved-creator and milestone-truncation note for the activation page when flagged", async () => {
+    fetchMock.mockImplementation((url: unknown) =>
+      isAccountsUrl(url) ? ok(activationPage([activationRow()], { unresolvedCreatorAccounts: 2, milestoneEvidenceTruncated: true })) : ok(view([owner()]))
+    );
+    render(<BetaCohortPage />);
+    const section = await screen.findByTestId("account-activation-table");
+    expect(section.textContent).toMatch(/Unresolved creator.*2/);
+    expect(section.textContent).toMatch(/Milestone evidence truncated/);
   });
 });

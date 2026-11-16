@@ -19,9 +19,10 @@ import { CURRENT_DIAGNOSIS_CYCLE_ORDER, currentEvidenceWhere } from "@/services/
 import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import { PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE } from "@/lib/beta";
 import {
-  buildAccountOverview, buildOwnerView, emptyAutomaticFacts, evaluateExpansionGate, storedAssignmentSchema, storedEvidenceSchema,
-  STORED_SCHEMA_VERSION, type AccountOverviewRow, type AssignmentInput, type CohortAccountOverview, type CohortAssignment,
-  type CohortAutomaticFacts, type CohortOwnerView, type EvidenceInput, type ExpansionGate, type LedgerEntry,
+  buildAccountActivationRow, buildAccountOverview, buildOwnerView, emptyAccountActivationMilestones, emptyAutomaticFacts,
+  evaluateExpansionGate, groupAccountActivationMilestones, storedAssignmentSchema, storedEvidenceSchema,
+  STORED_SCHEMA_VERSION, type AccountActivationPage, type AccountOverviewRow, type AssignmentInput, type CohortAccountOverview,
+  type CohortAssignment, type CohortAutomaticFacts, type CohortOwnerView, type EvidenceInput, type ExpansionGate, type LedgerEntry,
 } from "@/domain/beta-cohort/evidence";
 
 const ENTITY_TYPE = "BetaCohortOwner";
@@ -452,4 +453,124 @@ export async function getAccountClassificationOverview(
   }
 
   return buildAccountOverview(rows, now, { unresolvedCreatorAccounts, accountListTruncated, milestoneEvidenceTruncated });
+}
+
+// ─── Account activation (read-only, PER-ACCOUNT, paginated, no cohort write) ──────────
+
+const ACCOUNT_ACTIVATION_DEFAULT_LIMIT = 50;
+const ACCOUNT_ACTIVATION_MAX_LIMIT = 100;
+const ACCOUNT_ACTIVATION_MIN_LIMIT = 1;
+/** Generous per-page milestone-row bound (page size is capped at ACCOUNT_ACTIVATION_MAX_LIMIT accounts); see
+ * ACCOUNT_OVERVIEW_MILESTONE_EVENTS' doc comment above for why a single workspace can still produce many rows. */
+const DEFAULT_MAX_ACTIVATION_MILESTONE_ROWS = 5000;
+
+function clampActivationLimit(limit: number | undefined): number {
+  if (limit === undefined || Number.isNaN(limit)) return ACCOUNT_ACTIVATION_DEFAULT_LIMIT;
+  return Math.max(ACCOUNT_ACTIVATION_MIN_LIMIT, Math.min(ACCOUNT_ACTIVATION_MAX_LIMIT, Math.floor(limit)));
+}
+/** Opaque, id-based pagination cursor -- same shape as admin-operability.service.ts's listWorkspacesForAdmin. */
+function encodeActivationCursor(id: string): string {
+  return Buffer.from(JSON.stringify({ id }), "utf-8").toString("base64");
+}
+function decodeActivationCursor(cursor: string | null | undefined): string | null {
+  if (!cursor) return null;
+  try {
+    const decoded = JSON.parse(Buffer.from(cursor, "base64").toString("utf-8"));
+    return typeof decoded?.id === "string" ? decoded.id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read-only, paginated, PER-ACCOUNT view: for each admitted account on this page (same signupSource-tagged set
+ * getAccountClassificationOverview counts), whether it's classified and which of the 4 product milestones it
+ * personally reached -- keyed only by workspaceId. This is the thing the aggregate overview above cannot answer:
+ * "which specific account". Does NOT write anything, classify anything, or change any cohort/expansion-gate state.
+ *
+ * `maxMilestoneRows` is a test seam for the one row bound below (default is the real production bound); production
+ * callers never need to pass it.
+ */
+export async function listAccountActivationForAdmin(
+  opts: { limit?: number; cursor?: string | null } = {},
+  maxMilestoneRows: number = DEFAULT_MAX_ACTIVATION_MILESTONE_ROWS,
+): Promise<AccountActivationPage> {
+  const limit = clampActivationLimit(opts.limit);
+  const cursorId = decodeActivationCursor(opts.cursor);
+
+  const workspaces: Array<{ id: string; createdAt: Date; createdBy: string | null; signupSource: string | null }> = await db.workspace.findMany({
+    where: { signupSource: { in: [PUBLIC_BETA_SIGNUP_SOURCE, CONTROLLED_BETA_SIGNUP_SOURCE] } },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: limit + 1,
+    ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    select: { id: true, createdAt: true, createdBy: true, signupSource: true },
+  });
+  const hasMore = workspaces.length > limit;
+  const page = hasMore ? workspaces.slice(0, limit) : workspaces;
+
+  const creatorIds = [...new Set(page.map((w) => w.createdBy).filter((id): id is string => Boolean(id)))];
+  const creators: Array<{ id: string; email: string; emailVerifiedAt: Date | null }> = creatorIds.length
+    ? await db.user.findMany({ where: { id: { in: creatorIds } }, select: { id: true, email: true, emailVerifiedAt: true } })
+    : [];
+  const creatorById = new Map(creators.map((c) => [c.id, c]));
+
+  const workspaceIds = page.map((w) => w.id);
+  const audit = getAuditEventReadOnlyClient();
+  const milestoneRows: Array<{ workspaceId: string | null; eventName: string; occurredAt: Date }> = workspaceIds.length
+    ? await audit.findMany({
+        where: { workspaceId: { in: workspaceIds }, eventName: { in: [...ACCOUNT_OVERVIEW_MILESTONE_EVENTS] } },
+        select: { workspaceId: true, eventName: true, occurredAt: true },
+        take: maxMilestoneRows,
+      })
+    : [];
+  const milestoneEvidenceTruncated = milestoneRows.length >= maxMilestoneRows;
+  const milestonesByWorkspace = groupAccountActivationMilestones(milestoneRows, {
+    firstRunStarted: AUDIT_EVENTS.PRODUCT_FIRST_RUN_STARTED,
+    firstEvidenceSaved: AUDIT_EVENTS.PRODUCT_FIRST_EVIDENCE_SAVED,
+    firstDiagnosisCompleted: AUDIT_EVENTS.PRODUCT_FIRST_DIAGNOSIS_COMPLETED,
+    firstResultViewed: AUDIT_EVENTS.PRODUCT_FIRST_RESULT_VIEWED,
+  });
+
+  // Same email-keyed classification lookup getAccountClassificationOverview uses, scoped to just this page's emails.
+  const emails = [...new Set(creators.map((c) => c.email.toLowerCase()))];
+  const requestsByEmail: Array<{ id: string; email: string }> = emails.length
+    ? await db.betaRequest.findMany({ where: { email: { in: emails } }, select: { id: true, email: true } })
+    : [];
+  const requestIdByEmail = new Map(requestsByEmail.map((r) => [r.email.toLowerCase(), r.id]));
+  const requestIds = requestsByEmail.map((r) => r.id);
+  const assignedRows: Array<{ entityId: string | null }> = requestIds.length
+    ? await audit.findMany({ where: { eventName: AUDIT_EVENTS.BETA_COHORT_OWNER_ASSIGNED, workspaceId: null, entityId: { in: requestIds } }, select: { entityId: true } })
+    : [];
+  const assignedRequestIds = new Set(assignedRows.map((r) => r.entityId));
+
+  const accounts = [];
+  let unresolvedCreatorAccounts = 0;
+  for (const w of page) {
+    const creator = w.createdBy ? creatorById.get(w.createdBy) : undefined;
+    // Same policy as getAccountClassificationOverview: never guess a fact for an unresolvable creator.
+    if (!creator) {
+      unresolvedCreatorAccounts += 1;
+      continue;
+    }
+    const email = creator.email.toLowerCase();
+    const requestId = requestIdByEmail.get(email);
+    accounts.push(buildAccountActivationRow({
+      workspaceId: w.id,
+      createdAt: w.createdAt,
+      signupSource: w.signupSource === PUBLIC_BETA_SIGNUP_SOURCE ? "PUBLIC_BETA" : "CONTROLLED_BETA_INVITE",
+      verified: creator.emailVerifiedAt !== null,
+      internalAddress: isInternalAddress(email),
+      classified: requestId !== undefined && assignedRequestIds.has(requestId),
+      milestones: milestonesByWorkspace.get(w.id) ?? emptyAccountActivationMilestones(),
+    }));
+  }
+
+  const nextCursor = hasMore && page.length > 0 ? encodeActivationCursor(page[page.length - 1].id) : null;
+
+  return {
+    accounts,
+    pagination: { limit, cursor: opts.cursor ?? null, nextCursor, hasMore },
+    unresolvedCreatorAccounts,
+    milestoneEvidenceTruncated,
+  };
 }
