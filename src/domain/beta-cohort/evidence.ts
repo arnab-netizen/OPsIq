@@ -521,6 +521,165 @@ export interface ExpansionGate {
   unmet: string[];
 }
 
+// ─── Account classification overview (read-only, aggregate-only) ───────────
+
+/**
+ * One admitted account's facts, already resolved by the caller (the service does the DB joins and the
+ * signupSource/internal-address/classified lookups). Deliberately carries NOTHING that could identify the
+ * account — no id, no email, no email hint, no name — because this feeds an AGGREGATE view only: see
+ * buildAccountOverview below, which turns a list of these into counts and nothing else.
+ */
+export interface AccountOverviewRow {
+  signupSource: "PUBLIC_BETA" | "CONTROLLED_BETA_INVITE";
+  verified: boolean;
+  internalAddress: boolean;
+  /** True iff this account's BetaRequest (by email) already has a BETA_COHORT_OWNER_ASSIGNED entry in ANY cohort. */
+  classified: boolean;
+  firstRunStarted: boolean;
+  firstEvidenceSaved: boolean;
+  firstDiagnosisCompleted: boolean;
+  firstResultViewed: boolean;
+}
+
+export interface AccountOverviewBucket {
+  count: number;
+  emailVerified: number;
+  firstRunStarted: number;
+  firstEvidenceSaved: number;
+  firstDiagnosisCompleted: number;
+  firstResultViewed: number;
+}
+
+export interface CohortAccountOverview {
+  generatedAt: Date;
+  /** Every admitted account found, INCLUDING any with an unresolved creator below. Never silently undercounted. */
+  totalAccounts: number;
+  bySignupSource: { publicBeta: number; controlledBetaInvite: number };
+  /** verified + unverified + unresolvedCreatorAccounts === totalAccounts, always. */
+  verified: number;
+  unverified: number;
+  /** Accounts on an internal (@opsiq.solutions) address: can only ever be QA_MECHANICS, never REAL_OWNER. */
+  internalAddressAccounts: number;
+  classified: number;
+  unclassified: number;
+  /** Deliberately part of the payload, not just a UI string: UNCLASSIFIED is UNKNOWN, never "not a customer". */
+  unclassifiedNote: string;
+  classifiedMilestones: AccountOverviewBucket;
+  unclassifiedMilestones: AccountOverviewBucket;
+  /**
+   * Admitted accounts whose creator user record could not be resolved (e.g. the referenced user id no longer
+   * exists). Counted in totalAccounts but deliberately excluded from verified/unverified/classified/unclassified/
+   * milestones below -- their state is unknown, never guessed or silently dropped. classified + unclassified +
+   * unresolvedCreatorAccounts === totalAccounts, always.
+   */
+  unresolvedCreatorAccounts: number;
+  /** Non-empty only when unresolvedCreatorAccounts > 0. */
+  unresolvedCreatorNote: string;
+  /** True when the admitted-account scan itself hit its row bound; totalAccounts and everything below it are then a lower bound, not exact. */
+  accountListTruncated: boolean;
+  /**
+   * True when the milestone-event query hit its row bound. Several of the 4 milestone events are deduped per
+   * (workspace, business) or per diagnosis cycle, not per workspace (see PRODUCT_FIRST_DIAGNOSIS_COMPLETED /
+   * PRODUCT_FIRST_EVIDENCE_SAVED / PRODUCT_FIRST_RESULT_VIEWED emission sites), so a single long-lived, multi-
+   * business workspace can contribute many rows -- this is a real, not merely theoretical, way to exhaust the
+   * bound well before every admitted account's full history is captured. When true, every milestone count in
+   * BOTH buckets below is a lower bound, never exact: some accounts may have reached a milestone whose audit
+   * row simply didn't make it into the scanned set.
+   */
+  milestoneEvidenceTruncated: boolean;
+  /** Non-empty only when milestoneEvidenceTruncated is true. */
+  milestoneEvidenceNote: string;
+}
+
+const UNCLASSIFIED_NOTE =
+  "Unclassified means this account's cohort status is UNKNOWN -- it is not evidence that the account is QA, " +
+  "and it is not evidence that it is a genuine external owner. Classify it in the table below to find out which.";
+
+const UNRESOLVED_CREATOR_NOTE =
+  "One or more admitted accounts have no resolvable creator user record. They are counted in totalAccounts but " +
+  "excluded from every other count below -- their verification, classification and milestone state is UNKNOWN, " +
+  "never guessed.";
+
+const MILESTONE_EVIDENCE_NOTE =
+  "The milestone-event scan hit its row bound before covering every admitted account's full history. The " +
+  "milestone counts above are a lower bound, not exact: some accounts may have reached a milestone whose audit " +
+  "row simply wasn't included in this scan.";
+
+function emptyBucket(): AccountOverviewBucket {
+  return { count: 0, emailVerified: 0, firstRunStarted: 0, firstEvidenceSaved: 0, firstDiagnosisCompleted: 0, firstResultViewed: 0 };
+}
+
+function addToBucket(bucket: AccountOverviewBucket, row: AccountOverviewRow): void {
+  bucket.count += 1;
+  if (row.verified) bucket.emailVerified += 1;
+  if (row.firstRunStarted) bucket.firstRunStarted += 1;
+  if (row.firstEvidenceSaved) bucket.firstEvidenceSaved += 1;
+  if (row.firstDiagnosisCompleted) bucket.firstDiagnosisCompleted += 1;
+  if (row.firstResultViewed) bucket.firstResultViewed += 1;
+}
+
+export interface AccountOverviewCompleteness {
+  /** Count of admitted accounts found whose creator user record could not be resolved (excluded from `rows`). */
+  unresolvedCreatorAccounts: number;
+  /** True when the admitted-account scan itself hit its row bound. */
+  accountListTruncated: boolean;
+  /** True when the milestone-event query hit its row bound. */
+  milestoneEvidenceTruncated: boolean;
+}
+
+/**
+ * Pure aggregation: turns already-resolved rows (plus the caller's completeness facts) into counts only. No
+ * identity of any kind ever appears here. `rows` must contain only accounts with a resolved creator -- unresolved
+ * ones are reported solely via `completeness.unresolvedCreatorAccounts`, never added to `rows` with guessed facts.
+ */
+export function buildAccountOverview(
+  rows: readonly AccountOverviewRow[],
+  now: Date,
+  completeness: AccountOverviewCompleteness,
+): CohortAccountOverview {
+  const classifiedMilestones = emptyBucket();
+  const unclassifiedMilestones = emptyBucket();
+  let publicBeta = 0;
+  let controlledBetaInvite = 0;
+  let verified = 0;
+  let internalAddressAccounts = 0;
+  let classified = 0;
+
+  for (const row of rows) {
+    if (row.signupSource === "PUBLIC_BETA") publicBeta += 1;
+    else controlledBetaInvite += 1;
+    if (row.verified) verified += 1;
+    if (row.internalAddress) internalAddressAccounts += 1;
+    if (row.classified) {
+      classified += 1;
+      addToBucket(classifiedMilestones, row);
+    } else {
+      addToBucket(unclassifiedMilestones, row);
+    }
+  }
+
+  const { unresolvedCreatorAccounts, accountListTruncated, milestoneEvidenceTruncated } = completeness;
+
+  return {
+    generatedAt: now,
+    totalAccounts: rows.length + unresolvedCreatorAccounts,
+    bySignupSource: { publicBeta, controlledBetaInvite },
+    verified,
+    unverified: rows.length - verified,
+    internalAddressAccounts,
+    classified,
+    unclassified: rows.length - classified,
+    unclassifiedNote: UNCLASSIFIED_NOTE,
+    classifiedMilestones,
+    unclassifiedMilestones,
+    unresolvedCreatorAccounts,
+    unresolvedCreatorNote: unresolvedCreatorAccounts > 0 ? UNRESOLVED_CREATOR_NOTE : "",
+    accountListTruncated,
+    milestoneEvidenceTruncated,
+    milestoneEvidenceNote: milestoneEvidenceTruncated ? MILESTONE_EVIDENCE_NOTE : "",
+  };
+}
+
 export function evaluateExpansionGate(views: readonly CohortOwnerView[], required = MIN_REAL_OWNERS_FOR_GATE): ExpansionGate {
   const counted = views.filter((v) => v.countedInGate);
   const open = counted.flatMap((v) => v.evidence.openIssues);
