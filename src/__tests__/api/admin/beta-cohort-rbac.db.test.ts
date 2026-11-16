@@ -61,6 +61,10 @@ async function callView() {
   const { GET } = await import("@/app/api/admin/beta-cohort/route");
   return GET(new NextRequest("http://localhost/api/admin/beta-cohort?cohortId=CB1") as never, {});
 }
+async function callAccounts() {
+  const { GET } = await import("@/app/api/admin/beta-cohort/accounts/route");
+  return GET(new NextRequest("http://localhost/api/admin/beta-cohort/accounts") as never, {});
+}
 async function callAssign() {
   const { POST } = await import("@/app/api/admin/beta-cohort/assign/route");
   return POST(json("http://localhost/api/admin/beta-cohort/assign", {
@@ -75,7 +79,7 @@ async function callEvidence() {
   }) as never, {});
 }
 
-const surfaces: Array<[string, () => Promise<Response>]> = [["view", callView], ["assign", callAssign], ["evidence", callEvidence]];
+const surfaces: Array<[string, () => Promise<Response>]> = [["view", callView], ["accounts", callAccounts], ["assign", callAssign], ["evidence", callEvidence]];
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Beta cohort routes — access control", () => {
   afterEach(async () => {
@@ -119,6 +123,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Beta cohort routes — access contro
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.gate.gate).toBe("CLOSED");
+  });
+
+  it("[db] ADMINISTRATION_OPERATOR and SYSTEM_ADMIN can read the per-account activation list", async () => {
+    await actAs(role(ROLES.ADMINISTRATION_OPERATOR));
+    expect((await callAccounts()).status).toBe(200);
+    await actAs(role(ROLES.SYSTEM_ADMIN));
+    const res = await callAccounts();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.accounts)).toBe(true);
   });
 
   it("[db] an authorised operator reaches the service (unknown request → 404 / unassigned → 400, never 401/403)", async () => {

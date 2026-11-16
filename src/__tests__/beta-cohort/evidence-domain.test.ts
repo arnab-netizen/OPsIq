@@ -7,8 +7,9 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  assignmentInputSchema, buildAccountOverview, buildOwnerView, computeFirstTrustedValue, DAY_MS, emptyAutomaticFacts,
-  evaluateExpansionGate, evidenceEntrySchema, evidenceInputSchema, reduceLedger, sanitiseCohortText,
+  assignmentInputSchema, buildAccountActivationRow, buildAccountOverview, buildOwnerView, computeFirstTrustedValue, DAY_MS,
+  emptyAccountActivationMilestones, emptyAutomaticFacts, evaluateExpansionGate, evidenceEntrySchema, evidenceInputSchema,
+  groupAccountActivationMilestones, reduceLedger, sanitiseCohortText,
   type AccountOverviewCompleteness, type AccountOverviewRow,
   type CohortAssignment, type CohortAutomaticFacts, type CohortKind, type EvidenceEntry, type LedgerEntry,
 } from "@/domain/beta-cohort/evidence";
@@ -419,6 +420,72 @@ describe("buildAccountOverview — aggregate account classification (counts only
       "classified", "unclassified", "unclassifiedNote", "classifiedMilestones", "unclassifiedMilestones",
       "unresolvedCreatorAccounts", "unresolvedCreatorNote", "accountListTruncated",
       "milestoneEvidenceTruncated", "milestoneEvidenceNote",
+    ]);
+  });
+});
+
+const EVENT_NAMES = {
+  firstRunStarted: "PRODUCT_FIRST_RUN_STARTED", firstEvidenceSaved: "PRODUCT_FIRST_EVIDENCE_SAVED",
+  firstDiagnosisCompleted: "PRODUCT_FIRST_DIAGNOSIS_COMPLETED", firstResultViewed: "PRODUCT_FIRST_RESULT_VIEWED",
+};
+
+describe("groupAccountActivationMilestones / buildAccountActivationRow — per-account activation (workspaceId only)", () => {
+  it("each flag derives independently from whatever event-name set is passed for that workspace", () => {
+    const flags = groupAccountActivationMilestones(
+      [
+        { workspaceId: "ws-1", eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(0) },
+        { workspaceId: "ws-1", eventName: EVENT_NAMES.firstResultViewed, occurredAt: at(5) },
+      ],
+      EVENT_NAMES,
+    ).get("ws-1");
+    expect(flags).toMatchObject({ firstRunStarted: true, firstEvidenceSaved: false, firstDiagnosisCompleted: false, firstResultViewed: true });
+  });
+
+  it("two workspaces' events, interleaved in one array, never bleed into each other's flags", () => {
+    const grouped = groupAccountActivationMilestones(
+      [
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(0) },
+        { workspaceId: "ws-b", eventName: EVENT_NAMES.firstDiagnosisCompleted, occurredAt: at(1) },
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstEvidenceSaved, occurredAt: at(2) },
+        { workspaceId: "ws-b", eventName: EVENT_NAMES.firstResultViewed, occurredAt: at(3) },
+      ],
+      EVENT_NAMES,
+    );
+    expect(grouped.get("ws-a")).toMatchObject({ firstRunStarted: true, firstEvidenceSaved: true, firstDiagnosisCompleted: false, firstResultViewed: false });
+    expect(grouped.get("ws-b")).toMatchObject({ firstRunStarted: false, firstEvidenceSaved: false, firstDiagnosisCompleted: true, firstResultViewed: true });
+  });
+
+  it("a row with a null workspaceId or an unrecognised eventName is ignored, not mis-attributed", () => {
+    const grouped = groupAccountActivationMilestones(
+      [
+        { workspaceId: null, eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(0) },
+        { workspaceId: "ws-a", eventName: "SOME_OTHER_EVENT", occurredAt: at(1) },
+      ],
+      EVENT_NAMES,
+    );
+    expect(grouped.size).toBe(0);
+  });
+
+  it("lastMilestoneAt is the max occurredAt among reached events, and null when none were reached", () => {
+    const grouped = groupAccountActivationMilestones(
+      [
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(10) },
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstResultViewed, occurredAt: at(5) },
+      ],
+      EVENT_NAMES,
+    );
+    expect(grouped.get("ws-a")?.lastMilestoneAt).toEqual(at(10));
+    expect(emptyAccountActivationMilestones().lastMilestoneAt).toBeNull();
+  });
+
+  it("never exposes any field beyond workspaceId — no email, name, user id or beta-request id", () => {
+    const row = buildAccountActivationRow({
+      workspaceId: "ws-a", createdAt: at(0), signupSource: "PUBLIC_BETA", verified: true, internalAddress: false,
+      classified: true, milestones: emptyAccountActivationMilestones(),
+    });
+    expect(Object.keys(row)).toEqual([
+      "workspaceId", "createdAt", "signupSource", "verified", "internalAddress", "classified",
+      "firstRunStarted", "firstEvidenceSaved", "firstDiagnosisCompleted", "firstResultViewed", "lastMilestoneAt",
     ]);
   });
 });

@@ -680,6 +680,121 @@ export function buildAccountOverview(
   };
 }
 
+// ─── Account activation (read-only, PER-ACCOUNT, no cohort write) ──────────
+//
+// Unlike AccountOverviewRow/buildAccountOverview above (which deliberately discards per-row identity for an
+// aggregate), this view answers "which specific account reached which milestone" so an authorized admin can pick
+// an account to investigate further. workspaceId is the ONLY identifier ever carried here -- no email, name,
+// user id or beta-request id. An admin going from a workspaceId to an actual contactable address is a separate,
+// consent-aware step this module does not perform.
+
+export interface AccountActivationMilestoneFlags {
+  firstRunStarted: boolean;
+  firstEvidenceSaved: boolean;
+  firstDiagnosisCompleted: boolean;
+  firstResultViewed: boolean;
+  /** Latest occurredAt among whichever of the 4 milestone events this workspace reached; null when none reached. Not a full activity log. */
+  lastMilestoneAt: Date | null;
+}
+
+export function emptyAccountActivationMilestones(): AccountActivationMilestoneFlags {
+  return { firstRunStarted: false, firstEvidenceSaved: false, firstDiagnosisCompleted: false, firstResultViewed: false, lastMilestoneAt: null };
+}
+
+export interface AccountActivationMilestoneEventNames {
+  firstRunStarted: string;
+  firstEvidenceSaved: string;
+  firstDiagnosisCompleted: string;
+  firstResultViewed: string;
+}
+
+/**
+ * Pure: groups a flat, possibly multi-workspace list of milestone audit rows (exactly what one bulk `audit.findMany`
+ * scoped to a page of workspace ids returns) into one flags-object PER workspaceId. A row whose workspaceId is null
+ * or whose eventName matches none of `eventNames` is ignored. This is the one place cross-account mixing could be
+ * introduced by a careless implementation (e.g. a shared counter instead of a per-id map) -- see its own tests.
+ */
+export function groupAccountActivationMilestones(
+  milestoneRows: ReadonlyArray<{ workspaceId: string | null; eventName: string; occurredAt: Date }>,
+  eventNames: AccountActivationMilestoneEventNames,
+): Map<string, AccountActivationMilestoneFlags> {
+  const byWorkspace = new Map<string, AccountActivationMilestoneFlags>();
+  for (const row of milestoneRows) {
+    if (!row.workspaceId) continue;
+    let matched: keyof AccountActivationMilestoneEventNames | null = null;
+    if (row.eventName === eventNames.firstRunStarted) matched = "firstRunStarted";
+    else if (row.eventName === eventNames.firstEvidenceSaved) matched = "firstEvidenceSaved";
+    else if (row.eventName === eventNames.firstDiagnosisCompleted) matched = "firstDiagnosisCompleted";
+    else if (row.eventName === eventNames.firstResultViewed) matched = "firstResultViewed";
+    if (!matched) continue;
+    const flags = byWorkspace.get(row.workspaceId) ?? emptyAccountActivationMilestones();
+    flags[matched] = true;
+    if (!flags.lastMilestoneAt || row.occurredAt.getTime() > flags.lastMilestoneAt.getTime()) flags.lastMilestoneAt = row.occurredAt;
+    byWorkspace.set(row.workspaceId, flags);
+  }
+  return byWorkspace;
+}
+
+/**
+ * One admitted account's activation facts for the per-account admin view. workspaceId is the sole identifier --
+ * never email, name, user id or beta-request id.
+ */
+export interface AccountActivationRow {
+  workspaceId: string;
+  createdAt: Date;
+  signupSource: "PUBLIC_BETA" | "CONTROLLED_BETA_INVITE";
+  verified: boolean;
+  internalAddress: boolean;
+  /** True iff this account's BetaRequest (by email) already has a BETA_COHORT_OWNER_ASSIGNED entry in ANY cohort. */
+  classified: boolean;
+  firstRunStarted: boolean;
+  firstEvidenceSaved: boolean;
+  firstDiagnosisCompleted: boolean;
+  firstResultViewed: boolean;
+  lastMilestoneAt: Date | null;
+}
+
+/** Pure: assembles one already-resolved workspace's facts into its AccountActivationRow. No DB access, no identity beyond workspaceId. */
+export function buildAccountActivationRow(input: {
+  workspaceId: string;
+  createdAt: Date;
+  signupSource: "PUBLIC_BETA" | "CONTROLLED_BETA_INVITE";
+  verified: boolean;
+  internalAddress: boolean;
+  classified: boolean;
+  milestones: AccountActivationMilestoneFlags;
+}): AccountActivationRow {
+  return {
+    workspaceId: input.workspaceId,
+    createdAt: input.createdAt,
+    signupSource: input.signupSource,
+    verified: input.verified,
+    internalAddress: input.internalAddress,
+    classified: input.classified,
+    firstRunStarted: input.milestones.firstRunStarted,
+    firstEvidenceSaved: input.milestones.firstEvidenceSaved,
+    firstDiagnosisCompleted: input.milestones.firstDiagnosisCompleted,
+    firstResultViewed: input.milestones.firstResultViewed,
+    lastMilestoneAt: input.milestones.lastMilestoneAt,
+  };
+}
+
+export interface AccountActivationPagination {
+  limit: number;
+  cursor: string | null;
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface AccountActivationPage {
+  accounts: AccountActivationRow[];
+  pagination: AccountActivationPagination;
+  /** Admitted accounts on this page whose creator user record could not be resolved; excluded from `accounts`, never guessed. */
+  unresolvedCreatorAccounts: number;
+  /** True when this page's milestone-event scan hit its row bound; this page's milestone flags may then be a lower bound. */
+  milestoneEvidenceTruncated: boolean;
+}
+
 export function evaluateExpansionGate(views: readonly CohortOwnerView[], required = MIN_REAL_OWNERS_FOR_GATE): ExpansionGate {
   const counted = views.filter((v) => v.countedInGate);
   const open = counted.flatMap((v) => v.evidence.openIssues);
