@@ -73,7 +73,10 @@ function persistConsent(value: AnalyticsConsent): void {
 // Consent is an external store (localStorage). useSyncExternalStore keeps SSR/hydration safe (the server snapshot is
 // "not read yet" = undefined, so nothing is offered or loaded before the browser has read the choice) and also picks up
 // a change made in another tab through the `storage` event.
-function subscribeToConsent(onChange: () => void): () => void {
+// Exported so other consent-gated features (e.g. src/components/analytics/AttributionCapture.tsx)
+// can read/subscribe to the SAME visitor choice instead of re-implementing their own storage read,
+// cross-tab "storage" listener, and same-tab CONSENT_CHANGED_EVENT listener.
+export function subscribeToConsent(onChange: () => void): () => void {
   window.addEventListener("storage", onChange);
   window.addEventListener(CONSENT_CHANGED_EVENT, onChange);
   return () => {
@@ -81,8 +84,8 @@ function subscribeToConsent(onChange: () => void): () => void {
     window.removeEventListener(CONSENT_CHANGED_EVENT, onChange);
   };
 }
-const getConsentSnapshot = (): AnalyticsConsent | null => readStoredConsent() ?? memoryConsent;
-const getServerConsentSnapshot = (): AnalyticsConsent | null | undefined => undefined;
+export const getConsentSnapshot = (): AnalyticsConsent | null => readStoredConsent() ?? memoryConsent;
+export const getServerConsentSnapshot = (): AnalyticsConsent | null | undefined => undefined;
 
 /** Best-effort removal of the first-party cookies Clarity may have set on this site (host and parent domain). */
 function clearClarityCookies(): void {
