@@ -7,6 +7,15 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
+// A fixed calendar date eventually exceeds FIRST_READ_STALE_AFTER_DAYS (45) and the evidence this test relies on
+// being "current" starts being read as stale instead -- same non-rotting pattern as first-run.db.test.ts's period().
+const period = () => {
+  const end = new Date();
+  end.setUTCDate(0); // last day of previous month
+  const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+  return { periodStart: start.toISOString().slice(0, 10), periodEnd: end.toISOString().slice(0, 10) };
+};
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] next-action consistency", () => {
   const scenarios: Record<string, Record<string, unknown>> = {
     receivablesHeavy: { revenue: 80000, fixedCosts: 20000, variableCosts: 35000, receivables: 60000, cashOnHand: 5000 },
@@ -26,7 +35,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] next-action consistency", () => {
       const { getFirstMoneyRead } = await import("@/services/owner-first-run/first-run.service");
       const { getFinanceDashboard } = await import("@/services/owner-finance/dashboard.service");
       const { getOwnerHome } = await import("@/services/owner-home/home.service");
-      const snap = await createFinancialSnapshot(b.id, { periodStart: "2026-09-01", periodEnd: "2026-09-30", currency: "INR", evidenceQuality: "ACTUAL", ...figures } as never, actorId, workspaceId);
+      const snap = await createFinancialSnapshot(b.id, { ...period(), currency: "INR", evidenceQuality: "ACTUAL", ...figures } as never, actorId, workspaceId);
       await runFinanceDiagnosis(b.id, snap.id, actorId, workspaceId);
       const fr = await getFirstMoneyRead(workspaceId, b.id);
       const dash = await getFinanceDashboard(workspaceId, b.id);

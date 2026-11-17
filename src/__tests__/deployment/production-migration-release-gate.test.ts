@@ -13,7 +13,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 // @ts-expect-error -- plain ESM script without type declarations
-import { evaluateMigrationGate, runGate } from "../../../scripts/release/production-migration-gate.mjs";
+import { evaluateMigrationGate, runGate, WRITE_CAPABILITY_TARGET_TABLE } from "../../../scripts/release/production-migration-gate.mjs";
 // @ts-expect-error -- plain ESM script without type declarations
 import { classifyMigrateStatus } from "../../../scripts/classify-migrate-status.mjs";
 
@@ -144,13 +144,36 @@ describe("production migration release gate (runs in `npm run build` on Vercel p
     expect(down.output).not.toMatch(/prod-db|s3cret|example\.invalid/);
   }, 60_000);
 
-  it("the gate only reads: one SELECT inside a READ ONLY transaction, no DDL/DML, no migrate command", () => {
+  it("the migration-history read path is one SELECT inside a READ ONLY transaction, no migrate command, and no DDL/DML/TRUNCATE at all", () => {
     const src = readFileSync(join(ROOT, "scripts/release/production-migration-gate.mjs"), "utf8");
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
     expect(code).toContain('client.query("BEGIN READ ONLY")');
     expect(code).toMatch(/SELECT migration_name, checksum, finished_at, rolled_back_at FROM "_prisma_migrations"/);
-    expect(code).not.toMatch(/\b(INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE)\b/);
+    expect(code).not.toMatch(/\b(INSERT|DELETE|ALTER|DROP|CREATE|TRUNCATE)\b/);
     expect(code).not.toMatch(/migrate (deploy|resolve|reset)|execSync|spawn/);
+  });
+
+  it("the gate's ONLY write-class statement is the sanctioned, always-rolled-back write-capability no-op (zero rows, WHERE false)", () => {
+    const src = readFileSync(join(ROOT, "scripts/release/production-migration-gate.mjs"), "utf8");
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    const updateStatements = code.match(/UPDATE[^`]*?WHERE false/g) ?? [];
+    expect(updateStatements).toHaveLength(1);
+    // The statement targets a parameter defaulted to WRITE_CAPABILITY_TARGET_TABLE, never a different literal.
+    expect(updateStatements[0]).toContain("${targetTable}");
+    expect(code).toMatch(/targetTable\s*=\s*WRITE_CAPABILITY_TARGET_TABLE/);
+    expect(WRITE_CAPABILITY_TARGET_TABLE).toBe("public.startup_status");
+    // No OTHER SQL UPDATE statement exists outside that one sanctioned no-op (a `client.query(...)` or
+    // template-literal SQL argument beginning with UPDATE) — case-sensitive SQL keyword usage, not the
+    // English word "UPDATE" that also appears in operator-facing messages (e.g. "lacks UPDATE privilege").
+    const sqlUpdateStatements = code.match(/(?:client\.query\(\s*`|`)UPDATE\b[^`]*`/g) ?? [];
+    expect(sqlUpdateStatements).toHaveLength(1);
+    // The function issuing it opens a plain (not READ ONLY) BEGIN and never COMMITs — only ROLLBACK.
+    const fnMatch = code.match(/export async function proveWriteCapabilityOnClient\([\s\S]*?\n}\n/);
+    expect(fnMatch).not.toBeNull();
+    const fnBody = (fnMatch as RegExpMatchArray)[0];
+    expect(fnBody).toContain('await client.query("BEGIN")');
+    expect(fnBody).toMatch(/ROLLBACK/);
+    expect(fnBody).not.toMatch(/\bCOMMIT\b/);
   });
 
   it("the production build runs the gate BEFORE next build, so a refused gate means no deployable build", () => {

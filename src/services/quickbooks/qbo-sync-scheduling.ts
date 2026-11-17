@@ -19,6 +19,8 @@ import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider, type HandlerResult, type TaskHandler } from "@/infra/scheduler";
 import type { QboSyncTrigger } from "./qbo-sync.service";
 import { runQboSync, type QboSyncDeps } from "./qbo-sync.service";
+import { enqueueFirstDiagnosis } from "@/services/owner-first-run/first-diagnosis-scheduling";
+import { logger } from "@/infra/logger";
 
 export const TASK_NAME_QBO_SYNC = "qbo-sync";
 
@@ -179,6 +181,19 @@ export function createQboSyncTaskHandler(makeDeps: () => QboSyncDeps): TaskHandl
             workspaceId: context.workspaceId, connectionId, trigger: "WEBHOOK",
             key: qboSyncKey(connectionId, "whc", pending.webhookPendingAt),
           });
+        }
+        // Canonical evidence was written: ask the (source-agnostic) first-read task to look. This is the unattended path - the owner
+        // need not have a tab open. Best-effort: the evidence is already saved, and first-run still starts the read on the owner's
+        // next visit, so a failure here is logged and never fails the sync.
+        if (c.canonicalCreated + c.canonicalAmended + c.canonicalUpdated > 0) {
+          try {
+            const conn = await db.qboConnection.findFirst({ where: { id: connectionId, workspaceId: context.workspaceId }, select: { businessId: true, syncState: { select: { lastSuccessAt: true } } } });
+            if (conn) {
+              await enqueueFirstDiagnosis({ workspaceId: context.workspaceId, businessId: conn.businessId, connectionId, evidenceWrittenAt: conn.syncState?.lastSuccessAt ?? new Date() });
+            }
+          } catch (e) {
+            logger.warn("Could not enqueue the first-read task after a QuickBooks sync", { connectionId, reason: e instanceof Error ? e.name : "unknown" });
+          }
         }
         return {
           status: "SUCCESS",

@@ -150,7 +150,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("QBO connect + callback routes (real Postg
       const { state, url } = await startFlow(t);
       const r = await callback(t, { state, code: "AUTHCODE-xyz-123", realmId: realm });
       expect(r.status).toBe(200);
-      expect(r.body).toEqual({ status: "CONNECTED", businessId: t.biz, environment: "sandbox", reconnected: false, next: "/owner/home" });
+      expect(r.body).toEqual({ status: "CONNECTED", businessId: t.biz, environment: "sandbox", reconnected: false, next: "/owner/home", landing: "data" }); // a test (fixture) business is not served by first-run, so it keeps the My Business landing
       expect(exchangeCalls()).toHaveLength(1);
       expect(exchangeCalls()[0].body).toContain(`redirect_uri=${encodeURIComponent(CALLBACK_URL)}`);
       expect(exchangeCalls()[0].body).toContain("code=AUTHCODE-xyz-123");

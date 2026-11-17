@@ -11,7 +11,7 @@ import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow } from "@/lib/validation";
 import { cohortIdSchema } from "@/domain/beta-cohort/evidence";
-import { getCohortView } from "@/services/beta-cohort/cohort-evidence.service";
+import { getAccountClassificationOverview, getCohortView } from "@/services/beta-cohort/cohort-evidence.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -20,7 +20,8 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const cohortId = parseOrThrow(cohortIdSchema, url.searchParams.get("cohortId") ?? "CB1");
-    return canonicalJson(await getCohortView(cohortId), { status: 200 });
+    const [view, accountOverview] = await Promise.all([getCohortView(cohortId), getAccountClassificationOverview()]);
+    return canonicalJson({ ...view, accountOverview }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.BETA_PROGRAM_MANAGE] },
 );

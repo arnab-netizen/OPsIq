@@ -1,0 +1,166 @@
+/**
+ * F-AUTH-ROOT-FAST-FAIL Phase 2 proof (DOUBLE_SESSION_FETCH).
+ *
+ * Pre-fix: the authenticated root route called getSession() once directly
+ * (HomePage) and then AGAIN inside getPolicyContext() -- two full session
+ * lookups (cookie read + the bounded raw-SQL round trip) for one request.
+ *
+ * Fix: getPolicyContextForSession(session, workspaceId?) takes an
+ * ALREADY-validated SessionInfo and performs every workspace-membership /
+ * role / capability read getPolicyContext() does, WITHOUT calling
+ * getSession() (and therefore without reading the session cookie or
+ * re-running the raw-SQL session lookup) a second time.
+ *
+ * This proves, with no real database (mocked Prisma model calls only):
+ *  - getPolicyContext() itself still reads the cookie exactly once (its own
+ *    internal getSession() call) -- unchanged, pre-existing behavior for
+ *    every OTHER caller of getPolicyContext().
+ *  - getPolicyContextForSession() reads the cookie ZERO times -- it never
+ *    touches next/headers at all, proving no second session fetch occurs.
+ *  - Both return the SAME resolved PolicyContext for the same inputs --
+ *    the fix is behavior-preserving, not merely "faster but different".
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const cookieHolder = vi.hoisted(() => ({ token: "session-token-1" as string | undefined }));
+const cookieGetSpy = vi.hoisted(() => vi.fn());
+
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => {
+      cookieGetSpy(name);
+      return name === "opsiq_session" && cookieHolder.token ? { value: cookieHolder.token } : undefined;
+    },
+  }),
+}));
+
+const sessionQueryMock = vi.hoisted(() => vi.fn());
+
+const workspaceMembershipFindFirst = vi.hoisted(() => vi.fn());
+const workspaceMembershipFindUnique = vi.hoisted(() => vi.fn());
+const userRoleAssignmentFindMany = vi.hoisted(() => vi.fn());
+const engagementMembershipFindMany = vi.hoisted(() => vi.fn());
+const mockDbClient = vi.hoisted(() => ({
+  workspaceMembership: { findFirst: workspaceMembershipFindFirst, findUnique: workspaceMembershipFindUnique },
+  userRoleAssignment: { findMany: userRoleAssignmentFindMany },
+  engagementMembership: { findMany: engagementMembershipFindMany },
+}));
+
+vi.mock("@/lib/db", () => ({
+  db: mockDbClient,
+  getDbInstance: vi.fn().mockResolvedValue({}),
+  getRawPool: vi.fn().mockResolvedValue({
+    connect: vi.fn().mockResolvedValue({
+      query: (text: string, values?: unknown[]) => sessionQueryMock(text, values),
+    }),
+  }),
+  withRawStatementTimeout: async (
+    pool: { connect: () => Promise<{ query: (...args: unknown[]) => unknown }> },
+    _timeoutMs: number,
+    fn: (client: { query: (...args: unknown[]) => unknown }) => unknown
+  ) => fn(await pool.connect()),
+  // santa-loop review finding (round 3): withRawStatementTimeoutWorstCaseMs() dropped its
+  // mainBackstopMarginMs parameter (dead -- no production caller) -- this mock's signature
+  // follows.
+  withRawStatementTimeoutWorstCaseMs: (statementTimeoutMs: number) => 90_000 + statementTimeoutMs + 2 * 5_000,
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5_000,
+}));
+
+vi.mock("@/lib/runtime-shadow-read-enforcer", () => ({
+  checkShadowRead: vi.fn(),
+}));
+
+import { getSession, getPolicyContext, getPolicyContextForSession } from "@/services/auth";
+
+const WORKSPACE_ID = "ws-1";
+
+function mockHealthySession() {
+  sessionQueryMock.mockResolvedValue({
+    rows: [
+      {
+        session_id: "sess-1",
+        expires_at: new Date(Date.now() + 60_000),
+        revoked_at: null,
+        user_id: "user-1",
+        user_email: "a@b.com",
+        user_name: "A",
+        user_is_active: true,
+      },
+    ],
+  });
+}
+
+function mockHealthyPolicyReads() {
+  workspaceMembershipFindFirst.mockResolvedValue({ workspaceId: WORKSPACE_ID });
+  workspaceMembershipFindUnique.mockResolvedValue({ isActive: true, role: "ADMIN_OR_PORTFOLIO_MANAGER" });
+  userRoleAssignmentFindMany.mockResolvedValue([{ role: "OWNER", scope: "workspace", scopeId: WORKSPACE_ID }]);
+  engagementMembershipFindMany.mockResolvedValue([]);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  cookieHolder.token = "session-token-1";
+  mockHealthySession();
+  mockHealthyPolicyReads();
+});
+
+describe("getPolicyContext() vs getPolicyContextForSession() — double session fetch", () => {
+  it("getPolicyContext() reads the session cookie exactly once (its own internal getSession() call) — unchanged baseline", async () => {
+    const ctx = await getPolicyContext();
+    expect(cookieGetSpy).toHaveBeenCalledTimes(1);
+    expect(sessionQueryMock).toHaveBeenCalledTimes(1);
+    expect(ctx).not.toBeNull();
+  });
+
+  it("getPolicyContextForSession() never reads the session cookie or re-runs the session query — DOUBLE_SESSION_FETCH_REMOVED", async () => {
+    const session = await getSession();
+    expect(cookieGetSpy).toHaveBeenCalledTimes(1);
+    expect(sessionQueryMock).toHaveBeenCalledTimes(1);
+    cookieGetSpy.mockClear();
+    sessionQueryMock.mockClear();
+
+    const ctx = await getPolicyContextForSession(session!);
+
+    expect(cookieGetSpy).not.toHaveBeenCalled();
+    expect(sessionQueryMock).not.toHaveBeenCalled();
+    expect(ctx).not.toBeNull();
+  });
+
+  it(
+    "getPolicyContext() and getPolicyContextForSession() resolve the identical PolicyContext for the same session — behavior-preserving",
+    async () => {
+      // santa-loop review finding (round 2): this test previously compared
+      // against a now-deleted opt-in raw-SQL path (statementTimeoutMs) that
+      // had no production caller left once the authenticated root route
+      // moved to its own single bounded transaction -- deleted along with
+      // that path. This test's real purpose, unchanged, is proving
+      // getPolicyContextForSession()'s double-fetch-removal is
+      // behavior-preserving relative to getPolicyContext().
+      const session = await getSession();
+      const viaReuse = await getPolicyContextForSession(session!);
+
+      cookieHolder.token = "session-token-1";
+      const viaFullFetch = await getPolicyContext();
+
+      expect(viaReuse).toEqual(viaFullFetch);
+    }
+  );
+
+  it("getPolicyContextForSession() returns null, performing zero DB reads beyond what membership resolution needs, when the caller passes a session but the user has no workspace membership", async () => {
+    workspaceMembershipFindFirst.mockResolvedValue(null);
+    const session = await getSession();
+    cookieGetSpy.mockClear();
+
+    const ctx = await getPolicyContextForSession(session!);
+
+    expect(ctx).toBeNull();
+    expect(cookieGetSpy).not.toHaveBeenCalled();
+    expect(userRoleAssignmentFindMany).not.toHaveBeenCalled();
+  });
+});
+
+// santa-loop review finding (round 2): the opt-in statementTimeoutMs raw-SQL mechanism this file
+// used to test here (and the POLICY_CONTEXT_MAIN_BACKSTOP_MARGIN_MS drift guard below it) was
+// added for the authenticated root route's OLD multi-domain implementation and had no production
+// caller left once the root route moved to its own single bounded transaction (see
+// root-redirect.service.ts) -- deleted from auth.ts as dead code, so these tests are deleted too.

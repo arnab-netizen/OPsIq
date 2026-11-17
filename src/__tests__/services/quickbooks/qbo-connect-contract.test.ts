@@ -38,8 +38,9 @@ describe("source contracts", () => {
     }
   });
   it("the callback PAGE forwards the query to the API once and navigates only to a constant path with ONE closed token", () => {
-    expect(callbackPage).toContain("qboOutcomeRedirectPath(token)");
-    expect(callbackPage).toMatch(/router\.replace\(qboOutcomeRedirectPath\(token\)\)/);
+    // The landing is one of two FIXED paths chosen by the domain from the API's closed `landing` value; the page never builds a path.
+    expect(callbackPage).toContain("qboLandingFromCallbackResponse(res.status, body)");
+    expect(callbackPage).toMatch(/router\.replace\(qboOutcomeRedirectPath\(token, landing\)\)/);
     expect(callbackPage).toContain("started.has(search)"); // one API call per page load (a second would only say "already used")
     expect(callbackPage).not.toMatch(/searchParams\.get|URLSearchParams|returnTo|redirect_uri|window\.location\.(href|assign)\s*=/);
     expect(callbackPage).not.toMatch(/console\.|logger\./);

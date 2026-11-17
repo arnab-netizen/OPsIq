@@ -43,8 +43,8 @@ describe("migrate-production.yml — safety controls", () => {
     expect(src).toContain("origin/main");
   });
 
-  it("7. Rejects empty DATABASE_URL (PRODUCTION_DATABASE_URL secret check)", () => {
-    expect(src).toContain("PRODUCTION_DATABASE_URL secret is missing or empty");
+  it("7. Rejects empty DATABASE_URL (OPERATOR_DATABASE_URL secret check)", () => {
+    expect(src).toContain("OPERATOR_DATABASE_URL secret is missing or empty");
     expect(src).toContain("exit 1");
   });
 

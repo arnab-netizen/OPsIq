@@ -27,6 +27,17 @@ export const GET = withCanonicalEnforcement(
         actorId: ctx.verifiedActorId,
       });
     }
+    // Server-decided (resolveFirstRunSources), never a client claim: only "OFFER" means the owner was actually
+    // shown the QuickBooks route. ATTENTION/IN_PROGRESS/HIDDEN never count as an offer.
+    if (context.business && context.evidenceSources?.quickBooks === "OFFER") {
+      await recordProductEventOnce({
+        name: "quickbooks_offered",
+        eventName: AUDIT_EVENTS.PRODUCT_QUICKBOOKS_OFFERED,
+        workspaceId: ctx.verifiedWorkspaceId,
+        actorId: ctx.verifiedActorId,
+        businessId: context.business.id,
+      });
+    }
     return context;
   },
   { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true },

@@ -43,12 +43,12 @@ describe("production-db-status.yml — read-only safety controls", () => {
     expect(src).not.toContain("pull_request");
   });
 
-  it("5. Runs under the production GitHub Environment (reuses existing protection rules)", () => {
-    expect(src).toContain("environment: production");
+  it("5. Runs under the protected production-operator GitHub Environment (main-only + owner approval; never the Vercel-shared one)", () => {
+    expect(src).toMatch(/^\s{4}environment: production-operator$/m);
   });
 
-  it("6. Rejects empty PRODUCTION_DATABASE_URL secret", () => {
-    expect(src).toContain("PRODUCTION_DATABASE_URL secret is missing or empty");
+  it("6. Rejects empty OPERATOR_DATABASE_URL secret", () => {
+    expect(src).toContain("OPERATOR_DATABASE_URL secret is missing or empty");
     expect(src).toContain("exit 1");
   });
 
@@ -65,11 +65,11 @@ describe("production-db-status.yml — read-only safety controls", () => {
     expect(src).toContain("u.hostname");
     expect(src).not.toMatch(/echo\s+"\$DATABASE_URL"\s*\n/);
     expect(src).not.toMatch(/echo\s+"\$PROD_URL"\s*\n/);
-    expect(src).not.toMatch(/echo\s+"\$\{\{\s*secrets\.PRODUCTION_DATABASE_URL/);
+    expect(src).not.toMatch(/echo\s+"\$\{\{\s*secrets\.OPERATOR_DATABASE_URL/);
   });
 
-  it("10. PRODUCTION_DATABASE_URL secret is referenced only within this single job", () => {
-    const matches = src.match(/secrets\.PRODUCTION_DATABASE_URL/g) ?? [];
+  it("10. OPERATOR_DATABASE_URL secret is referenced only within this single job", () => {
+    const matches = src.match(/secrets\.OPERATOR_DATABASE_URL/g) ?? [];
     expect(matches.length).toBeGreaterThan(0);
     // Scope to the jobs: section only (top-level `on:`/`concurrency:` keys
     // would otherwise also match a bare "2-space-indented key:" pattern).

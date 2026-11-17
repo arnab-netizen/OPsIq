@@ -38,8 +38,11 @@ interface PageState {
   forbidden: boolean;
 }
 
-async function fetchOverview(): Promise<OverviewData> {
-  const res = await fetch("/api/admin/overview");
+/** Must match JOURNEY_WINDOW_PRESETS in src/app/api/admin/overview/route.ts -- the route rejects any other value. */
+const JOURNEY_WINDOW_PRESETS = [7, 30, 90] as const;
+
+async function fetchOverview(windowDays: number): Promise<OverviewData> {
+  const res = await fetch(`/api/admin/overview?windowDays=${windowDays}`);
   if (!res.ok) {
     if (res.status === 403) {
       const err = new Error("Forbidden") as Error & { httpStatus?: number };
@@ -51,10 +54,10 @@ async function fetchOverview(): Promise<OverviewData> {
   return res.json();
 }
 
-async function loadAndApply(setState: (updater: PageState | ((prev: PageState) => PageState)) => void): Promise<void> {
+async function loadAndApply(setState: (updater: PageState | ((prev: PageState) => PageState)) => void, windowDays: number): Promise<void> {
   setState((s) => ({ ...s, loading: true, error: null, forbidden: false }));
   try {
-    const data = await fetchOverview();
+    const data = await fetchOverview(windowDays);
     setState({ data, loading: false, error: null, forbidden: false });
   } catch (error) {
     const tagged = error as Error & { httpStatus?: number };
@@ -79,10 +82,11 @@ function StatTile({ label, value, sublabel }: { label: string; value: string | n
 
 export default function AdminOverviewPage() {
   const [state, setState] = useState<PageState>({ data: null, loading: true, error: null, forbidden: false });
+  const [windowDays, setWindowDays] = useState<number>(7);
 
   useEffect(() => {
-    void loadAndApply(setState);
-  }, []);
+    void loadAndApply(setState, windowDays);
+  }, [windowDays]);
 
   if (state.loading) return <LoadingState message="Loading overview..." />;
   if (state.forbidden) return <GovernedEmptyState reason="permission_denied" />;
@@ -91,7 +95,7 @@ export default function AdminOverviewPage() {
       <div className="p-6">
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-sm font-medium text-red-700">{state.error}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => void loadAndApply(setState)}>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => void loadAndApply(setState, windowDays)}>
             Try again
           </Button>
         </div>
@@ -134,7 +138,23 @@ export default function AdminOverviewPage() {
       </section>
 
       <section className="space-y-3" data-testid="journey-funnel">
-        <h2 className="text-lg font-semibold">Signup to first value{journey ? ` (last ${journey.windowDays} days)` : ""}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Signup to first value{journey ? ` (last ${journey.windowDays} days)` : ""}</h2>
+          <div className="flex gap-1" role="group" aria-label="Reporting window">
+            {JOURNEY_WINDOW_PRESETS.map((days) => (
+              <Button
+                key={days}
+                type="button"
+                variant={windowDays === days ? "primary" : "outline"}
+                size="sm"
+                aria-pressed={windowDays === days}
+                onClick={() => setWindowDays(days)}
+              >
+                {days}d
+              </Button>
+            ))}
+          </div>
+        </div>
         {!journey && <p className="text-sm text-muted-foreground">The journey counts couldn&rsquo;t load. The rest of this page is unaffected.</p>}
         {journey && (
           <>

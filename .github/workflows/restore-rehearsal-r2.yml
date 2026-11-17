@@ -1,0 +1,110 @@
+name: Backup Ciphertext Verification (R2, no decryption)
+
+# Verifies that an R2-stored encrypted backup (produced by scheduled-backup-r2.yml) is intact and
+# recoverable BY CONSTRUCTION, without ever decrypting it:
+#   download (encrypted object + checksum sidecar) -> SHA-256 of the ciphertext as downloaded ->
+#   age header carries >= 2 recipient stanzas (primary + independent escrow) -> object is non-trivial.
+#
+# KEY CUSTODY (F-PRIVATE-KEY-CUSTODY): the age PRIVATE identities (primary and escrow) never exist in
+# GitHub. This workflow holds NO decryption key, starts NO database, and decrypts NOTHING, so no
+# decrypted customer data can ever exist on a GitHub-hosted runner. Restore proof is a controlled LOCAL
+# operation: scripts/restore-database-r2.sh (which itself refuses to run on a GitHub Actions runner) into
+# a disposable loopback database, followed by erasure reconciliation -- see
+# docs/opsiq/product/R2_BACKUP_RUNBOOK.md, "Local restore".
+#
+# ENVIRONMENT SEPARATION: uses the `backup-recovery` GitHub Environment, which now holds ONLY an R2
+# READ-ONLY credential (distinct from backup-write's Object-Read-&-Write token). It cannot write to R2,
+# cannot decrypt, and never touches Production or any database.
+#
+# workflow_dispatch only -- no schedule. Dispatch manually with the object name printed by a
+# scheduled-backup-r2.yml run's Summary step.
+
+on:
+  workflow_dispatch:
+    inputs:
+      object_name:
+        description: 'Exact encrypted object name to verify, e.g. opsiq_backup_2026-10-28_03-00-00_123456.sql.gz.age'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-ciphertext-verification-r2
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify stored ciphertext (no decryption)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: backup-recovery
+
+    steps:
+      - name: Preflight check - read-only configuration exists
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_READONLY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READONLY_SECRET_ACCESS_KEY }}
+        run: |
+          MISSING=0
+          for v in R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::$v is missing or empty"
+              MISSING=1
+            fi
+          done
+          [ "$MISSING" -eq 0 ] || { echo "::error::backup-recovery configuration incomplete. See docs/opsiq/product/R2_BACKUP_RUNBOOK.md."; exit 1; }
+          echo "Read-only configuration present."
+
+      - name: Download and verify the ciphertext
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_READONLY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READONLY_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          OBJECT_NAME: ${{ inputs.object_name }}
+        run: |
+          set -euo pipefail
+          # The object name becomes a filename and a remote key: forbid traversal/separators.
+          if [[ "$OBJECT_NAME" == */* ]] || [[ "$OBJECT_NAME" == *..* ]] || [[ "$OBJECT_NAME" != *.sql.gz.age ]]; then
+            echo "::error::object name is not a plain '*.sql.gz.age' filename"
+            exit 1
+          fi
+          if ! [[ "$R2_ENDPOINT" =~ ^https://[a-z0-9]+\.r2\.cloudflarestorage\.com/?$ ]]; then
+            echo "::error::R2_ENDPOINT does not look like a Cloudflare R2 account endpoint"
+            exit 1
+          fi
+          R2_ENDPOINT="${R2_ENDPOINT%/}"
+          WORK="$(mktemp -d)"
+          chmod 700 "$WORK"
+          aws s3 cp "s3://${R2_BUCKET}/backups/${OBJECT_NAME}" "$WORK/obj" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          aws s3 cp "s3://${R2_BUCKET}/backups/${OBJECT_NAME}.sha256" "$WORK/obj.sha256" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+
+          EXPECTED="$(tr -d '[:space:]' < "$WORK/obj.sha256")"
+          ACTUAL="$(sha256sum "$WORK/obj" | awk '{print $1}')"
+          if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+            echo "::error::CIPHERTEXT_CHECKSUM_MISMATCH"
+            exit 1
+          fi
+          SIZE="$(wc -c < "$WORK/obj" | tr -d ' ')"
+          if [ "$SIZE" -lt 200 ]; then
+            echo "::error::object is implausibly small ($SIZE bytes)"
+            exit 1
+          fi
+          # age header: plain text up to the first '---' MAC line. Count recipient stanzas; payload is never read.
+          STANZAS="$(head -c 8192 "$WORK/obj" | LC_ALL=C awk '/^---/{exit} /^-> /{n++} END{print n+0}')"
+          if ! head -n 1 "$WORK/obj" | grep -q '^age-encryption.org/v1'; then
+            echo "::error::object is not an age-encrypted file"
+            exit 1
+          fi
+          if [ "$STANZAS" -lt 2 ]; then
+            echo "::error::ESCROW_RECIPIENTS_MISSING: only $STANZAS recipient stanza(s); primary + independent escrow are required"
+            exit 1
+          fi
+          rm -rf "$WORK"
+          echo "CIPHERTEXT_VERIFIED object=$OBJECT_NAME size=$SIZE sha256=$ACTUAL recipient_stanzas=$STANZAS"
+          echo "No key was used and nothing was decrypted. A restore proof is a LOCAL operation (runbook: Local restore)."

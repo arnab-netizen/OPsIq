@@ -7,9 +7,11 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  assignmentInputSchema, buildOwnerView, computeFirstTrustedValue, DAY_MS, emptyAutomaticFacts, evaluateExpansionGate,
-  evidenceEntrySchema, evidenceInputSchema, reduceLedger, sanitiseCohortText, type CohortAssignment, type CohortAutomaticFacts,
-  type CohortKind, type EvidenceEntry, type LedgerEntry,
+  assignmentInputSchema, buildAccountActivationRow, buildAccountOverview, buildOwnerView, computeFirstTrustedValue, DAY_MS,
+  emptyAccountActivationMilestones, emptyAutomaticFacts, evaluateExpansionGate, evidenceEntrySchema, evidenceInputSchema,
+  groupAccountActivationMilestones, reduceLedger, sanitiseCohortText,
+  type AccountOverviewCompleteness, type AccountOverviewRow,
+  type CohortAssignment, type CohortAutomaticFacts, type CohortKind, type EvidenceEntry, type LedgerEntry,
 } from "@/domain/beta-cohort/evidence";
 
 const T0 = new Date("2026-10-20T09:00:00.000Z");
@@ -317,5 +319,173 @@ describe("expansion gate", () => {
     expect(g.gate).toBe("CLOSED");
     expect(g.criteria.REAL_OWNER_UNDERSTANDING).toBe("NOT_YET");
     expect(g.criteria.REAL_OWNER_ACTION).toBe("NOT_YET");
+  });
+});
+
+describe("buildAccountOverview — aggregate account classification (counts only, no identity)", () => {
+  const row = (over: Partial<AccountOverviewRow> = {}): AccountOverviewRow => ({
+    signupSource: "PUBLIC_BETA", verified: false, internalAddress: false, classified: false,
+    firstRunStarted: false, firstEvidenceSaved: false, firstDiagnosisCompleted: false, firstResultViewed: false, ...over,
+  });
+  const completeness = (over: Partial<AccountOverviewCompleteness> = {}): AccountOverviewCompleteness => ({
+    unresolvedCreatorAccounts: 0, accountListTruncated: false, milestoneEvidenceTruncated: false, ...over,
+  });
+
+  it("splits totals by signupSource, verification and internal-address, independent of classification", () => {
+    const rows = [
+      row({ signupSource: "PUBLIC_BETA", verified: true }),
+      row({ signupSource: "PUBLIC_BETA", verified: false }),
+      row({ signupSource: "CONTROLLED_BETA_INVITE", verified: true, internalAddress: true }),
+    ];
+    const o = buildAccountOverview(rows, at(0), completeness());
+    expect(o.totalAccounts).toBe(3);
+    expect(o.bySignupSource).toEqual({ publicBeta: 2, controlledBetaInvite: 1 });
+    expect(o.verified).toBe(2);
+    expect(o.unverified).toBe(1);
+    expect(o.internalAddressAccounts).toBe(1);
+    expect(o.accountListTruncated).toBe(false);
+  });
+
+  it("buckets milestone counts by classified vs unclassified, never mixing the two", () => {
+    const rows = [
+      row({ classified: true, firstRunStarted: true, firstResultViewed: true }),
+      row({ classified: true, firstRunStarted: true }),
+      row({ classified: false, firstDiagnosisCompleted: true }),
+    ];
+    const o = buildAccountOverview(rows, at(0), completeness());
+    expect(o.classified).toBe(2);
+    expect(o.unclassified).toBe(1);
+    expect(o.classifiedMilestones).toEqual({ count: 2, emailVerified: 0, firstRunStarted: 2, firstEvidenceSaved: 0, firstDiagnosisCompleted: 0, firstResultViewed: 1 });
+    expect(o.unclassifiedMilestones).toEqual({ count: 1, emailVerified: 0, firstRunStarted: 0, firstEvidenceSaved: 0, firstDiagnosisCompleted: 1, firstResultViewed: 0 });
+  });
+
+  it("an unclassified account is reported as UNKNOWN, never implied to be QA or a confirmed real owner", () => {
+    const o = buildAccountOverview([row({ classified: false })], at(0), completeness());
+    const note = o.unclassifiedNote.toLowerCase();
+    expect(note).toMatch(/unknown/);
+    // Must explicitly disclaim both readings, not just assert one of them as fact.
+    expect(note).toMatch(/not evidence that (the|this) account is qa/);
+    expect(note).toMatch(/not evidence that it is a genuine/);
+  });
+
+  it("zero rows is a valid, empty result — not an error", () => {
+    const o = buildAccountOverview([], at(0), completeness());
+    expect(o).toMatchObject({ totalAccounts: 0, verified: 0, unverified: 0, classified: 0, unclassified: 0, accountListTruncated: false });
+  });
+
+  it("carries the accountListTruncated flag through unchanged — a caller signal that totals are a lower bound", () => {
+    expect(buildAccountOverview([row()], at(0), completeness({ accountListTruncated: true })).accountListTruncated).toBe(true);
+  });
+
+  it("an unresolved creator is counted in totalAccounts but excluded from every derived count, never guessed", () => {
+    const rows = [row({ verified: true, classified: true })];
+    const o = buildAccountOverview(rows, at(0), completeness({ unresolvedCreatorAccounts: 2 }));
+    // totalAccounts must include the unresolved accounts even though they contribute no row.
+    expect(o.totalAccounts).toBe(rows.length + 2);
+    expect(o.unresolvedCreatorAccounts).toBe(2);
+    // The arithmetic invariant the fix promises: every admitted account is accounted for exactly once.
+    expect(o.verified + o.unverified + o.unresolvedCreatorAccounts).toBe(o.totalAccounts);
+    expect(o.classified + o.unclassified + o.unresolvedCreatorAccounts).toBe(o.totalAccounts);
+    expect(o.unresolvedCreatorNote.length).toBeGreaterThan(0);
+  });
+
+  it("the unresolved-creator note is empty when there is nothing unresolved to report", () => {
+    expect(buildAccountOverview([row()], at(0), completeness()).unresolvedCreatorNote).toBe("");
+  });
+
+  it("zero rows with only unresolved creators is still a valid, fully-accounted-for result", () => {
+    const o = buildAccountOverview([], at(0), completeness({ unresolvedCreatorAccounts: 3 }));
+    expect(o.totalAccounts).toBe(3);
+    expect(o.verified).toBe(0);
+    expect(o.unverified).toBe(0);
+    expect(o.classified).toBe(0);
+    expect(o.unclassified).toBe(0);
+  });
+
+  it("carries the milestoneEvidenceTruncated flag through, with a non-empty note only when true", () => {
+    const truncated = buildAccountOverview([row()], at(0), completeness({ milestoneEvidenceTruncated: true }));
+    expect(truncated.milestoneEvidenceTruncated).toBe(true);
+    expect(truncated.milestoneEvidenceNote.length).toBeGreaterThan(0);
+
+    const notTruncated = buildAccountOverview([row()], at(0), completeness());
+    expect(notTruncated.milestoneEvidenceTruncated).toBe(false);
+    expect(notTruncated.milestoneEvidenceNote).toBe("");
+  });
+
+  it("never exposes any field beyond counts — the row shape itself carries no id, email or name", () => {
+    const o = buildAccountOverview([row({ classified: true })], at(0), completeness());
+    const keys = Object.keys(o);
+    expect(keys).toEqual([
+      "generatedAt", "totalAccounts", "bySignupSource", "verified", "unverified", "internalAddressAccounts",
+      "classified", "unclassified", "unclassifiedNote", "classifiedMilestones", "unclassifiedMilestones",
+      "unresolvedCreatorAccounts", "unresolvedCreatorNote", "accountListTruncated",
+      "milestoneEvidenceTruncated", "milestoneEvidenceNote",
+    ]);
+  });
+});
+
+const EVENT_NAMES = {
+  firstRunStarted: "PRODUCT_FIRST_RUN_STARTED", firstEvidenceSaved: "PRODUCT_FIRST_EVIDENCE_SAVED",
+  firstDiagnosisCompleted: "PRODUCT_FIRST_DIAGNOSIS_COMPLETED", firstResultViewed: "PRODUCT_FIRST_RESULT_VIEWED",
+};
+
+describe("groupAccountActivationMilestones / buildAccountActivationRow — per-account activation (workspaceId only)", () => {
+  it("each flag derives independently from whatever event-name set is passed for that workspace", () => {
+    const flags = groupAccountActivationMilestones(
+      [
+        { workspaceId: "ws-1", eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(0) },
+        { workspaceId: "ws-1", eventName: EVENT_NAMES.firstResultViewed, occurredAt: at(5) },
+      ],
+      EVENT_NAMES,
+    ).get("ws-1");
+    expect(flags).toMatchObject({ firstRunStarted: true, firstEvidenceSaved: false, firstDiagnosisCompleted: false, firstResultViewed: true });
+  });
+
+  it("two workspaces' events, interleaved in one array, never bleed into each other's flags", () => {
+    const grouped = groupAccountActivationMilestones(
+      [
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(0) },
+        { workspaceId: "ws-b", eventName: EVENT_NAMES.firstDiagnosisCompleted, occurredAt: at(1) },
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstEvidenceSaved, occurredAt: at(2) },
+        { workspaceId: "ws-b", eventName: EVENT_NAMES.firstResultViewed, occurredAt: at(3) },
+      ],
+      EVENT_NAMES,
+    );
+    expect(grouped.get("ws-a")).toMatchObject({ firstRunStarted: true, firstEvidenceSaved: true, firstDiagnosisCompleted: false, firstResultViewed: false });
+    expect(grouped.get("ws-b")).toMatchObject({ firstRunStarted: false, firstEvidenceSaved: false, firstDiagnosisCompleted: true, firstResultViewed: true });
+  });
+
+  it("a row with a null workspaceId or an unrecognised eventName is ignored, not mis-attributed", () => {
+    const grouped = groupAccountActivationMilestones(
+      [
+        { workspaceId: null, eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(0) },
+        { workspaceId: "ws-a", eventName: "SOME_OTHER_EVENT", occurredAt: at(1) },
+      ],
+      EVENT_NAMES,
+    );
+    expect(grouped.size).toBe(0);
+  });
+
+  it("lastMilestoneAt is the max occurredAt among reached events, and null when none were reached", () => {
+    const grouped = groupAccountActivationMilestones(
+      [
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstRunStarted, occurredAt: at(10) },
+        { workspaceId: "ws-a", eventName: EVENT_NAMES.firstResultViewed, occurredAt: at(5) },
+      ],
+      EVENT_NAMES,
+    );
+    expect(grouped.get("ws-a")?.lastMilestoneAt).toEqual(at(10));
+    expect(emptyAccountActivationMilestones().lastMilestoneAt).toBeNull();
+  });
+
+  it("never exposes any field beyond workspaceId — no email, name, user id or beta-request id", () => {
+    const row = buildAccountActivationRow({
+      workspaceId: "ws-a", createdAt: at(0), signupSource: "PUBLIC_BETA", verified: true, internalAddress: false,
+      classified: true, milestones: emptyAccountActivationMilestones(),
+    });
+    expect(Object.keys(row)).toEqual([
+      "workspaceId", "createdAt", "signupSource", "verified", "internalAddress", "classified",
+      "firstRunStarted", "firstEvidenceSaved", "firstDiagnosisCompleted", "firstResultViewed", "lastMilestoneAt",
+    ]);
   });
 });
