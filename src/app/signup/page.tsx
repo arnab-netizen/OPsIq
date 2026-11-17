@@ -5,6 +5,7 @@ import { Input } from "@/ui/primitives/input";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { reportAnonymousProductEvent } from "@/lib/analytics/product-event-client";
+import { getAttributionSnapshot, sanitizeUtmTagsForTransport } from "@/lib/attribution/attribution-store";
 
 export const dynamic = "force-dynamic";
 
@@ -71,12 +72,25 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      // First/last-touch UTM attribution (src/lib/attribution/attribution-store.ts) — read fresh at
+      // submit time, never persisted anywhere except localStorage, and only present at all if the
+      // visitor granted analytics consent (see ClarityConsent). Re-sanitized against a closed
+      // character allowlist immediately before leaving the browser, so a stored value can never
+      // carry markup or anything a redirect/HTML context could misinterpret. Omitted entirely (not
+      // sent as empty objects) when there is nothing to report, so a signup from a visitor with no
+      // consent or no attribution looks exactly like it did before this field existed.
+      const { firstTouch, lastTouch } = getAttributionSnapshot(window);
+      const firstTouchAttribution = sanitizeUtmTagsForTransport(firstTouch);
+      const lastTouchAttribution = sanitizeUtmTagsForTransport(lastTouch);
+
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           workspaceName,
+          ...(Object.keys(firstTouchAttribution).length > 0 ? { firstTouchAttribution } : {}),
+          ...(Object.keys(lastTouchAttribution).length > 0 ? { lastTouchAttribution } : {}),
         }),
       });
 
