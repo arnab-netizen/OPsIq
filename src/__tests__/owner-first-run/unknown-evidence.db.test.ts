@@ -14,6 +14,15 @@ import { teardownOwnerBusiness } from "../test-helpers/owner-business-teardown";
 const COST_SENTENCE = /Some cost information is missing \(variable costs\), so OpsIQ cannot calculate total profit or margin yet\./;
 const CASH_SENTENCE = /OpsIQ doesn't know your cash, so it can't say how long your cash will last\./;
 
+// A fixed calendar date eventually exceeds FIRST_READ_STALE_AFTER_DAYS (45) and the evidence this test relies on
+// being "current" starts being read as stale instead -- same non-rotting pattern as first-run.db.test.ts's period().
+const period = () => {
+  const end = new Date();
+  end.setUTCDate(0); // last day of previous month
+  const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+  return { periodStart: start.toISOString().slice(0, 10), periodEnd: end.toISOString().slice(0, 10) };
+};
+
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] unknown evidence: first read and corrections", () => {
   const created: Array<{ actorId: string; workspaceId: string; businessId: string }> = [];
 
@@ -38,7 +47,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] unknown evidence: first read and cor
     const { getFirstMoneyRead } = await import("@/services/owner-first-run/first-run.service");
     const snap = await createFinancialSnapshot(
       t.businessId,
-      { periodStart: "2026-09-01", periodEnd: "2026-09-30", currency: "INR", evidenceQuality: "GOOD_ESTIMATE", ...evidence } as never,
+      { ...period(), currency: "INR", evidenceQuality: "GOOD_ESTIMATE", ...evidence } as never,
       t.actorId, t.workspaceId,
     );
     await runFinanceDiagnosis(t.businessId, snap.id, t.actorId, t.workspaceId);

@@ -94,6 +94,12 @@
   "enforcement": "none"
  },
  {
+  "method": "GET",
+  "route": "/api/admin/beta-cohort/accounts",
+  "classification": "NON_COMMERCIAL",
+  "enforcement": "none"
+ },
+ {
   "method": "POST",
   "route": "/api/admin/beta-cohort/assign",
   "classification": "NON_COMMERCIAL",

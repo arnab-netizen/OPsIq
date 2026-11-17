@@ -44,6 +44,16 @@ export const POST = withCanonicalEnforcement(
       businessId: params.businessId,
       props: { evidenceQuality: input.evidenceQuality },
     });
+    // This route is reachable only through the manual evidence form (QuickBooks evidence arrives through the
+    // separate sync path, never through this POST). Deduped once per (workspace, business) — a later manual
+    // save for the same business never re-fires it.
+    await recordProductEventOnce({
+      name: "manual_entry_selected",
+      eventName: AUDIT_EVENTS.PRODUCT_MANUAL_ENTRY_SELECTED,
+      workspaceId: ctx.verifiedWorkspaceId,
+      actorId: ctx.verifiedActorId,
+      businessId: params.businessId,
+    });
     return canonicalJson(snapshot, { status: 201 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true }

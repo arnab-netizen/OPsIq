@@ -777,6 +777,14 @@ export const AUDIT_EVENTS = {
   PRODUCT_RETURNING_OWNER: "product.returning_owner",
   PRODUCT_OUTCOME_VERIFICATION_STARTED: "product.outcome_verification_started",
   PRODUCT_OUTCOME_VERIFIED: "product.outcome_verified",
+  /** The server offered the QuickBooks route in the first-run evidence step (resolveFirstRunSources role === "OFFER"). Never fired for ATTENTION/IN_PROGRESS/HIDDEN. */
+  PRODUCT_QUICKBOOKS_OFFERED: "product.quickbooks_offered",
+  /** The owner initiated a QuickBooks connect (an authorization URL was issued). Not a successful connection — see PRODUCT_QUICKBOOKS_CONNECTED. */
+  PRODUCT_QUICKBOOKS_SELECTED: "product.quickbooks_selected",
+  /** The owner's first manual financial snapshot was saved (the manual evidence route, not QuickBooks). */
+  PRODUCT_MANUAL_ENTRY_SELECTED: "product.manual_entry_selected",
+  /** The QuickBooks OAuth callback finalized an ACTIVE connection. Never fired on a selection alone or a callback failure/denial. */
+  PRODUCT_QUICKBOOKS_CONNECTED: "product.quickbooks_connected",
 
   // Controlled-beta homepage capture
   BETA_REQUEST_CREATED: "beta_request.created",

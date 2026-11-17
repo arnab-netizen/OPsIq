@@ -49,6 +49,10 @@ import { createBusiness } from "@/services/founder-recovery/business.service";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { listOwnerDecisions } from "@/services/owner-outcome/owner-decision.service";
 import { logger } from "@/infra/logger";
+import { resolveQboConfig } from "@/domain/quickbooks/qbo-config";
+import { qboFirstRunOffer } from "@/domain/quickbooks/qbo-first-run-offer";
+import { getQboOwnerStatus } from "@/services/quickbooks/qbo-status.service";
+import { resolveFirstRunSources, type FirstRunSourceView } from "@/domain/owner-first-run/first-run-source";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { NEW_GOAL_TARGET_TYPES } from "@/services/owner-strategy/goal.service";
 import { recordProductEvent } from "@/services/analytics/product-events.service";
@@ -92,10 +96,45 @@ export interface FirstRunContext {
   businessTypes: readonly string[];
   /** The goal families the product supports today (never invented in the UI). */
   goalFamilies: readonly string[];
+  /**
+   * Which evidence routes the NEEDS_EVIDENCE step shows (server-decided from the persisted QuickBooks connection and the
+   * fail-closed first-run offer). Null in every other state. Both routes converge on the same canonical evidence + diagnosis.
+   */
+  evidenceSources: FirstRunSourceView | null;
 }
 
-async function firstRealBusiness(workspaceId: string, businessId?: string): Promise<(FirstRunBusiness & { createdAt: Date }) | null> {
-  const row = await db.ownerBusiness.findFirst({
+/**
+ * The persisted QuickBooks state + the fail-closed offer, reduced to what the first-run step shows. Any failure to read QuickBooks
+ * status hides the QuickBooks route (the manual route is always there) — never an error screen, never a guessed connection.
+ */
+async function loadEvidenceSources(workspaceId: string, businessId: string): Promise<FirstRunSourceView> {
+  try {
+    const status = await getQboOwnerStatus({ workspaceId, businessId }, { env: process.env });
+    const offer = qboFirstRunOffer(resolveQboConfig(process.env), process.env);
+    // Offered only when the deployment offers it AND the existing Sandbox/real-business isolation allows THIS business to connect
+    // (a Sandbox deployment never takes a real business; a Production one never a test business). That rule is not restated here.
+    return resolveFirstRunSources({ quickBooksOffered: offer.offered && status.available && status.connectBlockedReason === null, quickBooksState: status.state });
+  } catch (error) {
+    logger.warn("First-run evidence sources: QuickBooks status unavailable; offering the manual route only", { reason: describeFailure(error) });
+    return resolveFirstRunSources({ quickBooksOffered: false, quickBooksState: "NOT_CONNECTED" });
+  }
+}
+
+/**
+ * F-AUTH-ROOT-SINGLE-TX: `client` defaults to the global `db` singleton, so every existing caller
+ * (owner dashboard, onboarding) is byte-for-byte unaffected. Only the authenticated-root single
+ * transaction (root-redirect.service.ts) passes its own Prisma TransactionClient, so this read runs
+ * on the SAME bounded, cancellable transaction/backend as the rest of that decision.
+ *
+ * Typed as `Prisma.TransactionClient` (a real structural subset of PrismaClient -- missing
+ * $connect/$disconnect/$on/$extends) rather than `PrismaClient`, so the root-redirect.service.ts
+ * call site passes its `tx` with no cast at all (santa-loop round-2 review finding: the previous
+ * `PrismaClient` typing forced an unnecessary `as unknown as PrismaClient` erasure there). `db`
+ * (declared `any` at its own export in db.ts) still satisfies this narrower type for every other
+ * caller with no change.
+ */
+async function firstRealBusiness(workspaceId: string, businessId?: string, client: Prisma.TransactionClient = db): Promise<(FirstRunBusiness & { createdAt: Date }) | null> {
+  const row = await client.ownerBusiness.findFirst({
     where: { workspaceId, isActive: true, isFixtureBusiness: false, ...(businessId ? { id: businessId } : {}) },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: { id: true, name: true, businessType: true, currency: true, createdAt: true },
@@ -107,9 +146,15 @@ async function firstRealBusiness(workspaceId: string, businessId?: string): Prom
  * When this business's evidence was first corrected. Every snapshot amendment emits OWNER_FINANCE_SNAPSHOT_AMENDED
  * carrying its businessId (the governed record of the mutation), so the audit trail answers it without a second
  * reader of the snapshot table.
+ *
+ * F-AUTH-ROOT-SINGLE-TX: `getAuditEventReadOnlyClient()` reaches the global `db` singleton directly —
+ * the one real escape point in this graph. When an injected `client` is given (the root single
+ * transaction), read through it instead, so this statement stays on that same transaction/backend
+ * too; every other caller (client omitted) is unchanged.
  */
-async function firstSnapshotAmendmentAt(workspaceId: string, businessId: string): Promise<Date | null> {
-  const row = await getAuditEventReadOnlyClient().findFirst({
+async function firstSnapshotAmendmentAt(workspaceId: string, businessId: string, client: Prisma.TransactionClient = db): Promise<Date | null> {
+  const auditClient = client === db ? getAuditEventReadOnlyClient() : client.auditEvent;
+  const row = await auditClient.findFirst({
     where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_FINANCE_SNAPSHOT_AMENDED, payload: { path: ["businessId"], equals: businessId } },
     orderBy: { occurredAt: "asc" },
     select: { occurredAt: true },
@@ -117,15 +162,15 @@ async function firstSnapshotAmendmentAt(workspaceId: string, businessId: string)
   return row?.occurredAt ?? null;
 }
 
-async function trustedInteractionFacts(workspaceId: string, businessId: string): Promise<TrustedInteractionFact[]> {
+async function trustedInteractionFacts(workspaceId: string, businessId: string, client: Prisma.TransactionClient = db): Promise<TrustedInteractionFact[]> {
   const [decision, amendment, improvement] = await Promise.all([
-    db.ownerDecisionRecord.findFirst({
+    client.ownerDecisionRecord.findFirst({
       where: { workspaceId, businessId, decisionState: { in: ["ACCEPTED", "MODIFIED"] } },
       orderBy: { decidedAt: "asc" },
       select: { decidedAt: true },
     }),
-    firstSnapshotAmendmentAt(workspaceId, businessId),
-    db.ownerFirstResultInteraction.findFirst({
+    firstSnapshotAmendmentAt(workspaceId, businessId, client),
+    client.ownerFirstResultInteraction.findFirst({
       where: { workspaceId, businessId, kind: "IMPROVEMENT_REQUESTED" },
       orderBy: { createdAt: "asc" },
       select: { createdAt: true },
@@ -143,10 +188,15 @@ async function trustedInteractionFacts(workspaceId: string, businessId: string):
  * business that is not an active, non-fixture business of this workspace is refused — never silently replaced by the
  * oldest one. When omitted (login landing, server-side callers) the oldest real business is used, as before.
  */
-export async function getFirstRunContext(workspaceId: string, businessId?: string): Promise<FirstRunContext> {
+/**
+ * F-AUTH-ROOT-SINGLE-TX: `client` defaults to the global `db` singleton (every existing caller
+ * unaffected); the authenticated-root single transaction passes its own Prisma TransactionClient so
+ * the entire owner-first-run graph stays on that one bounded, cancellable transaction/backend.
+ */
+export async function getFirstRunContext(workspaceId: string, businessId?: string, client: Prisma.TransactionClient = db): Promise<FirstRunContext> {
   const [workspace, business] = await Promise.all([
-    db.workspace.findFirst({ where: { id: workspaceId }, select: { name: true } }),
-    firstRealBusiness(workspaceId, businessId),
+    client.workspace.findFirst({ where: { id: workspaceId }, select: { name: true } }),
+    firstRealBusiness(workspaceId, businessId, client),
   ]);
   if (businessId && !business) throw new NotFoundError("OwnerBusiness", businessId);
 
@@ -155,12 +205,17 @@ export async function getFirstRunContext(workspaceId: string, businessId?: strin
   let interactions: TrustedInteractionFact[] = [];
 
   if (business) {
-    const deps = { db: db as unknown as PrismaClient, workspaceId, businessId: business.id, now: new Date() };
+    // The one cast this graph still needs: OwnerDbProviderDeps.db (owner-db-providers.ts, shared
+    // owner-mode infrastructure well beyond this route) is typed PrismaClient, which
+    // Prisma.TransactionClient does not structurally satisfy (it's missing
+    // $connect/$disconnect/$on/$extends) -- verified safe by inspection: nothing reachable from
+    // prefetchOwnerDomainRows/loadFirstReadSufficiency uses those four methods.
+    const deps = { db: client as unknown as PrismaClient, workspaceId, businessId: business.id, now: new Date() };
     const rows = await prefetchOwnerDomainRows(deps);
     firstReadSufficient = (await loadFirstReadSufficiency(deps, rows)).sufficient;
     const [ev, facts] = await Promise.all([
-      firstRunEvidence(workspaceId, business.id, deps.now, undefined, { cashStaleness: true }),
-      trustedInteractionFacts(workspaceId, business.id),
+      firstRunEvidence(workspaceId, business.id, deps.now, client, { cashStaleness: true }),
+      trustedInteractionFacts(workspaceId, business.id, client),
     ]);
     evidence = ev;
     interactions = facts;
@@ -192,6 +247,7 @@ export async function getFirstRunContext(workspaceId: string, businessId?: strin
     firstTrustedInteractionAt: first?.at ?? null,
     businessTypes: BUSINESS_TYPES,
     goalFamilies: NEW_GOAL_TARGET_TYPES,
+    evidenceSources: business && state === "NEEDS_EVIDENCE" ? await loadEvidenceSources(workspaceId, business.id) : null,
   };
 }
 
@@ -684,23 +740,4 @@ export async function submitFirstValueFeedback(
     audit: { eventName: AUDIT_EVENTS.PRODUCT_FIRST_VALUE_FEEDBACK, props: { rating: input.rating, ...(input.reason ? { reason: input.reason } : {}) } },
   });
   return { replayed: !created };
-}
-
-/**
- * Where a signed-in self-serve owner should land: an interrupted first run resumes, everyone else goes to
- * the Cockpit. Resolves the workspace exactly as the policy context does (first active membership,
- * deterministic order) and fails closed to the Cockpit — a lookup problem must never trap a sign-in.
- */
-export async function resolveOwnerLoginHref(userId: string): Promise<string> {
-  try {
-    const membership = await db.workspaceMembership.findFirst({
-      where: { userId, isActive: true },
-      orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
-      select: { workspaceId: true },
-    });
-    if (!membership) return "/owner/cockpit";
-    return (await getFirstRunContext(membership.workspaceId)).loginHref;
-  } catch {
-    return "/owner/cockpit";
-  }
 }

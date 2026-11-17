@@ -5,7 +5,7 @@
  * exact, unmerged PR commit SHA before that PR merges. The controls below
  * exist to guarantee the unmerged commit's application code/scripts are
  * NEVER checked out or executed while the workflow holds
- * PRODUCTION_DATABASE_URL — only its single named migration.sql file is
+ * OPERATOR_DATABASE_URL — only its single named migration.sql file is
  * ever read, via a git-object-level read, and only after checksum and
  * GitHub-API provenance verification. All checks are static-source against
  * the YAML file — no workflow execution.
@@ -135,7 +135,7 @@ describe("migrate-production.yml — PINNED_PREDEPLOY safety controls", () => {
 
   it("19. DATABASE_URL placeholder/pooler checks are shared — no mode-specific database target exists", () => {
     const urlStepIdx = src.indexOf("Validate DATABASE_URL safety");
-    const nextModeSpecificEnv = src.indexOf("PRODUCTION_DATABASE_URL", urlStepIdx + 1);
+    const nextModeSpecificEnv = src.indexOf("OPERATOR_DATABASE_URL", urlStepIdx + 1);
     expect(urlStepIdx).toBeGreaterThan(-1);
     // The safety step itself is unconditional (no `if: inputs.mode ==` guard).
     const stepBlock = src.slice(urlStepIdx - 200, urlStepIdx);

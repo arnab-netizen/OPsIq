@@ -31,8 +31,13 @@ const ci = YAML.load(raw) as { jobs: Record<string, Job> };
 const buildAndTest = ci.jobs["build-and-test"];
 const suiteStep = (buildAndTest.steps ?? []).find((s) => s.name?.includes("Run non-DB test suite"));
 
-/** The step cap is only meaningful if the job outlives it. */
-const MIN_STEP_MINUTES = 30;
+/**
+ * The step cap is only meaningful if the job outlives it. 45 (was 30) since the 2026-11
+ * addendum: passing runs sat 18s under 1800s (run 43212944581) and a local run took 1858s.
+ */
+const MIN_STEP_MINUTES = 45;
+/** Observed setup-to-suite-start is ~5.1 min (306s, run 43212944581); keep >= 10 min of slack. */
+const MIN_JOB_SLACK_MINUTES = 10;
 
 describe("CI capacity — the non-DB suite has room to finish", () => {
   it("the non-DB suite step still exists and is found by name", () => {
@@ -48,13 +53,13 @@ describe("CI capacity — the non-DB suite has room to finish", () => {
     // The trap this guards: raising the step to 30 while the job stays at 25 reads
     // as a fix and behaves as none — the job is killed first and the step never
     // reports its own timeout. The job must also leave room for setup before the
-    // step starts, observed at ~2 minutes.
+    // step starts, observed at ~5 minutes (306s).
     const jobCap = buildAndTest["timeout-minutes"];
     const stepCap = suiteStep?.["timeout-minutes"];
     expect(jobCap).toBeDefined();
     expect(stepCap).toBeDefined();
     expect(jobCap!).toBeGreaterThan(stepCap!);
-    expect(jobCap! - stepCap!).toBeGreaterThanOrEqual(5);
+    expect(jobCap! - stepCap!).toBeGreaterThanOrEqual(MIN_JOB_SLACK_MINUTES);
   });
 
   it("the step remains blocking — continue-on-error is false or absent", () => {
@@ -132,5 +137,35 @@ describe("CI capacity — the deferred work is recorded, not forgotten", () => {
     expect(text).toContain("NON_DB_SUITE_TIMEOUT_HEADROOM_EXHAUSTED");
     expect(text).toMatch(/does not fix/i);
     expect(text).toMatch(/environment instantiation/i);
+  });
+});
+
+describe("CI capacity — timing diagnostics exist and cannot mask the suite result", () => {
+  const steps = buildAndTest.steps ?? [];
+  const idx = (needle: string) => steps.findIndex((s) => s.name?.includes(needle));
+  const report = steps[idx("Non-DB suite timing diagnostics")];
+
+  it("records job start first and suite start immediately before the suite step", () => {
+    expect(idx("Record job step start time")).toBe(0);
+    expect(idx("Record non-DB suite start time")).toBe(idx("Run non-DB test suite") - 1);
+  });
+
+  it("the report step runs after the suite step, under always() and the same classifier gate", () => {
+    expect(report, "timing diagnostics step missing").toBeDefined();
+    expect(idx("Non-DB suite timing diagnostics")).toBeGreaterThan(idx("Run non-DB test suite"));
+    expect(report.if).toBe("always() && needs.classify.outputs.suite_mode == 'BROAD_NON_DB'");
+  });
+
+  it("reports setup, suite and total seconds and agrees with the real step cap", () => {
+    const run = report.run ?? "";
+    for (const field of ["setup_s=", "suite_s=", "total_s=", "step_cap_s=", "suite_headroom_s="]) expect(run).toContain(field);
+    const cap = Number(/STEP_CAP_S=(\d+)/.exec(run)?.[1]);
+    expect(cap).toBe((suiteStep?.["timeout-minutes"] ?? 0) * 60);
+  });
+
+  it("diagnostics cannot fail or mask anything: no continue-on-error on the suite, the report never exits non-zero", () => {
+    expect(suiteStep?.["continue-on-error"] ?? false).toBe(false);
+    expect(report["continue-on-error"]).toBeUndefined();
+    expect(report.run ?? "").not.toMatch(/exit\s+[1-9]/);
   });
 });
