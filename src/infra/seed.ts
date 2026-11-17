@@ -23,11 +23,10 @@ async function createStagingSeedClient() {
   console.log("DATABASE_URL present for staging seed");
 
   // Always use pg adapter for staging seed (not Neon serverless)
+  // P0-15: no manual `ssl` override — pg-connection-string already parses
+  // sslmode=require from the connection string when `ssl` is left unset.
   const pool = new Pool({
     connectionString: databaseUrl,
-    ssl: databaseUrl.includes("sslmode=require")
-      ? { rejectUnauthorized: false }
-      : undefined,
   });
 
   const adapter = new PrismaPg(pool);
