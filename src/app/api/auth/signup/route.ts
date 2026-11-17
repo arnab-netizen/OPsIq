@@ -26,9 +26,38 @@ import { trustedClientAddress } from "@/lib/client-address";
 import { EMAIL_VERIFICATION_TTL_MS, isAwaitingEmailOwnership } from "@/services/auth/email-ownership.service";
 import { resendVerificationEmailIfEligible } from "@/services/auth/resend-verification.service";
 import { requirePgRateLimit, RateLimitError, EMAIL_VERIFICATION_RATE_LIMIT } from "@/infra/rate-limit";
+import { SAFE_UTM_VALUE_PATTERN, type UtmTags } from "@/lib/attribution/attribution-store";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+/** A single UTM leaf: malformed/oversized/unsafe-character input becomes `undefined`, never a thrown validation error. */
+const lenientUtmTag = z
+  .string()
+  .optional()
+  .transform((v) => (typeof v === "string" && SAFE_UTM_VALUE_PATTERN.test(v) ? v : undefined));
+
+/** See the `firstTouchAttribution`/`lastTouchAttribution` fields on signupSchema below for the full rationale. */
+const attributionTagsSchema = z
+  .object({
+    utmSource: lenientUtmTag,
+    utmMedium: lenientUtmTag,
+    utmCampaign: lenientUtmTag,
+    utmContent: lenientUtmTag,
+    utmTerm: lenientUtmTag,
+  })
+  .catch(() => ({
+    utmSource: undefined,
+    utmMedium: undefined,
+    utmCampaign: undefined,
+    utmContent: undefined,
+    utmTerm: undefined,
+  }));
+
+/** True if any UTM leaf survived sanitization — used only to log PRESENCE (never the values themselves) on the signup audit event. */
+function hasAnyUtmTag(tags: UtmTags | undefined): boolean {
+  return Boolean(tags && (tags.utmSource || tags.utmMedium || tags.utmCampaign || tags.utmContent || tags.utmTerm));
+}
 
 /**
  * Signup deliberately accepts NO password and NO policy consents. Before the
@@ -57,6 +86,20 @@ const signupSchema = z.object({
     .min(1, "Business name is required")
     .max(100, "Business name must be 100 characters or fewer")
     .refine(NO_CONTROL_CHARACTERS.test, NO_CONTROL_CHARACTERS.message),
+  // First/last-touch UTM attribution (src/lib/attribution/attribution-store.ts), sent only when the
+  // visitor granted analytics consent and has a captured value. Every leaf is validated against the
+  // SAME closed character allowlist used before the value ever left the browser (defense in depth —
+  // the server never trusts client-side sanitization alone) and leniently: anything malformed,
+  // oversized, or outside that allowlist silently becomes `undefined` rather than failing the parse.
+  // `.catch({})` extends that guarantee to the whole object (wrong type, extra attacker-added keys,
+  // not-an-object at all) — attribution is bonus metadata riding along with a far more important
+  // write (the account itself) and must never be able to turn a genuine signup into a 400.
+  //
+  // NOTE: neither value is persisted as a durable attribution field anywhere below — see the
+  // USER_CREATED audit-event comment further down for why, and the PR description for the resulting
+  // decision point (a Workspace/User schema migration) that was deliberately NOT made in this change.
+  firstTouchAttribution: attributionTagsSchema.optional(),
+  lastTouchAttribution: attributionTagsSchema.optional(),
 });
 
 /**
@@ -208,7 +251,7 @@ const handleSignup = async (request: NextRequest) => {
 
     // Parse and validate request
     currentStage = "validation";
-    const { email, workspaceName } = await parseRequestBody(
+    const { email, workspaceName, firstTouchAttribution, lastTouchAttribution } = await parseRequestBody(
       request,
       signupSchema
     );
@@ -354,7 +397,20 @@ const handleSignup = async (request: NextRequest) => {
         eventName: AUDIT_EVENTS.USER_CREATED,
         actorId: user.id,
         workspaceId: workspace.id,
-        payload: { email, workspaceName, signupSource: workspace.signupSource },
+        // hasFirstTouchAttribution / hasLastTouchAttribution record PRESENCE only, never the raw UTM
+        // values — the exact precedent POST /api/beta-requests already follows for its own
+        // `beta_request.created` audit event (see src/app/api/beta-requests/route.ts), which keeps
+        // attacker-controlled campaign-tag free text out of this audit trail. Workspace/User carry no
+        // dedicated attribution columns today (unlike BetaRequest, which has utm_source/.../utm_term
+        // columns for exactly this purpose) — adding them is a schema migration and a governed
+        // decision this change deliberately does not make; see the PR description.
+        payload: {
+          email,
+          workspaceName,
+          signupSource: workspace.signupSource,
+          hasFirstTouchAttribution: hasAnyUtmTag(firstTouchAttribution),
+          hasLastTouchAttribution: hasAnyUtmTag(lastTouchAttribution),
+        },
         visibility: "internal",
       });
       await emitAuditEvent({
