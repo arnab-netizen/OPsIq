@@ -35,4 +35,6 @@ Suppose a retainer bills $6,000 a month, scoped at 40 hours, and loaded delivery
 
 Pick your five largest clients. For each, compare hours scoped with hours logged for the last month and compute delivery margin. If any sit under 50%, that is your first conversation: scope, price or process. Only after that is it worth reviewing overhead, collections and utilization.
 
+If you want this walked through for your own numbers instead of worked out by hand, the free [Agency Decision Diagnostic](/agency) takes the ten inputs above, runs in your browser, needs no signup, and returns one prioritized issue and a next step.
+
 This is general operating guidance, not accounting or financial advice. Your accountant or fractional CFO can tell you which benchmarks fit your business.
