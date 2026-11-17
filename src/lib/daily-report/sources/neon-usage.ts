@@ -14,6 +14,7 @@
  * correct outcome here, proven by fixture tests for the day one *is* configured.
  */
 import { fetchJson, HttpTransportError, type FetchLike } from "../http";
+import { scrubLogText } from "@/lib/operator-error-governance";
 import { buildMetric, buildSourceReport, type SourceContext, type SourceModule, type SourceReport } from "../types";
 
 export const NEON_USAGE_SOURCE_ID = "neon-usage";
@@ -99,8 +100,13 @@ export function createNeonUsageModule(opts: NeonUsageOptions = {}): SourceModule
         }
         return single(ctx, startedAt, "VERIFIED", value, `Neon reported ${totalComputeSeconds}s compute time and ${totalWrittenBytes} written bytes across ${rows.length} period row(s).`);
       } catch (err) {
-        const message = err instanceof HttpTransportError ? err.message : `unexpected error calling Neon consumption API: ${String((err as Error)?.message ?? err)}`;
-        return single(ctx, startedAt, "FAILED", null, message);
+        let safeMessage: string;
+        if (err instanceof HttpTransportError) {
+          safeMessage = scrubLogText(err.message);
+        } else {
+          safeMessage = `unexpected error calling Neon consumption API: ${scrubLogText(String((err as Error)?.message ?? err))}`;
+        }
+        return single(ctx, startedAt, "FAILED", null, safeMessage);
       }
     },
   };

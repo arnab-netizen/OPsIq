@@ -17,6 +17,7 @@
  * to `@/lib/db` lazily (dynamic import, only reached once DATABASE_URL is confirmed present) so this
  * module never fails to even load in an environment with no database configured.
  */
+import { scrubLogText } from "@/lib/operator-error-governance";
 import { buildMetric, buildSourceReport, type Metric, type SourceContext, type SourceModule, type SourceReport } from "../types";
 
 export const INTERNAL_RECORDS_SOURCE_ID = "internal-records";
@@ -122,6 +123,7 @@ async function safeCountMetric(ctx: SourceContext, name: string, fn: () => Promi
     }
     return buildMetric({ name, source: INTERNAL_RECORDS_SOURCE_ID, status: "VERIFIED", window: ctx.window, value: count, detail: `Query succeeded: ${count} ${noun} in this window.`, retrievedAt });
   } catch (err) {
-    return buildMetric({ name, source: INTERNAL_RECORDS_SOURCE_ID, status: "FAILED", window: ctx.window, value: null, detail: `Query for ${noun} failed: ${String((err as Error)?.message ?? err)}`, retrievedAt });
+    const safeDetail = `Query for ${noun} failed: ${scrubLogText(String((err as Error)?.message ?? err))}`;
+    return buildMetric({ name, source: INTERNAL_RECORDS_SOURCE_ID, status: "FAILED", window: ctx.window, value: null, detail: safeDetail, retrievedAt });
   }
 }

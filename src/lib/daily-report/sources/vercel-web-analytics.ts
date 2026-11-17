@@ -17,6 +17,7 @@
  *   - a genuine 200 with count > 0 -> VERIFIED
  */
 import { fetchJson, HttpTransportError, type FetchLike } from "../http";
+import { scrubLogText } from "@/lib/operator-error-governance";
 import { buildMetric, buildSourceReport, type SourceContext, type SourceModule, type SourceReport } from "../types";
 
 export const VERCEL_WEB_ANALYTICS_SOURCE_ID = "vercel-web-analytics";
@@ -93,8 +94,13 @@ export function createVercelWebAnalyticsModule(opts: VercelWebAnalyticsOptions =
         }
         return single(ctx, startedAt, "VERIFIED", { visits: total }, `Vercel Web Analytics reported ${total} visits for this window.`);
       } catch (err) {
-        const message = err instanceof HttpTransportError ? err.message : `unexpected error calling Vercel Web Analytics API: ${String((err as Error)?.message ?? err)}`;
-        return single(ctx, startedAt, "FAILED", null, message);
+        let safeMessage: string;
+        if (err instanceof HttpTransportError) {
+          safeMessage = scrubLogText(err.message);
+        } else {
+          safeMessage = `unexpected error calling Vercel Web Analytics API: ${scrubLogText(String((err as Error)?.message ?? err))}`;
+        }
+        return single(ctx, startedAt, "FAILED", null, safeMessage);
       }
     },
   };

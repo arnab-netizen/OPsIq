@@ -45,7 +45,7 @@ export function createGhCliTransport(opts: { timeoutMs?: number } = {}): GithubA
         try {
           return JSON.parse(stdout) as T;
         } catch (err) {
-          throw new GithubActionsFailedError(`gh api ${path} returned non-JSON output: ${String((err as Error)?.message ?? err)}`);
+          throw new GithubActionsFailedError(`gh api ${path} produced non-JSON output: ${String((err as Error)?.message ?? err)}`);
         }
       } catch (err) {
         if (err instanceof GithubActionsFailedError) throw err;

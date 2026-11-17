@@ -14,6 +14,7 @@
  * reports BLOCKED cleanly -- proven correct by fixture tests for the day credentials are configured.
  */
 import { fetchJson, HttpTransportError, type FetchLike } from "../http";
+import { scrubLogText } from "@/lib/operator-error-governance";
 import { buildMetric, buildSourceReport, type SourceContext, type SourceModule, type SourceReport } from "../types";
 
 export const METRICOOL_SOURCE_ID = "metricool-scheduled-posts";
@@ -91,8 +92,13 @@ export function createMetricoolModule(opts: MetricoolOptions = {}): SourceModule
         }
         return single(ctx, startedAt, "VERIFIED", value, `Metricool reported ${failures.length} of ${posts.length} scheduled post(s) in a failed/ERROR state.`);
       } catch (err) {
-        const message = err instanceof HttpTransportError ? err.message : `unexpected error calling Metricool API: ${String((err as Error)?.message ?? err)}`;
-        return single(ctx, startedAt, "FAILED", null, message);
+        let safeMessage: string;
+        if (err instanceof HttpTransportError) {
+          safeMessage = scrubLogText(err.message);
+        } else {
+          safeMessage = `unexpected error calling Metricool API: ${scrubLogText(String((err as Error)?.message ?? err))}`;
+        }
+        return single(ctx, startedAt, "FAILED", null, safeMessage);
       }
     },
   };

@@ -12,6 +12,7 @@
  * deployment health immediately, with no code change.
  */
 import { fetchJson, HttpTransportError, type FetchLike } from "../http";
+import { scrubLogText } from "@/lib/operator-error-governance";
 import { buildMetric, buildSourceReport, type SourceContext, type SourceModule, type SourceReport } from "../types";
 
 export const VERCEL_RUNTIME_HEALTH_SOURCE_ID = "vercel-runtime-health";
@@ -142,8 +143,13 @@ export function createVercelRuntimeHealthModule(opts: VercelRuntimeHealthOptions
         }
         return oneMetricReport(ctx, metricName, "VERIFIED", value, `Latest production deployment state is "${state}".`, retrievedAt);
       } catch (err) {
-        const message = err instanceof HttpTransportError ? err.message : `unexpected error calling Vercel API: ${String((err as Error)?.message ?? err)}`;
-        return oneMetricReport(ctx, metricName, "FAILED", null, message, retrievedAt);
+        let safeMessage: string;
+        if (err instanceof HttpTransportError) {
+          safeMessage = scrubLogText(err.message);
+        } else {
+          safeMessage = `unexpected error calling Vercel API: ${scrubLogText(String((err as Error)?.message ?? err))}`;
+        }
+        return oneMetricReport(ctx, metricName, "FAILED", null, safeMessage, retrievedAt);
       }
     },
   };

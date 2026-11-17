@@ -16,6 +16,7 @@ import {
   GithubActionsBlockedError,
   type GithubActionsClient,
 } from "../github-actions-client";
+import { scrubLogText } from "@/lib/operator-error-governance";
 import { buildMetric, buildSourceReport, type SourceContext, type SourceModule, type SourceReport } from "../types";
 
 export const BACKUP_FRESHNESS_SOURCE_ID = "backup-freshness";
@@ -73,7 +74,8 @@ export function createBackupFreshnessModule(opts: BackupFreshnessOptions = {}): 
         return single(ctx, startedAt, "VERIFIED", value, `Last successful backup (#${latestSuccess.id}) was ${value.ageHours}h ago, within the freshness bound.`);
       } catch (err) {
         const blocked = err instanceof GithubActionsBlockedError;
-        return single(ctx, startedAt, blocked ? "BLOCKED" : "FAILED", null, `Could not retrieve runs for ${workflowFile}: ${String((err as Error)?.message ?? err)}`);
+        const safeDetail = `Could not retrieve runs for ${workflowFile}: ${scrubLogText(String((err as Error)?.message ?? err))}`;
+        return single(ctx, startedAt, blocked ? "BLOCKED" : "FAILED", null, safeDetail);
       }
 
       function single(
