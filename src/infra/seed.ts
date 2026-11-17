@@ -1,4 +1,3 @@
-// @ts-nocheck - seed script uses data definitions that don't strictly match schema but are handled at runtime
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
@@ -206,6 +205,7 @@ async function seedDemoData(db: PrismaClient) {
       data: {
         id: conditionId,
         engagementId: engagement.id,
+        workspaceId: workspace.id,
         businessStatus: "challenged",
         severityScore: 7,
         urgencyLevel: "high",

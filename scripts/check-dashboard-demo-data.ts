@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 /**
  * Dashboard Demo Data Diagnostic
  * Verifies demo data exists and is properly linked to workspace for dashboard queries
