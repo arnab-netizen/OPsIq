@@ -17,8 +17,9 @@ import { evaluateMigrationGate } from "./production-migration-gate.mjs";
 
 /** Statements that are not expand-only. Patterns run on SQL with comments and string literals removed. */
 const DESTRUCTIVE = [
-  [/\bDROP\s+(TABLE|COLUMN|SCHEMA|TYPE|DATABASE|ROLE)\b/i, "drops an object"],
-  [/\bDROP\s+CONSTRAINT\b/i, "drops a constraint"],
+  [/\bDROP\b/i, "drops an object, column, constraint, default or index"],
+  [/\bDO\b\s+(BEGIN|DECLARE|LANGUAGE|'')/i, "runs an anonymous code block (cannot be inspected statically)"],
+  [/\bUPDATE\b(?![^;]*\bWHERE\b)[^;]*\bSET\b/i, "updates rows without WHERE"],
   [/\bTRUNCATE\b/i, "truncates data"],
   [/\bDELETE\s+FROM\b(?![^;]*\bWHERE\b)/i, "deletes rows without WHERE"],
   [/\bALTER\s+TABLE\b[^;]*\bALTER\s+COLUMN\b[^;]*\bTYPE\b/i, "changes a column type"],
@@ -28,11 +29,51 @@ const DESTRUCTIVE = [
   [/\bCREATE\s+(ROLE|USER)\b|\bALTER\s+(ROLE|USER)\b/i, "changes roles"],
 ];
 
+/**
+ * Single-pass SQL scanner: removes comments (including nested block comments), replaces string literals and quoted
+ * identifiers with empty placeholders, and KEEPS dollar-quoted bodies as code (a DO $$ ... $$ block executes its body).
+ * One pass, so a `--` inside a string is not a comment and a quote inside a comment does not start a string.
+ */
 export function stripSql(sql) {
-  return String(sql)
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/--[^\n]*/g, " ")
-    .replace(/'(?:[^']|'')*'/g, "''");
+  const t = String(sql);
+  let out = "";
+  let i = 0;
+  while (i < t.length) {
+    const c = t[i];
+    const n = t[i + 1];
+    if (c === "-" && n === "-") { while (i < t.length && t[i] !== "\n") i++; out += " "; continue; }
+    if (c === "/" && n === "*") {
+      let depth = 1; i += 2;
+      while (i < t.length && depth > 0) {
+        if (t[i] === "/" && t[i + 1] === "*") { depth++; i += 2; }
+        else if (t[i] === "*" && t[i + 1] === "/") { depth--; i += 2; }
+        else i++;
+      }
+      out += " "; continue;
+    }
+    if (c === "'" ) {
+      const esc = /[eE]$/.test(out.slice(-1));
+      i++;
+      while (i < t.length) {
+        if (esc && t[i] === "\\") { i += 2; continue; }
+        if (t[i] === "'" && t[i + 1] === "'") { i += 2; continue; }
+        if (t[i] === "'") { i++; break; }
+        i++;
+      }
+      out += "''"; continue;
+    }
+    if (c === '"') {
+      i++;
+      while (i < t.length) { if (t[i] === '"' && t[i + 1] === '"') { i += 2; continue; } if (t[i] === '"') { i++; break; } i++; }
+      out += '""'; continue;
+    }
+    if (c === "$") {
+      const m = /^\$[A-Za-z_]*\$/.exec(t.slice(i, i + 64));
+      if (m) { out += " "; i += m[0].length; continue; } // drop the dollar-quote tags, keep the body as code
+    }
+    out += c; i++;
+  }
+  return out;
 }
 
 export function destructiveReasons(sql) {

@@ -47,6 +47,14 @@ describe("planRelease", () => {
       expect(Object.keys(r.destructive)).toEqual(["001"]);
     }
   });
+  it("review finding 8: a comment marker inside a string cannot hide a following DROP; more statements are covered", () => {
+    expect(destructiveReasons("INSERT INTO t VALUES ('--'); DROP TABLE x;")).not.toEqual([]);
+    for (const sql of ["DROP INDEX i;", "DROP VIEW v;", "DROP FUNCTION f();", "DROP TRIGGER t ON x;", "DROP SEQUENCE s;", "DROP EXTENSION e;", 'ALTER TABLE "x" ALTER COLUMN "y" DROP DEFAULT;', 'ALTER TABLE "x" ALTER COLUMN "y" DROP NOT NULL;', "UPDATE x SET a = 1;", "DO $$ BEGIN EXECUTE 'x'; END $$;", "DO $body$ BEGIN PERFORM 1; END $body$;", "/* a /* nested */ still comment */ DROP TABLE x;"]) {
+      expect(destructiveReasons(sql), sql).not.toEqual([]);
+    }
+    expect(destructiveReasons("UPDATE x SET a = 1 WHERE id = 2;")).toEqual([]);
+    expect(destructiveReasons('CREATE TABLE "drop" (id int);')).toEqual([]);
+  });
   it("comments and string literals do not trigger or hide destructive detection", () => {
     expect(destructiveReasons("-- DROP TABLE x\nCREATE TABLE y (a text DEFAULT 'DROP TABLE z');")).toEqual([]);
     expect(destructiveReasons("/* harmless */ DROP TABLE x;")).not.toEqual([]);

@@ -18,7 +18,11 @@ import { parseRoleTopologyVerifyOutput } from "../db/parse-role-topology-verify.
 export const APPLY_CONFIRM_PHRASE = "APPLY PRODUCTION RUNTIME ROLE TOPOLOGY";
 const ALLOWED_TARGETS = ["production", "ci"];
 
+const oneLine = (x) => String(x).replace(/[\r\n]+/g, " ");
+const countLines = (text, needle) => String(text ?? "").split("\n").filter((l) => l.includes(needle)).length;
+
 function parseApply(text) {
+  if (countLines(text, '"ROLE_TOPOLOGY_APPLY"') !== 1) return null; // zero or ambiguous (more than one) result lines
   const lines = String(text ?? "").split("\n");
   const jsonLine = [...lines].reverse().find((l) => l.includes('"ROLE_TOPOLOGY_APPLY"'));
   if (!jsonLine) return null;
@@ -31,6 +35,7 @@ function parseApply(text) {
 /** Strict, complete least-privilege verdict for ONE verify transcript. Returns a list of problems (empty = acceptable). */
 export function strictVerifyProblems({ exitCode, output }, { target, phase = "post", requireConforming = true }) {
   const problems = [];
+  if (countLines(output, '"ROLE_TOPOLOGY_VERIFY"') !== 1) return ["verify output missing, malformed or ambiguous (expected exactly one result line)"];
   const v = parseRoleTopologyVerifyOutput(output);
   if (!v) return ["verify output missing or malformed"];
   if (exitCode !== 0 && exitCode !== 1) problems.push(`verify exit status ${exitCode} is neither PASS(0) nor FAIL(1)`);
@@ -69,7 +74,7 @@ export function runReconcileGate({ target = "production", expectedSha, actualSha
 
   const pre = run("pre");
   if (pre.exitCode === null) return block("PRE_VERIFY_DID_NOT_RUN", ["pre-verify did not run"]);
-  const pv = parseRoleTopologyVerifyOutput(pre.output);
+  const pv = countLines(pre.output, '"ROLE_TOPOLOGY_VERIFY"') === 1 ? parseRoleTopologyVerifyOutput(pre.output) : null;
   if (!pv) return block("PRE_VERIFY_MALFORMED", ["pre-verify output missing or malformed"]);
   if (pv.runtimeRoleState === "ABSENT") return block("RUNTIME_ROLE_ABSENT", ["production requires opsiq_app; the gate never creates it"]);
   const preProblems = strictVerifyProblems(pre, { target, phase: "post", requireConforming: false });
@@ -94,32 +99,32 @@ export function runReconcileGate({ target = "production", expectedSha, actualSha
   return { ok: true, code: "RUNTIME_ROLE_RECONCILED", problems: [] };
 }
 
+/** Single source of truth for the tool invocation, used by the CLI and by the tests. */
+export function toolInvocation(stage, { target, expectedHost = "" }) {
+  const hostArgs = expectedHost ? ["--expected-host", expectedHost] : [];
+  return stage === "apply"
+    ? ["tsx", "scripts/db/opsiq-role-cutover.ts", "apply", "--target", target, ...hostArgs, "--only-if-present", "--confirm", APPLY_CONFIRM_PHRASE]
+    : ["tsx", "scripts/db/opsiq-role-cutover.ts", "verify", "--target", target, ...hostArgs, "--phase", "post"];
+}
+
 function cli() {
   const env = process.env;
   const target = env.OPSIQ_RECONCILE_TARGET || "production";
-  const expectedHost = env.EXPECTED_DATABASE_HOST || "";
   const git = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" });
-  const base = ["tsx", "scripts/db/opsiq-role-cutover.ts"];
-  const hostArgs = expectedHost ? ["--expected-host", expectedHost] : [];
-  const exec = (args, extraEnv = {}) => {
-    const r = spawnSync("npx", [...base, ...args], { encoding: "utf8", env: { ...env, ...extraEnv } });
+  const exec = (stage) => {
+    const r = spawnSync("npx", toolInvocation(stage, { target, expectedHost: env.EXPECTED_DATABASE_HOST || "" }), {
+      encoding: "utf8",
+      env: stage === "apply" ? env : { ...env, PGOPTIONS: "-c default_transaction_read_only=on" },
+    });
     process.stdout.write(r.stdout ?? "");
     process.stderr.write(r.stderr ?? "");
-    return { exitCode: r.status, output: `${r.stdout ?? ""}\n${r.stderr ?? ""}` };
+    // Parse stdout ONLY: a stderr line must never be able to supply or override a result line.
+    return { exitCode: r.status, output: r.stdout ?? "" };
   };
-  const readOnly = { PGOPTIONS: "-c default_transaction_read_only=on" };
-  const result = runReconcileGate({
-    target,
-    expectedSha: env.EXPECTED_RELEASE_SHA,
-    actualSha: (git.stdout ?? "").trim(),
-    run: (stage) =>
-      stage === "apply"
-        ? exec(["apply", "--target", target, ...hostArgs, "--only-if-present", "--confirm", APPLY_CONFIRM_PHRASE])
-        : exec(["verify", "--target", target, ...hostArgs, "--phase", "post"], readOnly),
-  });
+  const result = runReconcileGate({ target, expectedSha: env.EXPECTED_RELEASE_SHA, actualSha: (git.stdout ?? "").trim(), run: exec });
   console.log(`RUNTIME_ROLE_GATE=${result.ok ? "PASS" : "BLOCKED"}`);
   console.log(`RUNTIME_ROLE_GATE_CODE=${result.code}`);
-  for (const p of result.problems) console.log(`::error::${p}`);
+  for (const p of result.problems) console.log(`::error::${oneLine(p).replace(/::/g, ": :")}`);
   process.exit(result.ok ? 0 : 1);
 }
 

@@ -35,4 +35,20 @@ describe("migrate-production runtime-role sequencing", () => {
   it("the redeploy hook only runs once the reconcile has verified the runtime role", () => {
     expect(redeploy).toContain("env.RUNTIME_ROLE_RECONCILED == 'true'");
   });
+
+  it("review finding 2: the stale-SHA check runs before any database step (migration included)", () => {
+    const shaCheck = idx("differs from the SHA this run was dispatched on");
+    expect(shaCheck).toBeLessThan(idx("npx prisma migrate deploy"));
+    expect(shaCheck).toBeLessThan(idx("- name: Reconcile runtime role grants (blocking, reconcile-only)"));
+  });
+  it("review finding 3: production-writing workflows share one concurrency group", () => {
+    const reconcile = readFileSync(resolve(__dirname, "../../../.github/workflows/reconcile-runtime-role.yml"), "utf8");
+    expect(text).toContain("group: migrate-production");
+    expect(reconcile).toContain("group: migrate-production");
+    expect(reconcile).not.toContain("group: reconcile-runtime-role");
+  });
+  it("review finding 4: the job summary reports the gate outcome and never claims success when it did not pass", () => {
+    expect(text).toContain("RUNTIME_ROLE_RECONCILED:-false");
+    expect(text).toContain("the runtime-role gate did NOT pass");
+  });
 });

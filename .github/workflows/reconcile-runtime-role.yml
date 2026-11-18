@@ -91,7 +91,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: reconcile-runtime-role
+  # Same group as migrate-production.yml: production-writing database operations never overlap.
+  group: migrate-production
   cancel-in-progress: false
 
 jobs:

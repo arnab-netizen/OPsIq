@@ -170,3 +170,39 @@ A blocked task never blocks an unrelated task. "WS" is the workstream from the d
 | T13 | Open-PR triage and dependency audit | - | NOT_STARTED | C | sub-agent triage in progress | - | Merge agent report; merge only eligible PRs after checks |
 | T14 | Full regression suite | - | NOT_STARTED | C | Not run this session | - | Run with isolated DB (see CI recipe) |
 | T15 | P1/P2 (UX, Owner Mode, QuickBooks, analytics, acquisition, Product Hunt 2026-11-20, payments) | - | NOT_STARTED | D/E | - | Product Hunt: provider state unreadable from this session | Needs per-workstream agents |
+
+## Session 4 outcomes (2026-11-18)
+
+**Independent review of PR #682** (separate-context reviewer agent, read-only, against git objects at `5b3d92af`): verdict APPROVE_WITH_CHANGES. It is not a GitHub approval: the PR author and this session share the identity `arnab-netizen`, so only the owner or a CODEOWNER can approve.
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| 1. Real-tool gate DB proof never ran in CI; test built its own command | MED-HIGH | FIXED: exported `toolInvocation` used by CLI and tests; CI runtime-role step now runs the gate test and fails unless the 3 DB proofs passed (not skipped); stale-SHA CLI test moved out of the `[db]` block |
+| 2. Stale-SHA check ran after the migration | MED | FIXED: checked-out SHA must equal `GITHUB_SHA` before any database step; gate keeps its own check as a second layer |
+| 3. Merged authorization, contradicting comments, separate concurrency groups | MED (governance) | PARTIALLY FIXED: both production-writing workflows now share group `migrate-production`; comments and summary corrected. OWNER DECISION REMAINS: typing the migrate confirmation now also authorizes the runtime-role reconcile |
+| 4. Summary omitted the gate result | LOW-MED | FIXED |
+| 5. `PGOPTIONS` read-only may be ignored if the URL carries `options=` | LOW | NOT FIXED: needs `BEGIN READ ONLY` inside `opsiq-role-cutover.ts verify`, a separate PR |
+| 6. Workflow-command injection via table names in `::error::` | LOW | FIXED: newlines collapsed, `::` broken |
+| 7. Parser took last match over stdout+stderr | LOW | FIXED: stdout only, exactly one result line required |
+| 8. Planner `stripSql` bypass (`'--'` hides a DROP; missing DROP INDEX/VIEW etc., UPDATE without WHERE, DO blocks) | INFO | FIXED with a single-pass scanner; 17 of 190 historical migrations are now flagged |
+
+Local verification: `vitest run` deployment, ci-cd and 2 governance files: 990 passed, 50 skipped (DB tests skip without env); with the disposable PG (port 5432): gate + sequencing + planner = 30/30 pass, including the 3 real-tool proofs; `tsc --noEmit` clean. GitHub CI on the final head still to be read.
+
+**Dependency advisories**: PR #683 (`claude/security-npm-audit-fix`): lockfile-only `npm update @sentry/nextjs zod @vercel/functions`, `npm audit --omit=dev` 24 to 17 (critical 1 to 0, high 9 to 6); tsc clean, build exit 0, 1038 tests pass. A blanket `npm audit fix` was tried first and rejected: the build could not resolve `@tailwindcss/postcss`. Remaining 17 need `--force` (major bumps), a separate PR.
+
+**Open PR triage** (agent, read-only; 52 open, not 21; conflict state inferred for most): #631 (security group, CI green at its head, behind main) is the only safe priority; #452/#467/#463 patch bumps need rebase; majors (#465 stripe, #461 js-yaml, #462 @types/node 26, #464/#469 prisma lockstep) need review; #459 only with #457; #682, #636, #638, #650, #311 are owner-gated; 14 stage7 bot PRs (#410-415, #421-428) and old drafts need an owner sweep. Nothing was merged or closed.
+
+**Neon** (agent, read-only; org plan `launch`, a paid usage-based plan, NOT the free tier):
+- Production project `OPSIQ NEW` (`patient-lake-61323111`): default branch `br-purple-boat-ayjn6zl6`, 84.7 MB; this billing period 23,656 CU-s (about 6.6 CU-hr) in 1.5 days, far below the plan's included compute.
+- The repo's own `CURRENT_MAIN_CLOSURE_REGISTER.md` states `PRODUCTION_PROVEN`: `ep-empty-sky-ay1e6c27`, project `patient-lake-61323111`, branch `br-purple-boat-ayjn6zl6`, citing six convergent sources; `src/infra/production-db-identity.ts` hard-codes the same IDs. This is repo evidence and live Neon default-branch evidence. The remaining inference is that the Vercel runtime `DATABASE_URL` uses it. Still to be confirmed through the workflow's own exact-host gate.
+- Production history retention is only 6 h; no snapshot schedule was checked.
+- Nine other projects: `Test` is the sanctioned remote test database (KEEP); `OPSIQ`, `Opsiq1`, `shopwithmalini-commerce-intelligence`, `SociOps` need owner review; `QuickBooks Sandbox`, `QBO V1 Sandbox Acceptance PR630`, `Paddle Sandbox PR614`, `zz-DISPOSABLE-retention-test-delete-me` are candidates for owner deletion. None was deleted. `Opsiq1` had a brief compute burst today (07:33Z) from an unidentified source: not referenced anywhere in the repo.
+- A disposable branch `restore-proof-pre-beta-gate-disposable` lives in the production project and was active today (14:16Z).
+
+**Backups** (agent, read-only plus local rehearsal):
+- The encrypted R2 path exists in code, but run `44120603677` (2026-11-17, manual dispatch) FAILED in 14 s, never read; it has no schedule, and the legacy artifact backup is disabled. So no automated backup is currently running.
+- Required secrets/variables (exact names): environment `backup-write`: secrets `BACKUP_DATABASE_URL` (dedicated read-only `opsiq_backup` role), `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `MANIFEST_SIGNING_KEY`; variables `AGE_RECIPIENT`, `AGE_ESCROW_RECIPIENT`, `R2_ENDPOINT`, `R2_BUCKET`, `PRODUCTION_QBO_ENABLED`. Environment `backup-recovery`: `R2_READONLY_ACCESS_KEY_ID`, `R2_READONLY_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_BUCKET`. Whether they exist is unknown from here.
+- Local restore rehearsal PASSED on a disposable cluster: plain pg_dump (script flags), then the repo's `restore-database.sh verify`: 262 tables, 615 rows; independent comparison source vs restored identical (tables, indexes, enums, rows, per-table row-count md5). PG16 only; production is PG18, so it is not proven for production.
+- The QBO backup gate correctly refuses a whole-database dump while `qbo_*` rows exist (the local test DB has 192): an owner decision is needed for production QBO data.
+
+**Updated queue rows**: T01/T02 as above; T10 `GSC_INGESTION_DATABASE_URL` still `BLOCKED_AUTHORIZATION`; T11 and T12 PARTIALLY_COMPLETE with the reports above; T13 PARTIALLY_COMPLETE (triage done, nothing merged); T14 NOT_STARTED (full suite not run); dispatch probe (`rerun_failed_jobs` on `44257904842`) again returned `403 Resource not accessible by integration`.

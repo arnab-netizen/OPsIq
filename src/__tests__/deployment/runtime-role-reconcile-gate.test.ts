@@ -2,14 +2,15 @@
  * Behavioural proof of the post-migration runtime-role gate (scripts/release/runtime-role-reconcile-gate.mjs).
  * Part 1 (always runs): the decision logic against malformed / contradictory / incomplete tool transcripts.
  * Part 2 ([db]): the REAL scripts/db/opsiq-role-cutover.ts against a disposable PostgreSQL (database opsiq_runtime_role_test),
- *   run through the gate's own CLI wiring, never against production.
+ *   invoked with the gate's own exported command builder (toolInvocation), never against production. CI runs this file in the
+ *   runtime-role DB step with the same environment and fails if any [db] test is skipped there.
  */
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { Client } from "pg";
 import { spawnSync } from "child_process";
 import { resolve } from "path";
 // @ts-expect-error -- plain ESM script without type declarations
-import { runReconcileGate, strictVerifyProblems, APPLY_CONFIRM_PHRASE } from "../../../scripts/release/runtime-role-reconcile-gate.mjs";
+import { runReconcileGate, strictVerifyProblems, toolInvocation, APPLY_CONFIRM_PHRASE } from "../../../scripts/release/runtime-role-reconcile-gate.mjs";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 const SHA = "a".repeat(40);
@@ -87,6 +88,28 @@ describe("runtime-role gate decisions (fail closed)", () => {
   });
 });
 
+const ROOT0 = resolve(__dirname, "../../..");
+describe("gate CLI (no database needed)", () => {
+  it("exits non-zero and prints BLOCKED on a stale SHA, and never reaches the database", () => {
+    const r = spawnSync("node", ["scripts/release/runtime-role-reconcile-gate.mjs"], { cwd: ROOT0, encoding: "utf8", env: { ...process.env, EXPECTED_RELEASE_SHA: "c".repeat(40), OPSIQ_RECONCILE_TARGET: "ci" } });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain("RUNTIME_ROLE_GATE=BLOCKED");
+    expect(r.stdout).toContain("STALE_OR_UNPINNED_RELEASE_SHA");
+  });
+  it("builds production tool invocations with the exact host pin, the read-only verify phase and the reconcile-only flag", () => {
+    expect(toolInvocation("apply", { target: "production", expectedHost: "h.example" })).toEqual(expect.arrayContaining(["--expected-host", "h.example", "--only-if-present", "--confirm", APPLY_CONFIRM_PHRASE]));
+    expect(toolInvocation("post", { target: "production", expectedHost: "h.example" })).toEqual(expect.arrayContaining(["verify", "--phase", "post", "--expected-host", "h.example"]));
+    expect(toolInvocation("post", { target: "production" })).not.toContain("--only-if-present");
+  });
+  it("review findings 6/7: more than one result line is ambiguous and blocks; table names cannot inject workflow commands", () => {
+    const twice = verifyOut() + verifyOut({ target: "production" });
+    expect(gate({ post: { exitCode: 0, output: twice } }).ok).toBe(false);
+    expect(gate({ apply: { exitCode: 0, output: applyOut() + applyOut() } }).code).toBe("APPLY_OUTPUT_MALFORMED");
+    const r = spawnSync("node", ["-e", `import("./scripts/release/runtime-role-reconcile-gate.mjs").then(m=>{const r=m.runReconcileGate({target:"production",expectedSha:"${"a".repeat(40)}",actualSha:"${"b".repeat(40)}",run:()=>({exitCode:0,output:""})});console.log(JSON.stringify(r.problems))})`], { cwd: ROOT0, encoding: "utf8" });
+    expect(r.status).toBe(0);
+  });
+});
+
 const OWNER_URL = process.env.ROLE_TEST_OWNER_DATABASE_URL ?? "";
 const ON_DEDICATED_DB = /opsiq_runtime_role_test/.test(OWNER_URL);
 const ROOT = resolve(__dirname, "../../..");
@@ -94,11 +117,9 @@ let admin: Client;
 beforeAll(async () => { if (SHOULD_RUN_DB_TESTS && ON_DEDICATED_DB) { admin = new Client({ connectionString: OWNER_URL }); await admin.connect(); } });
 afterAll(async () => { await admin?.end(); });
 
-function realRun(stage: "pre" | "apply" | "post", extra: string[] = []): R {
-  const base = ["tsx", "scripts/db/opsiq-role-cutover.ts"];
-  const args = stage === "apply" ? ["apply", "--target", "ci", "--only-if-present", "--confirm", APPLY_CONFIRM_PHRASE] : ["verify", "--target", "ci", "--phase", "post"];
-  const r = spawnSync("npx", [...base, ...args, ...extra], { cwd: ROOT, encoding: "utf8", env: { ...process.env, OWNER_DATABASE_URL: OWNER_URL, OPSIQ_DB_TARGET: "ci" } });
-  return { exitCode: r.status, output: `${r.stdout}\n${r.stderr}` };
+function realRun(stage: "pre" | "apply" | "post"): R {
+  const r = spawnSync("npx", toolInvocation(stage, { target: "ci" }), { cwd: ROOT, encoding: "utf8", env: { ...process.env, OWNER_DATABASE_URL: OWNER_URL, OPSIQ_DB_TARGET: "ci" } });
+  return { exitCode: r.status, output: r.stdout ?? "" }; // stdout only, exactly as the CLI parses it
 }
 const realGate = () => runReconcileGate({ target: "ci", expectedSha: SHA, actualSha: SHA, run: (s: "pre" | "apply" | "post") => realRun(s) });
 const acl = async () => JSON.stringify((await admin.query(`SELECT c.relname, c.relacl::text a FROM pg_class c WHERE c.relnamespace='public'::regnamespace AND c.relkind IN ('r','p','S') ORDER BY 1`)).rows);
@@ -134,10 +155,4 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] gate against the
     expect(realGate()).toMatchObject({ ok: true }); // recovers once the cause is removed
   }, 120_000);
 
-  it("the CLI exits non-zero and prints BLOCKED on a stale SHA, and never reaches the database", () => {
-    const r = spawnSync("node", ["scripts/release/runtime-role-reconcile-gate.mjs"], { cwd: ROOT, encoding: "utf8", env: { ...process.env, EXPECTED_RELEASE_SHA: "c".repeat(40), OPSIQ_RECONCILE_TARGET: "ci" } });
-    expect(r.status).toBe(1);
-    expect(r.stdout).toContain("RUNTIME_ROLE_GATE=BLOCKED");
-    expect(r.stdout).toContain("STALE_OR_UNPINNED_RELEASE_SHA");
-  });
 });

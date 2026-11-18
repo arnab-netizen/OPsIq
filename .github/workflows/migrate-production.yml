@@ -249,6 +249,12 @@ jobs:
           MAIN_SHA=$(git rev-parse origin/main)
           echo "Checked-out SHA: $CURRENT_SHA"
           echo "origin/main SHA: $MAIN_SHA"
+          # Stale-release guard BEFORE any database step: the SHA this run was dispatched against must be exactly
+          # what is checked out. If main advanced between dispatch and checkout, stop now, not after the migration.
+          if [ "$CURRENT_SHA" != "${GITHUB_SHA}" ]; then
+            echo "::error::Checked-out SHA ($CURRENT_SHA) differs from the SHA this run was dispatched on (${GITHUB_SHA}); main advanced. Re-dispatch against the current main. No database step has run."
+            exit 1
+          fi
           # Verify the checked-out commit is an ancestor of (or equal to) main.
           # This workflow always checks out main directly (see "ref: main"
           # above); this check documents and enforces that invariant rather
@@ -486,9 +492,8 @@ jobs:
       # against the SAME OPERATOR_DATABASE_URL secret this job already holds (re-exposed under the
       # OWNER_DATABASE_URL name the tool itself requires; no new secret). It never calls `apply`, never
       # mutates anything, and `continue-on-error: true` guarantees a non-PASS result, or the check being
-      # unable to run at all, can never fail this migration job -- applying a migration and reconciling the
-      # runtime role's grants are separate, independently owner-authorized operations by design (see that
-      # doc's status line). The result is parsed by the shared scripts/db/parse-role-topology-verify.mjs and
+      # unable to run at all, can never fail this migration job. (The blocking reconcile and least-privilege gate
+      # that follows this step is what decides promotion; this informational step only feeds the summary.) The result is parsed by the shared scripts/db/parse-role-topology-verify.mjs and
       # only ever surfaced in the job summary below.
       - name: Informational - check runtime role access after migration (read-only, non-blocking)
         if: success() && env.POST_VERIFY_SUCCEEDED == 'true'
@@ -586,6 +591,7 @@ jobs:
           echo "| Deploy started | ${DEPLOY_STARTED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Deploy succeeded | ${DEPLOY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Post-verify succeeded | ${POST_VERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Runtime role reconciled and verified (blocking gate) | ${RUNTIME_ROLE_RECONCILED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Migration (owner-authorized, exact-one-pending enforced — both modes) | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
@@ -640,7 +646,11 @@ jobs:
             if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
               echo "Production now has \`${{ inputs.migration_name }}\` applied." >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "Production migrations applied successfully." >> "$GITHUB_STEP_SUMMARY"
+              if [ "${RUNTIME_ROLE_RECONCILED:-false}" == "true" ]; then
+              echo "Production migrations applied successfully and the runtime role was reconciled and verified." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "**Migrations applied, but the runtime-role gate did NOT pass: the release is NOT promoted (no redeploy). Inspect the gate step.**" >> "$GITHUB_STEP_SUMMARY"
+            fi
             fi
           elif [ "${DEPLOY_STARTED:-false}" != "true" ]; then
             echo "**MIGRATION_NOT_EXECUTED** — preflight did not pass; \`prisma migrate deploy\` was never run. No production schema mutation occurred in this run." >> "$GITHUB_STEP_SUMMARY"
