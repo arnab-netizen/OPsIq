@@ -147,3 +147,26 @@ Search Console ingestion (run `44257904842`), exact requirements from `scheduled
 - GSC ingestion stays `BLOCKED_AUTHORIZATION`.
 
 Still NOT started: Neon dependency tracing, backup/R2/restore rehearsal, full-suite regression, open-PR triage, P1/P2.
+
+## Execution queue (dependency-aware; session 4, 2026-11-18)
+
+Status values: VERIFIED_COMPLETE, IMPLEMENTED_NOT_VERIFIED, PARTIALLY_COMPLETE, BLOCKED_EXTERNAL, BLOCKED_AUTHORIZATION, FAILED, NOT_STARTED.
+A blocked task never blocks an unrelated task. "WS" is the workstream from the directive.
+
+| ID | Task | Deps | Status | WS | Evidence | Blocker | Next executable action |
+|---|---|---|---|---|---|---|---|
+| T01 | Merge PR #682 (privileged CI) | T02 | IMPLEMENTED_NOT_VERIFIED | C | PR #682 head `3f09fc8f`; CI run `44322792446` (earlier head) in progress at last read; mergeable_state `blocked` | No independent approval: the PR author and this session share the identity `arnab-netizen`, so an approval cannot come from this session | Read CI result for the final head; independent reviewer agent report; owner or CODEOWNER approval |
+| T02 | Independent review of PR #682 | - | PARTIALLY_COMPLETE | C | Separate-context reviewer agent launched (read-only); its report is not a GitHub approval | none | Apply the findings, push, re-run affected tests |
+| T03 | Dispatch DISCOVER/DRY_RUN/APPLY of the reconcile workflow | T01 not required | BLOCKED_AUTHORIZATION | A | Session 4: `rerun_failed_jobs` on run `44257904842` also returned `403 Resource not accessible by integration` (benign probe, no production effect). Effective Actions write is still absent for this session | Session-token permission, not branch protection/environment | One owner-run dispatch (steps in the session 3 section), or restored Actions write |
+| T04 | Confirm production DB identity | T03 | NOT_STARTED | A | Candidates only (see session 1); not evidence | Needs the workflow's exact-host gate or Vercel env read | Compare Vercel `DATABASE_URL` host via a secret-bearing workflow output (sanitized) |
+| T05 | Redeploy exact SHA and accept | T03,T04 | NOT_STARTED | A | - | - | After APPLY |
+| T06 | Ledger-driven release planner (A-C of the review) | - | IMPLEMENTED_NOT_VERIFIED | C | `scripts/release/release-plan.mjs`, `release-plan.test.ts` 10/10; pushed `3f09fc8f` | not wired into a workflow | Wire in the separately reviewed privileged-CI PR (T08) |
+| T07 | Exact-SHA deploy binding (replace the unpinned hook) | T08 | NOT_STARTED | C | Hook is unpinned (verified from the workflow source) | Needs the reviewed PR; Vercel supported mechanisms to be checked against the Vercel docs | Investigate Vercel create-deployment by commit SHA (git source) and `deployment.meta.githubCommitSha` verification |
+| T08 | Native event-driven release PR (privileged CI) | T06,T07 | NOT_STARTED | C | Draft in `docs/opsiq/ci/proposed/`; broke 6 governance tests when activated | needs independent review | Author a new trust-model doc; extend (not weaken) the isolation tests; no `secrets: inherit` |
+| T09 | Scheduled reconciliation (main vs production SHA, pending migrations, role drift) | T08 | NOT_STARTED | C | - | - | Read-only drift detector first (no secrets beyond the existing read-only checks) |
+| T10 | GSC ingestion | secret | BLOCKED_AUTHORIZATION | E | Run `44257904842` fails at preflight: `GSC_INGESTION_DATABASE_URL` empty in environment `gsc-ingestion` | Needs the owner credential to create role `opsiq_gsc_ingestion` | Owner runs `scripts/gsc/opsiq-gsc-ingestion-role.sql`, stores the URL in the environment secret |
+| T11 | Neon capacity, dependency tracing | - | PARTIALLY_COMPLETE | A | Inventory in session 1; sub-agent audit in progress | - | Merge agent report into this ledger |
+| T12 | Backup, R2, restore rehearsal | - | NOT_STARTED | B | sub-agent audit in progress | - | Merge agent report |
+| T13 | Open-PR triage and dependency audit | - | NOT_STARTED | C | sub-agent triage in progress | - | Merge agent report; merge only eligible PRs after checks |
+| T14 | Full regression suite | - | NOT_STARTED | C | Not run this session | - | Run with isolated DB (see CI recipe) |
+| T15 | P1/P2 (UX, Owner Mode, QuickBooks, analytics, acquisition, Product Hunt 2026-11-20, payments) | - | NOT_STARTED | D/E | - | Product Hunt: provider state unreadable from this session | Needs per-workstream agents |
