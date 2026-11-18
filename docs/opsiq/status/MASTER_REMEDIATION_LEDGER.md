@@ -110,3 +110,40 @@ Single owner action that unblocks production, with the exact request:
   If it only asks for the owner, replace it with a branch-restriction (main only) so the exact-SHA, host-pin and confirm-phrase gates carry the control.
 
 Not started this session: Neon consumption audit and dependency tracing for the nine inactive projects, backups and restore rehearsal, the full-suite regression run, the open-PR triage, the P1 user-journey and UX audits, QuickBooks, analytics, acquisition and payments. Next: read the production DB identity from Vercel metadata and the Neon branch list, then triage the PR backlog.
+
+## Update 2026-11-18 (session 3): hostile review of PR #682
+
+Findings A-D, each reproduced then fixed in `scripts/release/runtime-role-reconcile-gate.mjs` (`8d4258ea`):
+
+| Finding | Confirmed? | Fix | Test evidence |
+|---|---|---|---|
+| A. ABSENT role accepted | YES (`SKIPPED_ROLE_ABSENT` and `RUNTIME_ROLE_STATE=ABSENT` could set `RUNTIME_ROLE_RECONCILED=true`) | Production requires `opsiq_app`; ABSENT at pre-verify, apply or post-verify blocks; the gate never creates the role | `runtime-role-reconcile-gate.test.ts` |
+| B. Verifier exit status | YES (`set +e`, `\|\| true`) | Exit status must be valid and consistent with the JSON result and the plain token line; null/137/contradictory fail closed | same |
+| C. `GRANT_GAP_COUNT=0` insufficient | YES | Post-verify must be PASS + CONFORMING, no failed checks/gap/unclassified, `runtime_owned_objects=0`, `runtime_role_memberships=0`, `public_table_grants_to_public=0`, correct target and phase | same |
+| D. Text-only tests | YES | Decision tests plus `[db]` tests that run the real `opsiq-role-cutover.ts` on disposable PG16: missing grant, excess grant (INSERT/DELETE on `_prisma_migrations`, CREATE on schema), reconcile failure, idempotency, stale SHA CLI | 13 gate tests + 4 sequencing tests, all pass (17/17) |
+
+Limits of the evidence:
+- The tool's real production target (exact Neon identity) cannot run against local PG, so the `[db]` tests use `--target ci`. Host-mismatch and role-absent are proven against realistic tool transcripts, not live production.
+- The GitHub workflow itself has not executed. PR #682's CI result is still to be read.
+- Regression: `vitest run src/__tests__/deployment src/__tests__/ci-cd` plus 2 governance files: 41 files passed, 974 tests passed, 51 skipped. `tsc --noEmit` clean.
+
+Finding E (manual dispatch remains): the native release trigger is designed (`docs/opsiq/ci/AUTONOMOUS_RELEASE_PIPELINE_PROPOSAL.md`, draft in `docs/opsiq/ci/proposed/`) but NOT active.
+Making a `push`-triggered privileged release reusable broke 6 independent governance tests (`production-secret-isolation`, exact-host, exact-pending). I reverted it rather than edit those controls in the same PR, because a change must not approve itself. It needs its own independently reviewed PR.
+
+Vercel race (verified from deployment `dpl_DGatR1E5eF6j8YYxuZUbAMFGnVxv`): Vercel builds every push to main in parallel, and `production-migration-gate.mjs` fails that build closed, so production keeps the last good deploy. The deploy hook is not SHA-pinned.
+
+GitHub App permissions (official doc, code.claude.com/docs/en/github-actions): the Claude GitHub App DOES request Actions: Read and write and Workflows: Read and write.
+The doc states that when the app requests a permission it didn't have before, GitHub asks the account owner to approve it, and the installation keeps its old permissions until then.
+So the likely cause of the 403 is a pending permission-update approval on the installation, or an installation that predates those permissions. I could not verify this because the GitHub settings pages are not reachable from this session.
+The owner action is: github.com/settings/installations (or the organization's installed-apps page) -> Claude -> accept any pending "updated permissions" request.
+If nothing is pending, uninstall and reinstall the app (this re-grants the full current permission set).
+docs.github.com is not reachable from this session's network allowlist, so GitHub's own REST docs were not checked.
+
+Search Console ingestion (run `44257904842`), exact requirements from `scheduled-gsc-ingestion.yml`:
+- Secret `GSC_INGESTION_DATABASE_URL` in the GitHub Environment `gsc-ingestion` (the workflow job uses `environment: gsc-ingestion`). Repo variables `GSC_WORKLOAD_IDENTITY_PROVIDER` and `GSC_SERVICE_ACCOUNT` are already set.
+- It must hold the DIRECT connection string of the dedicated `opsiq_gsc_ingestion` role (SELECT/INSERT/UPDATE on `search_console_metrics` only), never `OPERATOR_DATABASE_URL`.
+- Creating the role needs the owner DB credential: `scripts/gsc/opsiq-gsc-ingestion-role.sql`, then set the password interactively and store the URL straight into the secret. Verify with `scripts/gsc-credential-check.sh`. The secret value never goes through chat.
+- Whether the role already exists is unknown (read-only inspection needs DB access I don't have).
+- GSC ingestion stays `BLOCKED_AUTHORIZATION`.
+
+Still NOT started: Neon dependency tracing, backup/R2/restore rehearsal, full-suite regression, open-PR triage, P1/P2.
