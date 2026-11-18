@@ -7429,3 +7429,35 @@ model PrivacyErasureRequest {
   @@index([status])
   @@map("privacy_erasure_requests")
 }
+
+/// Google Search Console daily performance rows (searchanalytics.query), ingested per the
+/// scaffold in src/lib/integrations/search-console.ts and src/services/external-systems/
+/// search-console-ingestion.service.ts. NOT workspace-scoped: this tracks OpsIQ's own
+/// sc-domain:opsiq.solutions property, not a per-tenant customer connector (unlike
+/// OwnerConnector). rowKey is a deterministic hash of (siteUrl, date, query, page, device,
+/// country) so re-ingesting the same day upserts in place instead of duplicating rows — GSC
+/// itself can revise a day's numbers for a few days after it is first reported, which this
+/// upsert-by-rowKey design accommodates intentionally (not just "skip duplicates").
+model SearchConsoleMetric {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  siteUrl     String   @map("site_url")
+  /// The GSC report date this row covers — never "today"; see freshness handling in the client.
+  date        DateTime @map("date") @db.Date
+  /// "" when the row is not broken out by this dimension.
+  query       String   @default("")
+  page        String   @default("")
+  device      String   @default("")
+  country     String   @default("")
+  clicks      Int
+  impressions Int
+  ctr         Float
+  position    Float
+  rowKey      String   @map("row_key")
+  fetchedAt   DateTime @default(now()) @map("fetched_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([rowKey], map: "search_console_metrics_row_key_key")
+  @@index([siteUrl, date])
+  @@map("search_console_metrics")
+}

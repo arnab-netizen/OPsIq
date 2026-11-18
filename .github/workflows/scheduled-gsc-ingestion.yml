@@ -1,0 +1,167 @@
+name: Google Search Console — Scheduled Ingestion
+
+# Wires PR #678's code-only GSC scaffold (src/lib/integrations/search-console.ts,
+# search-console-ingestion.service.ts, scripts/ingest-search-console.ts, the additive
+# `search_console_metrics` table) into a real schedule. PR #678 deliberately left two things out of
+# scope: the Production database credential the ingestion script writes through, and this workflow.
+# This file supplies the second; scripts/gsc/opsiq-gsc-ingestion-role.sql supplies the first.
+#
+# TRIGGERS: `schedule` (once daily) and `workflow_dispatch` (manual run / historical backfill) only.
+# Deliberately NEVER `pull_request` or any event that could let an untrusted contributor's code run
+# with the WIF auth or the database secret below.
+#
+# SCHEDULE TIMING: Google Search Console's own reporting delay is up to
+# GSC_REPORTING_DELAY_DAYS_MAX = 3 days (src/lib/integrations/search-console.ts) — the ingestion
+# script already defaults `--date` to `today - GSC_REPORTING_DELAY_DAYS_MAX`, so the exact hour this
+# runs at does not change correctness. 07:15 UTC is chosen only to land after the UTC day boundary
+# with margin (avoiding any edge-of-day ambiguity) and outside this project's other scheduled jobs.
+#
+# AUTH: Workload Identity Federation via google-github-actions/auth@v3 (Option B in
+# docs/opsiq/product/GSC_INTEGRATION_SETUP.md) — no long-lived Google credential is stored in
+# GitHub. `vars.GSC_WORKLOAD_IDENTITY_PROVIDER` and `vars.GSC_SERVICE_ACCOUNT` are repository
+# variables the owner has already configured (per that doc's step 4B); this workflow only consumes
+# them. The exchanged access token is scoped to `webmasters.readonly` ONLY — this path can never
+# write to Search Console, and GSC_ACCESS_TOKEN is passed to the script exactly as
+# getSearchConsoleAuthFromEnv() documents it.
+#
+# DATABASE: a NEW secret, `GSC_INGESTION_DATABASE_URL` — never OPERATOR_DATABASE_URL or
+# PRODUCTION_DATABASE_URL (the schema-owner/migrator login). It is meant to hold the connection
+# string for the dedicated `opsiq_gsc_ingestion` Postgres role (see
+# scripts/gsc/opsiq-gsc-ingestion-role.sql — SELECT+INSERT+UPDATE on `search_console_metrics` only,
+# nothing else) once the owner has applied that role SQL by hand. Until that secret is set, this
+# workflow FAILS CLOSED at the preflight step below with a clear error — exactly like
+# scheduled-backup-r2.yml's own preflight secret checks — rather than silently no-op'ing or falling
+# back to any other credential.
+#
+# IDEMPOTENCY: search-console-ingestion.service.ts upserts every row by a deterministic `row_key`
+# hash of (siteUrl, date, query, page, device, country) — re-ingesting the same date never
+# duplicates rows, it only in-place-corrects them (useful inside GSC's own reporting-delay window).
+# The `concurrency` group below additionally guarantees two runs (e.g. the daily schedule firing
+# while a manual backfill is still in flight) can never race each other's upserts.
+#
+# RETRY/BACKOFF — KNOWN GAP, FLAGGED RATHER THAN GUESSED AT: src/lib/integrations/search-console.ts
+# classifies a 429 as TooManyRequestsError (with Retry-After passthrough) and a 5xx as
+# ServiceUnavailableError, but neither the client nor search-console-ingestion.service.ts nor this
+# workflow actually RETRIES on either. A transient 429/5xx today fails the whole run (visible via
+# GitHub's own workflow-failure notification, see below) and waits for the next scheduled day or a
+# manual re-dispatch, rather than retrying with backoff inside the same run. Closing this gap needs
+# real backoff/jitter parameters tuned for GSC's actual quota behavior — deliberately not guessed at
+# here; left for a follow-up once real quota/429 behavior has been observed.
+#
+# FAILURE NOTIFICATION: this repo has no established Slack/webhook notification channel for
+# scheduled workflows (checked: no workflow here posts to one; scheduled-backup-r2.yml and
+# scheduled-backup.yml rely on GitHub's own workflow-failure UI/email). This workflow does the same
+# — a failed run is visible in the Actions tab and emails repo watchers per their own GitHub
+# notification settings; no new notification channel is built here.
+
+on:
+  schedule:
+    - cron: '15 7 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Optional: a specific report date to (re-)ingest, YYYY-MM-DD. Leave empty to use the script''s own default (today minus GSC_REPORTING_DELAY_DAYS_MAX days) — e.g. for a manual historical backfill, dispatch this with a past date.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: gsc-ingestion
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    name: Ingest one day of Search Console metrics
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: gsc-ingestion
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate date input (optional; must be YYYY-MM-DD when provided)
+        env:
+          DATE_INPUT: ${{ inputs.date }}
+        run: |
+          if [ -n "$DATE_INPUT" ] && ! echo "$DATE_INPUT" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+            echo "::error::date input must be YYYY-MM-DD (or empty). Got: '$DATE_INPUT'"
+            exit 1
+          fi
+          echo "✓ date input valid (or empty)"
+
+      - name: Preflight check - required secrets/config exist
+        env:
+          DATABASE_URL: ${{ secrets.GSC_INGESTION_DATABASE_URL }}
+          WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GSC_WORKLOAD_IDENTITY_PROVIDER }}
+          SERVICE_ACCOUNT: ${{ vars.GSC_SERVICE_ACCOUNT }}
+        run: |
+          MISSING=0
+          for v in DATABASE_URL WORKLOAD_IDENTITY_PROVIDER SERVICE_ACCOUNT; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::$v is missing or empty"
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" -ne 0 ]; then
+            echo "::error::Required GSC ingestion configuration is incomplete. See docs/opsiq/product/GSC_INTEGRATION_SETUP.md and scripts/gsc/opsiq-gsc-ingestion-role.sql. Refusing to proceed (uncertain = block)."
+            exit 1
+          fi
+          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+            echo "::error::GSC_INGESTION_DATABASE_URL looks like a placeholder, not a real credential. Refusing to proceed."
+            exit 1
+          fi
+          echo "✓ Required GSC ingestion configuration present."
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # F-LEAST-PRIVILEGE-GSC-INGESTION: prove, before any ingestion write, that
+      # GSC_INGESTION_DATABASE_URL's identity can read/write ONLY search_console_metrics and nothing
+      # else in Production. Prints counts and booleans only; fails closed (an over-broad credential,
+      # e.g. OPERATOR_DATABASE_URL pasted in by mistake, is refused here rather than silently used).
+      - name: Credential preflight (read-only; counts only, no data)
+        env:
+          DATABASE_URL: ${{ secrets.GSC_INGESTION_DATABASE_URL }}
+          REQUIRE_LEAST_PRIVILEGE: '1'
+        run: bash scripts/gsc-credential-check.sh
+
+      - id: auth
+        name: Authenticate to Google Cloud (Workload Identity Federation, webmasters.readonly only)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GSC_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GSC_SERVICE_ACCOUNT }}
+          token_format: 'access_token'
+          access_token_scopes: 'https://www.googleapis.com/auth/webmasters.readonly'
+
+      - name: Ingest one day of Search Console metrics
+        env:
+          GSC_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          DATABASE_URL: ${{ secrets.GSC_INGESTION_DATABASE_URL }}
+          DATE_INPUT: ${{ inputs.date }}
+        run: |
+          set -euo pipefail
+          if [ -n "${DATE_INPUT:-}" ]; then
+            npm run gsc:ingest -- --date="$DATE_INPUT"
+          else
+            npm run gsc:ingest
+          fi
+
+      - name: Summary
+        if: success()
+        env:
+          DATE_INPUT: ${{ inputs.date }}
+        run: |
+          echo "GSC ingestion completed for $( [ -n "${DATE_INPUT:-}" ] && echo "$DATE_INPUT" || echo "the script's default report date" )."
+          echo "A failed run is visible in this workflow's own Actions history and (per each watcher's notification settings) by email — no separate notification channel exists for this repo's scheduled workflows."
