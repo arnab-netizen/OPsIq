@@ -61,7 +61,9 @@ const print = (token: string, value: string, summary: Record<string, unknown>) =
 };
 
 async function connect(url: string): Promise<Client> {
-  const c = new Client({ connectionString: url, ssl: /sslmode=require/i.test(url) ? { rejectUnauthorized: false } : undefined, connectionTimeoutMillis: 60_000 });
+  // P0-15: no manual `ssl` override — pg-connection-string already parses
+  // sslmode=require from the connection string when `ssl` is left unset.
+  const c = new Client({ connectionString: url, connectionTimeoutMillis: 60_000 });
   await c.connect();
   return c;
 }

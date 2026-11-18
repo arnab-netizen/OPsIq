@@ -1,4 +1,3 @@
-// @ts-nocheck - seed script uses data definitions that don't strictly match schema but are handled at runtime
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
@@ -23,11 +22,10 @@ async function createStagingSeedClient() {
   console.log("DATABASE_URL present for staging seed");
 
   // Always use pg adapter for staging seed (not Neon serverless)
+  // P0-15: no manual `ssl` override — pg-connection-string already parses
+  // sslmode=require from the connection string when `ssl` is left unset.
   const pool = new Pool({
     connectionString: databaseUrl,
-    ssl: databaseUrl.includes("sslmode=require")
-      ? { rejectUnauthorized: false }
-      : undefined,
   });
 
   const adapter = new PrismaPg(pool);
@@ -207,6 +205,7 @@ async function seedDemoData(db: PrismaClient) {
       data: {
         id: conditionId,
         engagementId: engagement.id,
+        workspaceId: workspace.id,
         businessStatus: "challenged",
         severityScore: 7,
         urgencyLevel: "high",
