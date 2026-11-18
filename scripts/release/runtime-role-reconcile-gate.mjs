@@ -53,6 +53,7 @@ export function strictVerifyProblems({ exitCode, output }, { target, phase = "po
     if (v.grantGapTables.length > 0) problems.push(`grant gap: ${v.grantGapTables.join(",")}`);
     if (v.unclassifiedTables.length > 0) problems.push(`unclassified tables: ${v.unclassifiedTables.join(",")}`);
     const f = v.facts ?? {};
+    if (f.read_only_enforced !== true) problems.push("verify did not prove an enforced read-only transaction");
     if (f.runtime_role_exists !== true) problems.push("facts.runtime_role_exists is not true");
     if (f.runtime_owned_objects !== 0) problems.push("runtime role owns objects (expected 0)");
     if (f.runtime_role_memberships !== 0) problems.push("runtime role has role memberships (expected 0)");

@@ -12,9 +12,11 @@ import { resolve } from "path";
 // @ts-expect-error -- plain ESM script without type declarations
 import { runReconcileGate, strictVerifyProblems, toolInvocation, APPLY_CONFIRM_PHRASE } from "../../../scripts/release/runtime-role-reconcile-gate.mjs";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { verifyRoleTopologyReadOnly } from "@/services/privacy-erasure/role-topology";
+import { assertRoleCutoverStaticTarget } from "@/infra/role-cutover-target";
 
 const SHA = "a".repeat(40);
-const facts = { runtime_role_exists: true, runtime_owned_objects: 0, runtime_role_memberships: 0, public_table_grants_to_public: 0, grant_gap_tables: [], unclassified_tables: [] };
+const facts = { read_only_enforced: true, runtime_role_exists: true, runtime_owned_objects: 0, runtime_role_memberships: 0, public_table_grants_to_public: 0, grant_gap_tables: [], unclassified_tables: [] };
 const verifyOut = (o: Record<string, unknown> = {}, token?: string) => {
   const j = { ROLE_TOPOLOGY_VERIFY: "PASS", target: "production", phase: "post", runtimeRoleState: "CONFORMING", failedChecks: [], facts, ...o };
   return `PASS  x\n${JSON.stringify(j)}\n${token ?? `ROLE_TOPOLOGY_VERIFY=${j.ROLE_TOPOLOGY_VERIFY}`}\n`;
@@ -67,6 +69,7 @@ describe("runtime-role gate decisions (fail closed)", () => {
       "wrong phase": { phase: "pre" },
       "role missing flag": { facts: { ...facts, runtime_role_exists: false } },
       "facts missing": { facts: {} },
+      "no enforced read-only proof": { facts: { ...facts, read_only_enforced: false } },
       "no failedChecks list": { failedChecks: undefined },
     };
     for (const [name, o] of Object.entries(bad)) expect(gate({ post: { exitCode: 0, output: verifyOut(o) } }).ok, name).toBe(false);
@@ -155,4 +158,83 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] gate against the
     expect(realGate()).toMatchObject({ ok: true }); // recovers once the cause is removed
   }, 120_000);
 
+});
+
+const NAMES = { runtimeRole: "opsiq_app", eraserLogins: [] as string[] };
+const recording = (real: Client, override?: (sql: string) => { rows: unknown[] } | null) => {
+  const calls: string[] = [];
+  const client = new Proxy(real, {
+    get(t, prop, r) {
+      if (prop !== "query") return Reflect.get(t, prop, r);
+      return (...a: unknown[]) => {
+        const sql = typeof a[0] === "string" ? a[0] : String((a[0] as { text?: string })?.text);
+        calls.push(sql);
+        const o = override?.(sql);
+        return o ? Promise.resolve(o) : (t.query as (...x: unknown[]) => unknown).apply(t, a);
+      };
+    },
+  });
+  return { client, calls };
+};
+
+describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] explicit read-only enforcement (does not rely on PGOPTIONS)", () => {
+  it("proves the effective mode and rejects a write, leaves NO open transaction, and the report records the proof", async () => {
+    const { client, calls } = recording(admin);
+    const r = await verifyRoleTopologyReadOnly(client, NAMES);
+    expect(r.facts.read_only_enforced).toBe(true);
+    expect(calls[0]).toMatch(/^BEGIN READ ONLY/);
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+    expect((await admin.query(`SELECT pg_current_xact_id_if_assigned() AS x, now() = statement_timestamp() AS fresh`)).rows[0].x).toBeNull();
+    expect((await admin.query(`SHOW transaction_read_only`)).rows[0].transaction_read_only).toBe("off"); // session itself is untouched
+  });
+  it("a connection URL carrying options=-c default_transaction_read_only=off, and a session forced read-write, cannot defeat it", async () => {
+    const u = new URL(OWNER_URL);
+    u.searchParams.set("options", "-c default_transaction_read_only=off");
+    const hostile = new Client({ connectionString: u.toString() });
+    await hostile.connect();
+    try {
+      await hostile.query("SET SESSION CHARACTERISTICS AS TRANSACTION READ WRITE");
+      expect((await hostile.query("SHOW default_transaction_read_only")).rows[0].default_transaction_read_only).toBe("off"); // the URL option really is in force
+      const r = await verifyRoleTopologyReadOnly(hostile, NAMES);
+      expect(r.facts.read_only_enforced).toBe(true);
+      await expect(hostile.query("CREATE TEMP TABLE zz_after_ok (i int)")).resolves.toBeDefined(); // and the session is writable again afterwards: the guard was the transaction, not a setting
+    } finally { await hostile.end(); }
+  });
+  it("refuses to run any catalog query when the effective mode is not read-only, and still rolls back", async () => {
+    const { client, calls } = recording(admin, (sql) => (/^SHOW transaction_read_only/.test(sql) ? { rows: [{ transaction_read_only: "off" }] } : null));
+    await expect(verifyRoleTopologyReadOnly(client, NAMES)).rejects.toThrow(/READ_ONLY_NOT_ENFORCED/);
+    expect(calls.some((c) => /pg_roles|current_user/.test(c))).toBe(false);
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+    await expect(admin.query("SELECT 1")).resolves.toBeDefined(); // connection not left in an aborted transaction
+  });
+  it("refuses when a write-class statement is NOT rejected (incorrect transaction state), and rolls back", async () => {
+    const { client, calls } = recording(admin, (sql) => (/zz_read_only_probe \(i int\)/.test(sql) ? { rows: [] } : /SAVEPOINT/.test(sql) ? { rows: [] } : null));
+    await expect(verifyRoleTopologyReadOnly(client, NAMES)).rejects.toThrow(/not rejected/);
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+  });
+  it("a failing verification (query error mid-way) still rolls back and leaves the connection usable", async () => {
+    const { client, calls } = recording(admin, (sql) => { if (/FROM pg_roles/.test(sql)) throw new Error("boom"); return null; });
+    await expect(verifyRoleTopologyReadOnly(client, NAMES)).rejects.toThrow(/boom/);
+    expect(calls[calls.length - 1]).toBe("ROLLBACK");
+    await expect(admin.query("SELECT 1")).resolves.toBeDefined();
+  });
+  it("discovery never mutates: ACLs are byte-identical before and after a read-only verify, and dry-run apply persists nothing", async () => {
+    const snap = async () => JSON.stringify((await admin.query(`SELECT c.relname, c.relacl::text a FROM pg_class c WHERE c.relnamespace='public'::regnamespace AND c.relkind IN ('r','p','S') ORDER BY 1`)).rows);
+    await admin.query(`REVOKE INSERT ON TABLE public.search_console_metrics FROM opsiq_app`); // create drift
+    const drifted = await snap();
+    await verifyRoleTopologyReadOnly(admin, NAMES);
+    expect(await snap()).toBe(drifted);
+    const dry = spawnSync("npx", ["tsx", "scripts/db/opsiq-role-cutover.ts", "apply", "--target", "ci", "--only-if-present", "--dry-run"], { cwd: ROOT, encoding: "utf8", env: { ...process.env, OWNER_DATABASE_URL: OWNER_URL, OPSIQ_DB_TARGET: "ci" } });
+    expect(dry.stdout).toMatch(/"committed":false/);
+    expect(await snap()).toBe(drifted);
+    expect(realGate()).toMatchObject({ ok: true }); // the real reconcile repairs it, with the read-only proof in the post-verify
+  }, 120_000);
+});
+
+describe("connection pooling", () => {
+  it("a pooled endpoint is refused before any connection for a production target", () => {
+    const host = "ep-empty-sky-ay1e6c27-pooler.c-5.us-east-2.aws.neon.tech";
+    const env = { OPSIQ_DB_TARGET: "production", OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: "true" };
+    expect(() => assertRoleCutoverStaticTarget({ command: "verify", target: "production", url: `postgresql://u:p@${host}/db`, env, expectedHost: host } as never)).toThrow(/pooler|DIRECT/i);
+  });
 });
