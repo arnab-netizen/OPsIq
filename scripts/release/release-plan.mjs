@@ -82,6 +82,106 @@ export function destructiveReasons(sql) {
 }
 
 /**
+ * Statement tokenizer for the allowlist: one pass, comments removed, string literals reduced to '' , quoted identifiers kept
+ * verbatim, every dollar-quoted body replaced by the single opaque token $OPAQUE$ (a body is code and is never inspected),
+ * statements split on top-level semicolons. Returns normalised single-space statements.
+ */
+export function splitStatements(sql) {
+  const t = String(sql);
+  const stmts = [];
+  let cur = "";
+  let i = 0;
+  const push = () => { const x = cur.replace(/\s+/g, " ").trim(); if (x) stmts.push(x); cur = ""; };
+  while (i < t.length) {
+    const c = t[i], n = t[i + 1];
+    if (c === "-" && n === "-") { while (i < t.length && t[i] !== "\n") i++; cur += " "; continue; }
+    if (c === "/" && n === "*") {
+      let d = 1; i += 2;
+      while (i < t.length && d > 0) { if (t[i] === "/" && t[i + 1] === "*") { d++; i += 2; } else if (t[i] === "*" && t[i + 1] === "/") { d--; i += 2; } else i++; }
+      cur += " "; continue;
+    }
+    if (c === "'") {
+      const esc = /[eEuU&]$/.test(cur.slice(-2).trimEnd()) && /[eE]$/.test(cur.slice(-1));
+      i++;
+      while (i < t.length) { if (esc && t[i] === "\\") { i += 2; continue; } if (t[i] === "'" && t[i + 1] === "'") { i += 2; continue; } if (t[i] === "'") { i++; break; } i++; }
+      cur += "''"; continue;
+    }
+    if (c === '"') {
+      let j = i + 1;
+      while (j < t.length) { if (t[j] === '"' && t[j + 1] === '"') { j += 2; continue; } if (t[j] === '"') { j++; break; } j++; }
+      cur += t.slice(i, j).replace(/;/g, "_"); i = j; continue;
+    }
+    if (c === "$") {
+      const m = /^\$([A-Za-z_][A-Za-z_0-9]*)?\$/.exec(t.slice(i, i + 80));
+      if (m) {
+        const close = t.indexOf(m[0], i + m[0].length);
+        if (close === -1) { cur += " $OPAQUE$ "; i = t.length; continue; }
+        cur += " $OPAQUE$ "; i = close + m[0].length; continue;
+      }
+    }
+    if (c === ";") { push(); i++; continue; }
+    cur += c; i++;
+  }
+  push();
+  return stmts;
+}
+
+const ID = String.raw`(?:"[^"]+"|[A-Za-z_][A-Za-z_0-9]*)(?:\.(?:"[^"]+"|[A-Za-z_][A-Za-z_0-9]*))?`;
+const VOLATILE_DEFAULT = /\bDEFAULT\s+(?:random|gen_random_uuid|uuid_generate_v\d|clock_timestamp|nextval|setseed)\s*\(/i;
+
+function topLevelCommas(body) {
+  const parts = []; let depth = 0, cur = "";
+  for (const ch of body) { if (ch === "(") depth++; if (ch === ")") depth--; if (ch === "," && depth === 0) { parts.push(cur.trim()); cur = ""; } else cur += ch; }
+  parts.push(cur.trim());
+  return parts;
+}
+
+/**
+ * Allowlist classifier (fail closed). A migration is auto-approvable ONLY if every statement matches a recognised ADDITIVE shape.
+ * Anything else, including every DROP/DO/UPDATE/DELETE/INSERT/COPY/function/trigger/GRANT/transaction-control statement, needs explicit authorization.
+ * It is a policy filter, not a proof of compatibility: it cannot see table size, lock time or old-app write patterns.
+ */
+export function classifyMigration(sql) {
+  const reasons = [];
+  const stmts = splitStatements(sql);
+  if (stmts.length === 0) return { approved: true, reasons: [] }; // comments only: nothing executes
+  const created = new Set();
+  for (const st of stmts) { const m = new RegExp(String.raw`^CREATE TABLE (?:IF NOT EXISTS )?(${ID})(?=\s|\()`, "i").exec(st); if (m) created.add(m[1].replace(/"/g, "").toLowerCase()); }
+  const bad = (st, why) => reasons.push(`${why}: ${st.slice(0, 90)}`);
+  for (const st of stmts) {
+    if (st.includes("$OPAQUE$")) { bad(st, "contains an opaque (dollar-quoted) code body"); continue; }
+    if (new RegExp(String.raw`^CREATE TABLE (?:IF NOT EXISTS )?${ID}\s*\(`, "i").test(st)) {
+      if (/\)\s*(?:INHERITS|PARTITION|AS\b)|\bPARTITION OF\b|\bAS SELECT\b/i.test(st)) bad(st, "CREATE TABLE variant not allowlisted"); continue;
+    }
+    if (new RegExp(String.raw`^CREATE (?:UNIQUE )?INDEX (?:IF NOT EXISTS )?${ID} ON ${ID}(?: USING \w+)?\s*\(`, "i").test(st)) {
+      if (/\bCONCURRENTLY\b/i.test(st)) bad(st, "CONCURRENTLY cannot run inside a migration transaction"); continue;
+    }
+    if (new RegExp(String.raw`^CREATE TYPE ${ID} AS ENUM\s*\(`, "i").test(st)) continue;
+    if (new RegExp(String.raw`^ALTER TYPE ${ID} ADD VALUE (?:IF NOT EXISTS )?''(?: (?:BEFORE|AFTER) '')?$`, "i").test(st)) continue;
+    if (new RegExp(String.raw`^COMMENT ON (?:TABLE|COLUMN) ${ID}(?:\.${ID})? IS ''$`, "i").test(st)) continue;
+    if (/^CREATE EXTENSION IF NOT EXISTS "?pgcrypto"?$/i.test(st)) continue;
+    const alter = new RegExp(String.raw`^ALTER TABLE (?:ONLY )?(?:IF EXISTS )?(${ID}) (.+)$`, "i").exec(st);
+    if (alter) {
+      const table = alter[1].replace(/"/g, "").toLowerCase();
+      const isNew = created.has(table);
+      for (const action of topLevelCommas(alter[2])) {
+        if (/^ADD (?:COLUMN )?(?:IF NOT EXISTS )?(?:"[^"]+"|\w+) /i.test(action) && !/^ADD CONSTRAINT/i.test(action)) {
+          if (/\bGENERATED\b/i.test(action)) bad(st, "generated column rewrites the table");
+          else if (/\bNOT NULL\b/i.test(action) && !/\bDEFAULT\b/i.test(action) && !isNew) bad(st, "NOT NULL column without DEFAULT breaks the previously deployed app");
+          else if (VOLATILE_DEFAULT.test(action) && !isNew) bad(st, "volatile DEFAULT forces a table rewrite");
+          continue;
+        }
+        if (/^ADD CONSTRAINT (?:"[^"]+"|\w+) (?:FOREIGN KEY|UNIQUE|CHECK|PRIMARY KEY)\b/i.test(action)) continue;
+        bad(st, "ALTER TABLE action not allowlisted");
+      }
+      continue;
+    }
+    bad(st, "unrecognised statement shape");
+  }
+  return { approved: reasons.length === 0, reasons };
+}
+
+/**
  * @param {{ committed: {name:string, checksum:string|null}[]|null, rows: object[], sqlByName?: Record<string,string> }} p
  * @returns {{ action: "NOOP"|"MIGRATE"|"BLOCK", pending: string[], reasons: string[], destructive: Record<string,string[]> }}
  */
@@ -102,11 +202,11 @@ export function planRelease({ committed, rows, sqlByName = {} }) {
   const destructive = {};
   for (const n of g.pending) {
     if (typeof sqlByName[n] !== "string") return block([`no SQL available to inspect pending migration ${n}`], g.pending);
-    const r = destructiveReasons(sqlByName[n]);
-    if (r.length) destructive[n] = r;
+    const c = classifyMigration(sqlByName[n]);
+    if (!c.approved) destructive[n] = [...c.reasons, ...destructiveReasons(sqlByName[n])];
   }
   if (Object.keys(destructive).length) {
-    return block(Object.entries(destructive).map(([n, r]) => `${n} needs explicit authorization: ${r.join("; ")}`), g.pending, destructive);
+    return block(Object.entries(destructive).map(([n, r]) => `${n} not an allowlisted additive migration, needs explicit authorization: ${r.join("; ")}`), g.pending, destructive);
   }
   return { action: "MIGRATE", pending: g.pending, reasons: [], destructive: {} };
 }
