@@ -15,6 +15,11 @@ vi.mock("@/lib/db", () => ({
       upsert: (...args: unknown[]) => upsertMock(...args),
     },
   },
+  // vitest.setup.ts dynamically imports getDbInstance from "@/lib/db" when
+  // TEST_WITH_DB=true (Main Integration lane) — every vi.mock("@/lib/db")
+  // factory must export it or that lane fails even though LANE_A (no DB)
+  // passes silently. See DC-20 in scripts/a77-prevention-gates.ts.
+  getDbInstance: vi.fn().mockResolvedValue({}),
 }));
 
 import { ingestSearchConsoleDay } from "@/services/external-systems/search-console-ingestion.service";

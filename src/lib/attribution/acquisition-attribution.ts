@@ -70,7 +70,13 @@ function cleanHost(value: unknown): string | undefined {
   return host;
 }
 
-function sanitize(raw: Record<string, unknown>): AcquisitionAttribution {
+/**
+ * Exported so other attribution surfaces (e.g. the consent-gated, site-wide
+ * first/last-touch capture in src/lib/attribution/attribution-store.ts) can
+ * re-validate a parsed-but-untrusted object (stored JSON, a request body)
+ * through the exact same bounds instead of re-implementing them.
+ */
+export function sanitize(raw: Record<string, unknown>): AcquisitionAttribution {
   const out: AcquisitionAttribution = {};
   for (const [, key] of UTM_PARAMS) {
     const value = cleanUtm(raw[key]);

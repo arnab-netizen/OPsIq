@@ -5,6 +5,7 @@ import { PublicPageAnalytics } from "@/components/analytics/PublicPageAnalytics"
 import { shouldMountPageAnalytics } from "@/lib/analytics/public-page-analytics";
 import { ClarityConsent } from "@/components/analytics/ClarityConsent";
 import { resolveClarityProjectId } from "@/lib/analytics/clarity-policy";
+import { AttributionCapture } from "@/components/analytics/AttributionCapture";
 
 // The editorial display face for headlines and the top-priority finding on Home — a deliberate
 // departure from the generic sans-on-sans look of a default Tailwind/shadcn starter. Body copy,
@@ -41,6 +42,8 @@ export default function RootLayout({
         {children}
         {shouldMountPageAnalytics() && <PublicPageAnalytics />}
         {clarityProjectId && <ClarityConsent projectId={clarityProjectId} />}
+        {/* Reads the same analytics consent as ClarityConsent above; writes nothing until it is "granted". */}
+        <AttributionCapture />
       </body>
     </html>
   );
