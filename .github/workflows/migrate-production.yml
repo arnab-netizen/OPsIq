@@ -479,6 +479,42 @@ jobs:
           echo "✓ All migrations applied successfully"
           echo "POST_VERIFY_SUCCEEDED=true" >> "$GITHUB_ENV"
 
+      # Informational, READ-ONLY, NON-BLOCKING runtime-role access check (gap-detection follow-up to
+      # docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md §3's "After EVERY production migration that adds a
+      # table: run `apply --only-if-present`..."). This step only RUNS `verify --phase post` -- the same
+      # read-only catalog-check command .github/workflows/reconcile-runtime-role.yml's DISCOVER mode uses --
+      # against the SAME OPERATOR_DATABASE_URL secret this job already holds (re-exposed under the
+      # OWNER_DATABASE_URL name the tool itself requires; no new secret). It never calls `apply`, never
+      # mutates anything, and `continue-on-error: true` guarantees a non-PASS result, or the check being
+      # unable to run at all, can never fail this migration job -- applying a migration and reconciling the
+      # runtime role's grants are separate, independently owner-authorized operations by design (see that
+      # doc's status line). The result is parsed by the shared scripts/db/parse-role-topology-verify.mjs and
+      # only ever surfaced in the job summary below.
+      - name: Informational - check runtime role access after migration (read-only, non-blocking)
+        if: success() && env.POST_VERIFY_SUCCEEDED == 'true'
+        continue-on-error: true
+        env:
+          OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+          # Postgres itself rejects any write on this session, independent of what the tool contains.
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set +e
+          npx tsx scripts/db/opsiq-role-cutover.ts verify --target production \
+            --expected-host "$EXPECTED_DATABASE_HOST" \
+            --phase post > runtime-role-verify-after-migration.txt 2>&1
+          echo "=== Runtime role (opsiq_app) access check after migration (informational only) ==="
+          cat runtime-role-verify-after-migration.txt
+          echo "=== End runtime role access check ==="
+          node scripts/db/parse-role-topology-verify.mjs runtime-role-verify-after-migration.txt > runtime-role-verify-summary.txt 2>&1
+          cat runtime-role-verify-summary.txt
+          echo "RUNTIME_ROLE_CHECK_RAN=true" >> "$GITHUB_ENV"
+          # Always exit 0: continue-on-error already covers an unexpected failure above, but this step's
+          # own job is only to inform, never to gate -- it must never contribute a red X to this job.
+          exit 0
+
       - name: Structural post-migration verification (version-controlled, parameterized query — no arbitrary SQL)
         if: inputs.mode == 'PINNED_PREDEPLOY'
         env:
@@ -537,6 +573,32 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             cat migration-status-after.txt >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          # Informational, non-blocking: surfaces whether the just-applied migration added any
+          # Prisma-modelled table the opsiq_app runtime role cannot yet access. This NEVER affects
+          # DEPLOY_SUCCEEDED/POST_VERIFY_SUCCEEDED or this job's pass/fail outcome above or below --
+          # applying the migration and reconciling the runtime role's grants are separate steps by design.
+          echo "### Runtime role (\`opsiq_app\`) access after this migration — informational, non-blocking" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${RUNTIME_ROLE_CHECK_RAN:-false}" == "true" ] && [ -f runtime-role-verify-summary.txt ]; then
+            RR_PARSE_RESULT=$(grep '^PARSE_RESULT=' runtime-role-verify-summary.txt | cut -d= -f2)
+            RR_STATE=$(grep '^RUNTIME_ROLE_STATE=' runtime-role-verify-summary.txt | cut -d= -f2)
+            RR_GAP_COUNT=$(grep '^GRANT_GAP_COUNT=' runtime-role-verify-summary.txt | cut -d= -f2)
+            RR_GAP_TABLES=$(grep '^GRANT_GAP_TABLES=' runtime-role-verify-summary.txt | cut -d= -f2)
+            if [ "$RR_PARSE_RESULT" != "OK" ]; then
+              echo "Could not determine the runtime role's grant state after this migration (the check did not complete — see this run's \"Informational - check runtime role access after migration\" step log). This has **not** blocked the migration." >> "$GITHUB_STEP_SUMMARY"
+            elif [ "$RR_STATE" == "ABSENT" ]; then
+              echo "The \`opsiq_app\` runtime role does not exist in production yet (the runtime-role cutover has not been performed). This check is only meaningful after that cutover; no action is needed from this migration alone." >> "$GITHUB_STEP_SUMMARY"
+            elif [ -n "$RR_GAP_COUNT" ] && [ "$RR_GAP_COUNT" != "0" ]; then
+              echo "⚠️ **This migration added table(s) the runtime role cannot yet access — run the 'Reconcile Runtime Role' workflow (APPLY mode) before relying on this table in production, or the next deploy's release gate will block again.**" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "Inaccessible table(s) ($RR_GAP_COUNT): \`${RR_GAP_TABLES:-unknown}\`" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "✓ The runtime role already has full access to every Prisma-modelled table — no reconcile needed." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "This check did not run for this dispatch (e.g. the migration deploy or its post-verify did not succeed). This has **not** blocked the migration." >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Result" >> "$GITHUB_STEP_SUMMARY"
