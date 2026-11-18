@@ -56,12 +56,19 @@ export function parseRoleTopologyVerifyOutput(text) {
   const facts = parsed.facts && typeof parsed.facts === "object" ? parsed.facts : {};
   const grantGapTables = Array.isArray(facts.grant_gap_tables) ? facts.grant_gap_tables.map(String) : [];
   const unclassifiedTables = Array.isArray(facts.unclassified_tables) ? facts.unclassified_tables.map(String) : [];
+  const failedChecks = Array.isArray(parsed.failedChecks) ? parsed.failedChecks.map(String) : null;
+  // The tool also prints a plain `ROLE_TOPOLOGY_VERIFY=PASS|FAIL` token line; a transcript whose token contradicts its JSON is untrustworthy.
+  const token = lines.map((l) => l.trim()).filter((l) => /^ROLE_TOPOLOGY_VERIFY=(PASS|FAIL)$/.test(l)).pop();
   return {
     result: parsed.ROLE_TOPOLOGY_VERIFY,
     runtimeRoleState: typeof parsed.runtimeRoleState === "string" ? parsed.runtimeRoleState : "UNKNOWN",
     phase: typeof parsed.phase === "string" ? parsed.phase : undefined,
+    target: typeof parsed.target === "string" ? parsed.target : undefined,
     grantGapTables,
     unclassifiedTables,
+    failedChecks,
+    facts,
+    tokenAgrees: token === undefined ? false : token === `ROLE_TOPOLOGY_VERIFY=${parsed.ROLE_TOPOLOGY_VERIFY}`,
   };
 }
 

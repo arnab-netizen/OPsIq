@@ -530,34 +530,17 @@ jobs:
         env:
           OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          OPSIQ_RECONCILE_TARGET: production
           OPSIQ_DB_TARGET: production
           OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
         run: |
           set -euo pipefail
-          npx tsx scripts/db/opsiq-role-cutover.ts apply --target production \
-            --expected-host "$EXPECTED_DATABASE_HOST" \
-            --only-if-present \
-            --confirm "APPLY PRODUCTION RUNTIME ROLE TOPOLOGY" | tee "$RUNNER_TEMP/rr-apply.txt"
-          if ! grep -qE '^ROLE_TOPOLOGY_APPLY=(PASS|SKIPPED_ROLE_ABSENT)$' "$RUNNER_TEMP/rr-apply.txt"; then
-            echo "::error::runtime-role reconcile did not report PASS or SKIPPED_ROLE_ABSENT; refusing to promote this release."
-            exit 1
-          fi
-          set +e
-          PGOPTIONS="-c default_transaction_read_only=on" npx tsx scripts/db/opsiq-role-cutover.ts verify --target production \
-            --expected-host "$EXPECTED_DATABASE_HOST" --phase post > "$RUNNER_TEMP/rr-verify.txt" 2>&1
-          set -e
-          node scripts/db/parse-role-topology-verify.mjs "$RUNNER_TEMP/rr-verify.txt" > "$RUNNER_TEMP/rr-summary.txt" 2>&1 || true
-          cat "$RUNNER_TEMP/rr-summary.txt"
-          if ! grep -q '^PARSE_RESULT=OK$' "$RUNNER_TEMP/rr-summary.txt"; then
-            echo "::error::could not verify the runtime role after reconcile; refusing to promote this release."
-            exit 1
-          fi
-          if grep -q '^RUNTIME_ROLE_STATE=ABSENT$' "$RUNNER_TEMP/rr-summary.txt" || { grep -q '^GRANT_GAP_COUNT=0$' "$RUNNER_TEMP/rr-summary.txt"; }; then
-            echo "RUNTIME_ROLE_RECONCILED=true" >> "$GITHUB_ENV"
-          else
-            echo "::error::grant gap remains after reconcile; refusing to promote this release."
-            exit 1
-          fi
+          # All decisions live in the unit-tested gate: valid exit statuses, complete/consistent verifier output,
+          # production runtime role present, no grant gap/excess, no DDL/ownership/membership, exact release SHA.
+          node scripts/release/runtime-role-reconcile-gate.mjs | tee "$RUNNER_TEMP/rr-gate.txt"
+          grep -q '^RUNTIME_ROLE_GATE=PASS$' "$RUNNER_TEMP/rr-gate.txt"
+          echo "RUNTIME_ROLE_RECONCILED=true" >> "$GITHUB_ENV"
 
       - name: Structural post-migration verification (version-controlled, parameterized query — no arbitrary SQL)
         if: inputs.mode == 'PINNED_PREDEPLOY'

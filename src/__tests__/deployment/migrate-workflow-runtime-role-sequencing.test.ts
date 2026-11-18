@@ -21,15 +21,14 @@ describe("migrate-production runtime-role sequencing", () => {
   });
   it("is blocking: not continue-on-error, and fails closed on PASS/SKIPPED mismatch, unparseable verify or a remaining gap", () => {
     expect(reconcile).not.toMatch(/continue-on-error/);
-    expect(reconcile).toMatch(/ROLE_TOPOLOGY_APPLY=\(PASS\|SKIPPED_ROLE_ABSENT\)/);
-    expect(reconcile).toMatch(/PARSE_RESULT=OK/);
-    expect(reconcile).toMatch(/GRANT_GAP_COUNT=0/);
-    expect(reconcile).toMatch(/exit 1/);
+    expect(reconcile).toContain("scripts/release/runtime-role-reconcile-gate.mjs");
+    expect(reconcile).toContain("RUNTIME_ROLE_GATE=PASS");
+    expect(reconcile).not.toMatch(/SKIPPED_ROLE_ABSENT|\|\| true|set \+e/);
+    expect(reconcile).toContain("EXPECTED_RELEASE_SHA: ${{ github.sha }}");
   });
   it("is reconcile-only and scoped: MAIN mode, exact host, --only-if-present, no new secret, no password handling", () => {
     expect(reconcile).toContain("inputs.mode == 'MAIN'");
-    expect(reconcile).toContain("--expected-host");
-    expect(reconcile).toContain("--only-if-present");
+    expect(reconcile).toContain("EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}");
     expect(reconcile).toContain("secrets.OPERATOR_DATABASE_URL");
     expect(reconcile).not.toMatch(/PASSWORD\s+['"]|ALTER ROLE|CREATE ROLE|superuser/i);
   });
