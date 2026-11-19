@@ -4,6 +4,11 @@ import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import {
+  seedPlanEntitlement,
+  cleanupPlanEntitlement,
+  type PlanEntitlementFixture,
+} from "@/__tests__/test-helpers/plan-entitlement";
 
 describe("p2a-production-path — module contract assertions", () => {
   it("createRecommendation is a function", () => { expect(typeof createRecommendation).toBe("function"); });
@@ -32,6 +37,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
   const testUserId = uuidv4();
 
   let createdRecommendationId: string;
+  let planFixture: PlanEntitlementFixture | undefined;
 
   beforeAll(async () => {
     // Create test workspace
@@ -41,6 +47,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
         name: "P2A Test Workspace",
         slug: `p2a-test-${Date.now()}`,
       },
+    });
+
+    // Create the acting user as a real workspace member: audit events record
+    // actor_id with a foreign key to users (audit_events_actor_id_fkey), so the
+    // actor must exist for the governed create/update path to emit its audit.
+    await db.user.create({
+      data: { id: testUserId, email: `${testUserId}@example.com`, isActive: true, updatedAt: new Date() },
+    });
+    await db.workspaceMembership.create({
+      data: { userId: testUserId, workspaceId: testWorkspaceId, role: "admin", isActive: true },
     });
 
     // Create test client
@@ -89,6 +105,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
       },
     });
 
+    // createRecommendation is plan-gated (assertCapability "generate_recommendation",
+    // fail-closed since 027f10239). Grant it through a real active subscription
+    // rather than bypassing the gate.
+    planFixture = await seedPlanEntitlement([testWorkspaceId], ["generate_recommendation"]);
+
     console.log("✓ Test data setup complete");
   });
 
@@ -109,6 +130,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
       });
       await db.clientAccount.deleteMany({
         where: { id: testClientId },
+      });
+      await cleanupPlanEntitlement(planFixture);
+      await db.workspaceMembership.deleteMany({
+        where: { workspaceId: testWorkspaceId },
       });
       await db.workspace.deleteMany({
         where: { id: testWorkspaceId },
@@ -143,7 +168,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
         actorId: testUserId,
         sessionId: uuidv4(),
         createdAt: new Date(),
-      } as any,
+      } as never,
       policy: null,
     };
 
@@ -187,7 +212,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
     expect(retrieved?.id).toBe(createdRecommendationId);
 
     // Verify constraintsConsidered contains all expectation fields
-    const constraints = retrieved?.constraintsConsidered as Record<string, any>;
+    const constraints = retrieved?.constraintsConsidered as Record<string, unknown>;
     expect(constraints).toBeDefined();
     expect(constraints.why_now).toBe(
       "Revenue declining at 2% per week for the past month"
@@ -224,7 +249,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
         actorId: testUserId,
         sessionId: uuidv4(),
         createdAt: new Date(),
-      } as any,
+      } as never,
       policy: null,
     };
 
@@ -255,7 +280,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
 
     expect(updated).toBeDefined();
 
-    const constraints = updated?.constraintsConsidered as Record<string, any>;
+    const constraints = updated?.constraintsConsidered as Record<string, unknown>;
     expect(constraints).toBeDefined();
 
     // Updated fields should be present
@@ -290,7 +315,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
     );
 
     if (createEvent) {
-      const payload = createEvent.payload as Record<string, any>;
+      const payload = createEvent.payload as Record<string, unknown>;
       expect(payload).toBeDefined();
       // Verify at least some expectation fields are in payload
       expect(
