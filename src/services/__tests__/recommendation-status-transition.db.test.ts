@@ -139,9 +139,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateRecommendation — status changes f
     expect(updated.version).toBe(2);
   });
 
-  it("[db] a stale version is refused and nothing changes", async () => {
+  it("[db] a stale version is a 409 ConflictError (same as a lost race) and nothing changes", async () => {
     const id = await makeRec("proposed");
-    await expect(updateRecommendation(id, { version: 7, status: "endorsed" }, ctx(ws), ws)).rejects.toThrow(/modified/);
+    await expect(updateRecommendation(id, { version: 7, status: "endorsed" }, ctx(ws), ws)).rejects.toBeInstanceOf(ConflictError);
     expect(await row(id)).toEqual({ status: "proposed", version: 1 });
   });
 
@@ -161,9 +161,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateRecommendation — status changes f
     const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect(rejected[0].reason instanceof ConflictError || /modified/.test(String(rejected[0].reason))).toBe(true);
+    expect(rejected[0].reason).toBeInstanceOf(ConflictError);
     const final = await row(id);
     expect(final.version).toBe(2);
     expect(["endorsed", "rejected"]).toContain(final.status);
+  });
+
+  it("[db] the recommendation.updated audit event states previousStatus and the new status explicitly", async () => {
+    const id = await makeRec("proposed");
+    await updateRecommendation(id, { version: 1, status: "endorsed", priority: "high" }, ctx(ws), ws);
+    const event = await db.auditEvent.findFirstOrThrow({
+      where: { workspaceId: ws, entityId: id, eventName: "recommendation.updated" },
+      orderBy: { occurredAt: "desc" },
+    });
+    const payload = (typeof event.payload === "string" ? JSON.parse(event.payload) : event.payload) as Record<string, unknown>;
+    expect(payload.previousStatus).toBe("proposed");
+    expect(payload.status).toBe("endorsed");
+    expect(payload.priority).toBe("high");
   });
 });
