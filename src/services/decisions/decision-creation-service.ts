@@ -3,10 +3,14 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
-import { ValidationError } from "@/infra/errors";
+import { AppError, PlanLimitError, ValidationError } from "@/infra/errors";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { consumeCapabilityUsage, withCapabilityQuota } from "@/services/entitlement.service";
+import { addItems } from "@/services/operator/store";
+import type { OperatorItem } from "@/domain/operator/types";
 
 export interface VerifiedDecisionInput {
   // Business data
@@ -63,6 +67,10 @@ export async function createDecision(
 
   try {
     const decision = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Plan quota: decision:create is checked and recorded atomically in the SAME transaction as the
+      // decision row and its audit event (PlanLimitError 402 at the limit); a failed insert rolls it back.
+      // Enforced: POST /api/decisions/create (the only caller) asserted decision:create before this PR.
+      await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE, 1, { enforce: true });
       const created = await tx.operatorItem.create({
         data: {
           id: randomUUID(),
@@ -135,6 +143,48 @@ export async function createDecision(
   }
 }
 
+/**
+ * Persist one caller-built decision OperatorItem (POST /api/decisions/intake) and record its decision:create
+ * usage in ONE transaction under the capability lock (record-only: never a PlanLimitError).
+ */
+export async function persistDecisionItemWithinQuota(
+  workspaceId: string,
+  data: Prisma.OperatorItemUncheckedCreateInput
+) {
+  enforceWorkspaceId(workspaceId, "persistDecisionItemWithinQuota", "OperatorItem");
+  if (data.workspaceId !== workspaceId) {
+    throw new Error("Decision data must belong to the verified workspace");
+  }
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Record-only: intake is free by contract (PAYWALL_BOUNDARY: FREE_FOUNDATION) and was never plan-gated,
+    // so its decision:create usage is recorded atomically with the insert but never refused.
+    await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE, 1, { enforce: false });
+    return tx.operatorItem.create({ data });
+  });
+}
+
+/**
+ * Persist the decisions produced by a decision-engine run (POST /api/run) and record their decision:create
+ * usage: one unit per decision, reserved atomically before any write (record-only: never a PlanLimitError).
+ * addItems writes each decision in its own transaction, and each decision's unit is
+ * settled inside that transaction, so usage always equals the decisions actually persisted: on a failure at
+ * item k, the k committed decisions stay counted and only the units of the unwritten items are returned.
+ */
+export async function addDecisionItemsWithinQuota(workspaceId: string, items: OperatorItem[]): Promise<void> {
+  enforceWorkspaceId(workspaceId, "addDecisionItemsWithinQuota", "OperatorItem");
+  if (items.length === 0) return;
+  if (items.some((item) => item.workspaceId !== workspaceId)) {
+    throw new Error("Decision items must belong to the verified workspace");
+  }
+  await withCapabilityQuota(
+    workspaceId,
+    CAPABILITIES.DECISION_CREATE,
+    (reservation) => addItems(items, (tx) => reservation.settle(tx)),
+    // Record-only: POST /api/run was never plan-gated on decision:create, so usage is recorded, never refused.
+    { amount: items.length, enforce: false }
+  );
+}
+
 export interface BulkCreateInput {
   decisions: VerifiedDecisionInput[];
 }
@@ -144,6 +194,10 @@ export interface BulkCreateResult {
   failed: Array<{
     title: string;
     reason: string;
+    /** The refusal's error code when it was a domain refusal (e.g. "PLAN_LIMIT_EXCEEDED"). */
+    code?: string;
+    /** Present (true) when the refusal may clear on retry (e.g. the entitlement could not be read). */
+    retryable?: true;
   }>;
   summary: {
     total: number;
@@ -166,7 +220,7 @@ export async function createDecisionsBulk(
   }
 
   const successful: CreateDecisionResult[] = [];
-  const failed: Array<{ title: string; reason: string }> = [];
+  const failed: BulkCreateResult["failed"] = [];
 
   for (const decision of decisions) {
     try {
@@ -177,6 +231,8 @@ export async function createDecisionsBulk(
       failed.push({
         title: decision.title,
         reason: governed.operatorMessage,
+        ...(error instanceof AppError ? { code: error.code } : {}),
+        ...(error instanceof AppError && error.telemetry.retryable ? { retryable: true as const } : {}),
       });
       logger.warn("Failed to create decision in bulk", {
         title: decision.title,
@@ -201,6 +257,19 @@ export async function createDecisionsBulk(
       failed: failed.length,
     },
   };
+}
+
+/**
+ * The 402 a bulk create answers with when the plan refused EVERY item (no decision persisted): the status
+ * contract of POST /api/decisions/create, which refused a bulk request at the plan limit as a whole. A bulk
+ * that persisted at least one decision is a 200 carrying its per-item failures; null then.
+ */
+export function bulkPlanLimitRefusal(result: BulkCreateResult): PlanLimitError | null {
+  if (result.summary.succeeded > 0 || result.failed.length === 0) return null;
+  if (!result.failed.every((f) => f.code === "PLAN_LIMIT_EXCEEDED")) return null;
+  return new PlanLimitError(CAPABILITIES.DECISION_CREATE, result.failed[0].reason, undefined, {
+    entitlementUnverifiable: result.failed.some((f) => f.retryable === true),
+  });
 }
 
 function calculatePriorityScore(impact: number, confidence: number): number {

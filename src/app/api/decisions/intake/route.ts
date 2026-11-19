@@ -2,7 +2,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { parseOrThrow } from "@/lib/validation";
 import { ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { db } from "@/lib/db";
+import { persistDecisionItemWithinQuota } from "@/services/decisions/decision-creation-service";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { buildIntakeOperatorItemData } from "./intake-data";
@@ -59,9 +59,11 @@ export const POST = withCanonicalEnforcement(
     }
 
     try {
-      const decision = await db.operatorItem.create({
-        data: buildIntakeOperatorItemData(input, workspaceId, actorId),
-      });
+      // decision:create usage is recorded atomically with the insert (record-only: intake is free by contract).
+      const decision = await persistDecisionItemWithinQuota(
+        workspaceId,
+        buildIntakeOperatorItemData(input, workspaceId, actorId)
+      );
 
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.DECISION_INTAKE,

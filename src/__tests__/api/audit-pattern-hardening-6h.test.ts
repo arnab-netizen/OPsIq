@@ -81,6 +81,12 @@ vi.mock("@/services/auth/server-role", () => ({
 vi.mock("@/services/auth/access", () => ({
   canEdit: mocks.canEdit,
 }));
+// The intake route persists through the quota-governed service (its quota is proven by the DB tests in
+// src/__tests__/services/capability-quota/); here it forwards to the db mock so the route's own write and
+// audit sequencing stay observable.
+vi.mock("@/services/decisions/decision-creation-service", () => ({
+  persistDecisionItemWithinQuota: (_workspaceId: string, data: unknown) => mocks.dbOperatorItemCreate({ data }),
+}));
 vi.mock("@/services/entitlement.service", () => ({
   assertCapability: mocks.assertCapability,
 }));
