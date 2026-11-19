@@ -5,6 +5,7 @@
  */
 
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { z } from "zod";
 import {
@@ -57,7 +58,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const userId = ctx.verifiedActorId;
 
   const body: unknown = await ctx.request!.json();
-  const parsed = IncrementQuotaSchema.parse(body);
+  const parsed = parseOrThrow(IncrementQuotaSchema, body);
 
   // Check if quota available before incrementing
   const usage = getQuotaUsage(workspaceId, userId);

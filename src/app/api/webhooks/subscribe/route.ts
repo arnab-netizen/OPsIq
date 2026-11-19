@@ -9,6 +9,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { WebhookRegistrationSchema } from "@/domain/webhooks/webhook-contracts";
 import { registerWebhook } from "@/services/webhooks.service";
+import { parseOrThrow } from "@/lib/validation";
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -18,12 +19,8 @@ export const POST = withCanonicalEnforcement(
     // caught and re-thrown as a plain Error (an unknown 500).
     const body: unknown = ctx.request ? await ctx.request.json() : {};
 
-    const validationResult = WebhookRegistrationSchema.safeParse(body);
-    if (!validationResult.success) {
-      throw new Error(`Invalid request body: ${JSON.stringify(validationResult.error.issues)}`);
-    }
-
-    const { url, events, secret } = validationResult.data;
+    // A body failing the schema is a ValidationError (400) carrying only {path, message} field errors.
+    const { url, events, secret } = parseOrThrow(WebhookRegistrationSchema, body);
 
     const webhook = await registerWebhook(workspaceId, url, events, ctx.verifiedActorId, secret);
 

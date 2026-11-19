@@ -6,7 +6,7 @@
 import { z } from "zod/v4";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, parseOrThrow } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ValidationError } from "@/infra/errors";
 import {
@@ -60,7 +60,7 @@ export const POST = withCanonicalEnforcement(
     switch (action) {
       case "SCREEN": {
         if (!ideaId) throw new ValidationError("ideaId required for SCREEN");
-        const profile = startupScreeningProfileSchema.parse(rawBody.profile ?? {});
+        const profile = parseOrThrow(startupScreeningProfileSchema, rawBody.profile ?? {});
         const result = await screenIdeaRecord(
           ctx.verifiedWorkspaceId,
           params.sessionId,
@@ -107,7 +107,7 @@ export const POST = withCanonicalEnforcement(
           cashReserveMonths: z.coerce.number().nullable().optional(),
           cashRunwayMonthsAvailable: z.coerce.number().nullable().optional(),
         });
-        const econInputRaw = econSchema.parse(rawBody.inputs ?? {});
+        const econInputRaw = parseOrThrow(econSchema, rawBody.inputs ?? {});
         const econInputs: EconomicInputs = {
           startupCostCents: econInputRaw.startupCostCents != null ? BigInt(Math.round(econInputRaw.startupCostCents)) : null,
           fixedMonthlyCostCents: econInputRaw.fixedMonthlyCostCents != null ? BigInt(Math.round(econInputRaw.fixedMonthlyCostCents)) : null,
@@ -151,7 +151,7 @@ export const POST = withCanonicalEnforcement(
           criticalHypothesesPassed: z.coerce.number().default(0),
           criticalHypothesesFailed: z.coerce.number().default(0),
         });
-        const readinessInputRaw = readinessSchema.parse(rawBody.inputs ?? {});
+        const readinessInputRaw = parseOrThrow(readinessSchema, rawBody.inputs ?? {});
         const readinessInputs: ReadinessInputs = {
           ...readinessInputRaw,
           economicClassification: readinessInputRaw.economicClassification ?? null,
@@ -181,7 +181,7 @@ export const POST = withCanonicalEnforcement(
           result: z.enum(["CONFIRMED","DISCONFIRMED","PARTIALLY_CONFIRMED","INCONCLUSIVE"]),
           resultSummary: z.string().min(1),
         });
-        const h = hypoSchema.parse(rawBody);
+        const h = parseOrThrow(hypoSchema, rawBody);
         await recordHypothesisResult(
           ctx.verifiedWorkspaceId,
           h.hypothesisId,
@@ -199,7 +199,7 @@ export const POST = withCanonicalEnforcement(
           confidence: z.number().min(0).max(100),
           inputSnapshot: z.record(z.string(), z.unknown()).optional(),
         });
-        const rec = recSchema.parse(rawBody);
+        const rec = parseOrThrow(recSchema, rawBody);
         const recId = await createSystemRecommendation(
           ctx.verifiedWorkspaceId,
           params.sessionId,

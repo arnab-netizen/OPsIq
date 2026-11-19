@@ -1,7 +1,8 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { ValidationError } from "@/infra/errors";
+import type { AuditEvent } from "@/generated/prisma/client";
 import { queryAuditEvents } from "@/infra/audit";
-import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = withCanonicalEnforcement(
   async (ctx) => {
@@ -48,14 +49,14 @@ export const GET = withCanonicalEnforcement(
 
     // Validate date range if both provided
     if (filter.from && filter.to && filter.from > filter.to) {
-      throw new Error("fromDate must be before toDate");
+      throw new ValidationError("fromDate must be before toDate");
     }
 
     // Set limit with max of 100
     if (limit) {
       const parsedLimit = parseInt(limit, 10);
       if (isNaN(parsedLimit) || parsedLimit < 1) {
-        throw new Error("Invalid limit");
+        throw new ValidationError("Invalid limit");
       }
       filter.limit = Math.min(parsedLimit, 100);
     } else {
@@ -66,7 +67,7 @@ export const GET = withCanonicalEnforcement(
     const events = await queryAuditEvents(filter);
 
     return {
-      events: events.map((event: Prisma.AuditEventGetPayload<{}>) => ({
+      events: events.map((event: AuditEvent) => ({
         id: event.id,
         eventName: event.eventName,
         actorId: event.actorId,
