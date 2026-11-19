@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import { ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { persistDecisionItemWithinQuota } from "@/services/decisions/decision-creation-service";
@@ -40,7 +41,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const input = IntakeSchema.parse(body);
+    const input = parseOrThrow(IntakeSchema, body);
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,

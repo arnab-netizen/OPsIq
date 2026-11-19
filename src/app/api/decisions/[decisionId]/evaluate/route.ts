@@ -1,5 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError, ConflictError } from "@/infra/errors";
 import { hasPermission } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
@@ -38,7 +38,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     if (decision.status !== "pending") {
-      throw new Error(`Cannot evaluate ${decision.status} decision. Only pending decisions can be evaluated.`);
+      throw new ConflictError(`Cannot evaluate ${decision.status} decision. Only pending decisions can be evaluated.`);
     }
 
     const decisionInput = {

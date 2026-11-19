@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import { UnauthorizedError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { hasPermission } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -46,7 +47,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const verificationInput = VerifyOutcomeSchema.parse(body);
+    const verificationInput = parseOrThrow(VerifyOutcomeSchema, body);
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {

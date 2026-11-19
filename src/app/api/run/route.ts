@@ -1,5 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError, ConflictError, ValidationError } from "@/infra/errors";
 import { runSystem } from "@/services/system/run";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addBlockedDecision } from "@/services/operator/store";
@@ -120,7 +120,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         }
       });
 
-      throw new Error("Insufficient permissions");
+      throw new ForbiddenError("Insufficient permissions");
     }
 
     // Record VALIDATED stage (auth and permissions passed)
@@ -144,7 +144,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     // server process. Not a substitute for DB-backed idempotency (DB_BLOCKED).
     const requestHash = getRequestHash(workspace.workspaceId, { revenue, cost, currency, confidence, revenueChange, costChange, recommendationId });
     if (isDuplicateRequest(requestHash)) {
-      throw new Error("Duplicate request detected — identical run submitted within the deduplication window. Please wait before resubmitting.");
+      throw new ConflictError("Duplicate request detected — identical run submitted within the deduplication window. Please wait before resubmitting.");
     }
 
     // Capture inputs snapshot for replay
@@ -208,7 +208,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         }
       });
 
-      throw new Error("Missing or invalid required fields: revenue and cost must be numbers");
+      throw new ValidationError("Missing or invalid required fields: revenue and cost must be numbers");
     }
 
     // 1b. FAIL-CLOSED: Require confidence to be explicitly provided
@@ -257,7 +257,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         }
       });
 
-      throw new Error("Missing required field: confidence must be a number between 0 and 1");
+      throw new ValidationError("Missing required field: confidence must be a number between 0 and 1");
     }
 
     // 1c. FAIL-CLOSED: Require revenue/cost changes to be explicitly provided
@@ -309,7 +309,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         }
       });
 
-      throw new Error("Missing required fields: revenueChange and costChange must be numbers");
+      throw new ValidationError("Missing required fields: revenueChange and costChange must be numbers");
     }
 
     // 2. Normalize financial inputs before any calculations
@@ -363,7 +363,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         }
       });
 
-      throw new Error(`Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }`);
+      throw new ValidationError(`Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }`);
     }
 
     let normalizedMetrics;
@@ -443,7 +443,8 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         // Ignore lifecycle recording errors - observability only
       });
 
-      throw new Error(errorMsg);
+      // The submitted inputs failed normalization/validation (INPUT_VALIDATION_FAILED above): a client fault.
+      throw new ValidationError(errorMsg);
     }
 
     // Record NORMALIZED stage (input normalization successful)
@@ -565,7 +566,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         // Ignore lifecycle recording errors - observability only
       });
 
-      throw new Error(depValidation.error.details);
+      throw new ValidationError(depValidation.error.details);
     }
 
     // Dependency validation passed
@@ -679,7 +680,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         // Ignore lifecycle recording errors - observability only
       });
 
-      throw new Error(gateResult.reason || "Decision gate validation failed");
+      throw new ValidationError(gateResult.reason || "Decision gate validation failed");
     }
 
     // Decision gate passed - record GATED stage
@@ -810,6 +811,14 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         // Ignore lifecycle recording errors - observability only
       });
 
+      // Low confidence / non-positive impact are deterministic outcomes of the submitted inputs (client faults);
+      // a scenario-generation or unknown failure stays a server fault.
+      if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
+        throw new ValidationError("Decision blocked: confidence level is too low");
+      }
+      if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
+        throw new ValidationError("Decision blocked: expected impact is not positive");
+      }
       throw new Error(errorMsg);
     }
 
@@ -1011,7 +1020,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         // Ignore lifecycle recording errors - observability only
       });
 
-      throw new Error(guardrailsResult.violations.map((v) => v.message).join("; "));
+      throw new ValidationError(guardrailsResult.violations.map((v) => v.message).join("; "));
     }
 
     // Record GUARDRAIL_CHECKED stage

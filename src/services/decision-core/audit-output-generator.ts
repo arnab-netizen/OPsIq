@@ -125,7 +125,10 @@ export class AuditOutputGenerator {
    * Generate SHA256 hash of inputs snapshot
    */
   private hashInputs(inputs: Record<string, unknown>): string {
-    // Recursively key-sorted so nested inputs are covered; byte-identical to the previous form for flat inputs.
+    // Recursively key-sorted so nested inputs are covered. For the flat, plain-JSON inputs hashed today the bytes equal
+    // the previous form; they differ for integer-like keys (now emitted in ascending numeric order ahead of
+    // other keys, not string-sorted) and for values with a toJSON other than Date (e.g. Decimal, URL, Buffer: now
+    // serialized from their own enumerable properties, not their toJSON output).
     const serialized = stableStringify(inputs);
     return createHash("sha256").update(serialized).digest("hex");
   }

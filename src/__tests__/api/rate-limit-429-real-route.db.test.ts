@@ -18,6 +18,7 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { checkWorkspaceRateLimit, resetAllRateLimits } from "@/middleware/rate-limit";
 import { checkRateLimit, PRODUCTION_CONFIG } from "@/services/production/safety-config";
 import type { VerifiedWorkspaceId } from "@/lib/workspace-identity";
+import { logger } from "@/infra/logger";
 
 let mockActorId = randomUUID();
 let mockWorkspaceId = randomUUID();
@@ -123,6 +124,27 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] rate-limited requests are 429 + Retr
     expect(retryAfter).toBeGreaterThanOrEqual(1);
     expect(retryAfter).toBeLessThanOrEqual(60);
     expect((await res.json()).error).toBe(`Rate limit exceeded. Retry after ${retryAfter} seconds.`);
+  });
+
+  it("a 429 is logged as an expected client rejection (WARN), never as a server failure ([WRAPPER_FAILED] at ERROR)", async () => {
+    for (let i = 0; i < PRODUCTION_CONFIG.rateLimit.requestsPerMinute; i++) checkRateLimit(workspaceId);
+    const { POST } = await import("@/app/api/run/route");
+    const warn = vi.spyOn(logger, "warn");
+    const error = vi.spyOn(logger, "error");
+    try {
+      const res = await POST(post("/api/run", { problem: "x" }), { params: Promise.resolve({}) });
+      expect(res.status).toBe(429);
+      expect(warn).toHaveBeenCalledWith(
+        "[WRAPPER_CLIENT_REJECTION]",
+        expect.objectContaining({ statusCode: 429, classification: "handler_invocation_rate_limited" })
+      );
+      const errorMessages = error.mock.calls.map((c) => String(c[0]));
+      expect(errorMessages).not.toContain("[WRAPPER_FAILED]");
+      expect(errorMessages).not.toContain("Handler failed");
+    } finally {
+      warn.mockRestore();
+      error.mockRestore();
+    }
   });
 
   it("a non-rate-limit 4xx carries no Retry-After header", async () => {
