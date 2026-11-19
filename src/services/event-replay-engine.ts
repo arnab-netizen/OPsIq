@@ -33,7 +33,9 @@ export class EventReplayEngine {
     upToEventNumber?: number
   ): Promise<ReplayedAggregate> {
     let usedSnapshot = false;
-    let startEventNumber = 0;
+    // Highest eventNumber already folded into initialState (0 = nothing folded).
+    // A snapshot at eventNumber S covers events 1..S, so replay resumes at S + 1.
+    let snapshotEventNumber = 0;
     let initialState: Record<string, unknown> = {
       aggregateId,
       aggregateType,
@@ -47,9 +49,15 @@ export class EventReplayEngine {
       workspaceId
     );
 
-    if (validSnapshot) {
+    // A snapshot taken after the requested bound already contains events past
+    // upToEventNumber, so it cannot produce the as-of state: replay from event 1.
+    const snapshotWithinBound =
+      validSnapshot !== null &&
+      (!upToEventNumber || validSnapshot.lastEventNumber <= upToEventNumber);
+
+    if (validSnapshot && snapshotWithinBound) {
       usedSnapshot = true;
-      startEventNumber = validSnapshot.lastEventNumber + 1;
+      snapshotEventNumber = validSnapshot.lastEventNumber;
       initialState = {
         ...validSnapshot.state,
         events: (validSnapshot.state.events as Array<unknown>) || [],
@@ -57,18 +65,22 @@ export class EventReplayEngine {
 
       logger.info("EventReplayEngine: Using snapshot for optimization", {
         aggregateId,
-        startEventNumber,
+        startEventNumber: snapshotEventNumber + 1,
       });
     }
 
-    // Phase 2: Fetch remaining events (or all if no snapshot)
+    // Phase 2: Fetch remaining events (or all if no snapshot), bounded on both
+    // sides in a single eventNumber filter: (snapshotEventNumber, upToEventNumber].
+    const eventNumberFilter = {
+      ...(snapshotEventNumber > 0 && { gt: snapshotEventNumber }),
+      ...(upToEventNumber && { lte: upToEventNumber }),
+    };
     const query = {
       where: {
         aggregateId,
         aggregateType,
         workspaceId,
-        eventNumber: startEventNumber > 0 ? { gt: startEventNumber } : undefined,
-        ...(upToEventNumber && { eventNumber: { lte: upToEventNumber } }),
+        ...(Object.keys(eventNumberFilter).length > 0 && { eventNumber: eventNumberFilter }),
       },
       orderBy: { eventNumber: "asc" as const },
     };
@@ -116,10 +128,10 @@ export class EventReplayEngine {
     const result: ReplayedAggregate = {
       aggregateId,
       aggregateType,
-      version: events.length + (usedSnapshot ? startEventNumber : 0),
+      version: snapshotEventNumber + events.length,
       eventCount: events.length,
       state,
-      lastEventNumber: lastEvent?.eventNumber || startEventNumber,
+      lastEventNumber: lastEvent?.eventNumber ?? snapshotEventNumber,
       lastEventTimestamp: lastEvent?.recordedAt || new Date(),
       usedSnapshot,
     };
