@@ -34,6 +34,7 @@ import {
   classifyExecution,
   pushExecutionContext,
   popExecutionContext,
+  runInExecutionScope,
 } from "@/lib/execution-reentry-detector";
 import {
   initializeEnforcerForRequest,
@@ -222,7 +223,9 @@ export function withCanonicalEnforcement(
     serviceVersion?: string;
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
-  return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
+  // Each request runs in its OWN execution-stack scope (see runInExecutionScope): concurrent requests that share an
+  // async ancestor must never push/pop one another's trace (EXECUTION STACK MISMATCH after the handler committed).
+  return (req: NextRequest, context: { params: Promise<Record<string, string>> }) => runInExecutionScope(async () => {
     const params = await context.params;
     let telemetry: CanonicalTelemetryLifecycle | null = null;
     let traceManager: CanonicalExecutionTraceManager | null = null;
@@ -942,7 +945,7 @@ export function withCanonicalEnforcement(
         },
       });
     }
-  };
+  });
 }
 
 /**
