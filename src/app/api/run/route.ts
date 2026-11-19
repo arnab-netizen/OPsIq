@@ -23,7 +23,8 @@ import { evaluateGuardrails, HIGH_IMPACT_APPROVAL_THRESHOLD } from "@/services/c
 import { validateDependencies } from "@/services/control/variable-registry";
 import { enforceControlLayer } from "@/services/control/enforcement";
 import { recordLifecycleStage } from "@/services/lifecycle/decision-lifecycle";
-import { checkRateLimit, isDuplicateRequest, getRequestHash } from "@/services/production/safety-config";
+import { checkRateLimit, getRateLimitRetryAfterSeconds, isDuplicateRequest, getRequestHash } from "@/services/production/safety-config";
+import { RateLimitError } from "@/infra/rate-limit";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 function addIntegrity(
@@ -59,7 +60,8 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
     // Check rate limit per workspace
     if (!checkRateLimit(workspace.workspaceId)) {
-      throw new Error("Rate limit exceeded");
+      // 429 + Retry-After (canonical wrapper), never a plain Error (which is an unknown 500).
+      throw new RateLimitError(getRateLimitRetryAfterSeconds(workspace.workspaceId));
     }
 
     // Record RECEIVED stage
