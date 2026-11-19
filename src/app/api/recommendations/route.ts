@@ -60,6 +60,7 @@ export const POST = withCanonicalEnforcement(
     // Check idempotency
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
+      workspaceId: ctx.verifiedWorkspaceId,
       operationName: "createRecommendation",
       actorId: ctx.verifiedSessionSnapshot.actorId,
       payload: body,

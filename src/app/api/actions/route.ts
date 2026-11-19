@@ -84,7 +84,7 @@ export const POST = withCanonicalEnforcement(
       // Enforced: this route was plan-gated on action_create before usage was recorded (see the check above).
       async () => createAction(body, ctx, workspaceId, undefined, { enforce: true }),
       body,
-      ctx.verifiedActorId
+      { actorId: ctx.verifiedActorId, workspaceId: ctx.verifiedWorkspaceId }
     );
 
     return result;
