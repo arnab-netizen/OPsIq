@@ -14,6 +14,7 @@ import type { LearningStore } from "../learning-store";
 import type { Constraint } from "../whole-business/arbitration";
 import type { PublicCase } from "../public-cases/schema";
 import { buildSupervisorSummary, type SupervisorInput, type SupervisorSummary } from "@/domain/owner-mode/supervisor-summary";
+import { stableStringify } from "@/domain/owner-spine/owner-decision-record";
 
 /** Display label for the dominant constraint — mirrors the production service (display only). */
 const CONSTRAINT_LABEL: Record<Constraint, string> = {
@@ -166,7 +167,9 @@ export interface LockedExpectation {
 
 /** A stable, order-independent hash of the expectation content (FNV-1a; no Date/random). */
 export function hashExpectation(scenario: ChaosScenario): string {
-  const json = JSON.stringify(scenario, Object.keys(scenario).sort());
+  // Recursively key-sorted so a tamper below the top level is detected; byte-identical to the previous form for the
+  // flat scenario schema.
+  const json = stableStringify(scenario);
   let h = 0x811c9dc5;
   for (let i = 0; i < json.length; i++) {
     h ^= json.charCodeAt(i);
