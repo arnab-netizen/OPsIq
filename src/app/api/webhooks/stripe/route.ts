@@ -32,7 +32,9 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  * 10. Retry alerting threshold
  * 11. Max attempts with dead-letter state (5 retries)
  * 12. Timeout protection (backstop derived from the transaction's worst-case bound)
- * 13. lastEventTimestamp enforcement (prevent out-of-order)
+ * 13. Out-of-order protection: subscription state is ordered by the event's own `created`
+ *     (event id as same-second tiebreak) inside the applying transaction; an older event is
+ *     acknowledged, audited as stale-ignored, and never overwrites newer state
  * 14. Handler idempotency via DB constraints
  *
  * Flow:
@@ -50,7 +52,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  * 7. On failure: mark status=failed + lastError + increment attempts
  *
  * Event envelope (Step 4): the signature-verified payload is runtime-validated
- * with StripeEventEnvelopeSchema (non-empty string `id` and `type`; every other
+ * with StripeEventEnvelopeSchema (non-empty string `id` and `type`, integer `created`; every other
  * Stripe field passes through untouched to handleWebhookEvent). Anything else
  * is rejected with 400 "Invalid event structure" before any record is written.
  *
@@ -63,6 +65,8 @@ const StripeEventEnvelopeSchema = z
   .object({
     id: z.string().min(1),
     type: z.string().min(1),
+    // Stripe's event creation time: the ordering key for subscription state (webhook.service).
+    created: z.number().int().nonnegative(),
   })
   .passthrough();
 

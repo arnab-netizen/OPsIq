@@ -637,7 +637,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
   it("processing timeout timer is cleared once processing succeeds", async () => {
     const id = nextEventId();
     await db.webhookEvent.create({ data: { stripeEventId: id, type: "invoice.paid", status: "processing", attempts: 0 } });
-    expect(await backstopTimersLeftArmed(() => handleWebhookEvent({ id, type: "invoice.paid", data: { object: {} } }))).toBe(0);
+    expect(await backstopTimersLeftArmed(() => handleWebhookEvent({ id, type: "invoice.paid", created: Math.floor(Date.now() / 1000), data: { object: {} } }))).toBe(0);
     expect((await eventRow(id))?.status).toBe("processed");
   });
 
