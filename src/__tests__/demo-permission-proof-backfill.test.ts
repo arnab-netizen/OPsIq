@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import * as demoPermissionRoute from '@/app/api/internal/demo-permission-proof/route';
 import { SHOULD_RUN_DB_TESTS } from '@/__tests__/test-helpers/db-test-gate';
 
@@ -24,6 +24,16 @@ vi.mock('@/lib/db', () => ({
     userRoleAssignment: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    // POST step 6 (route.ts) also backfills the demo user's EngagementMembership
+    // for ENG-001, so the mocked client must expose these delegates too.
+    engagement: {
+      findFirst: vi.fn(),
+    },
+    engagementMembership: {
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -140,7 +150,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
     describe('User found but membership missing', () => {
       it('returns membershipFound: false, classification: membership_missing', async () => {
         const mockUser = { id: 'user-1', email: demoUserEmail };
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
         vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(null);
 
         const request = createMockRequest('GET', diagnosticKey);
@@ -162,8 +172,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
 
         const request = createMockRequest('GET', diagnosticKey);
         const response = await demoPermissionRoute.GET(request);
@@ -181,8 +191,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
         vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(null);
         vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([]);
 
@@ -203,8 +213,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
         vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(null);
         vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([]);
 
@@ -230,9 +240,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: false,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
-        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockInactiveAssignment as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
+        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockInactiveAssignment as never);
         vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([]);
 
         const request = createMockRequest('GET', diagnosticKey);
@@ -258,10 +268,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
-        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockActiveAssignment as any);
-        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockActiveAssignment] as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
+        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockActiveAssignment as never);
+        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockActiveAssignment] as never);
 
         const request = createMockRequest('GET', diagnosticKey);
         const response = await demoPermissionRoute.GET(request);
@@ -280,8 +290,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
         vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(null);
         vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([]);
 
@@ -310,7 +320,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
 
       it('fails closed with 400 when membership not found', async () => {
         const mockUser = { id: 'user-1', email: demoUserEmail };
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
         vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(null);
 
         const request = createMockRequest('POST', diagnosticKey);
@@ -330,8 +340,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
 
         const request = createMockRequest('POST', diagnosticKey);
         const response = await demoPermissionRoute.POST(request);
@@ -358,11 +368,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
         vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(null);
-        vi.mocked(db.userRoleAssignment.create).mockResolvedValueOnce(mockNewAssignment as any);
-        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockNewAssignment] as any);
+        vi.mocked(db.userRoleAssignment.create).mockResolvedValueOnce(mockNewAssignment as never);
+        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockNewAssignment] as never);
 
         const request = createMockRequest('POST', diagnosticKey);
         const response = await demoPermissionRoute.POST(request);
@@ -389,10 +399,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
-        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockExistingAssignment as any);
-        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockExistingAssignment] as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
+        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockExistingAssignment as never);
+        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockExistingAssignment] as never);
 
         const request = createMockRequest('POST', diagnosticKey);
         const response = await demoPermissionRoute.POST(request);
@@ -423,11 +433,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
-        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockInactiveAssignment as any);
-        vi.mocked(db.userRoleAssignment.update).mockResolvedValueOnce(mockReactivatedAssignment as any);
-        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockReactivatedAssignment] as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
+        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockInactiveAssignment as never);
+        vi.mocked(db.userRoleAssignment.update).mockResolvedValueOnce(mockReactivatedAssignment as never);
+        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockReactivatedAssignment] as never);
 
         const request = createMockRequest('POST', diagnosticKey);
         const response = await demoPermissionRoute.POST(request);
@@ -454,17 +464,108 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
           isActive: true,
         };
 
-        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
         vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(null);
-        vi.mocked(db.userRoleAssignment.create).mockResolvedValueOnce(mockNewAssignment as any);
-        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockNewAssignment] as any);
+        vi.mocked(db.userRoleAssignment.create).mockResolvedValueOnce(mockNewAssignment as never);
+        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockNewAssignment] as never);
 
         const request = createMockRequest('POST', diagnosticKey);
         const response = await demoPermissionRoute.POST(request);
 
         const data = await response.json();
         expect(data.roleGrantsEngagementView).toBe(true);
+      });
+    });
+
+    describe('ENG-001 engagement membership backfill', () => {
+      const mockUser = { id: 'user-1', email: demoUserEmail };
+      const mockMembership = { workspaceId: validUUID, userId: 'user-1', isActive: true };
+      const mockActiveAssignment = {
+        id: 'assignment-1',
+        userId: 'user-1',
+        role: 'admin_or_portfolio_manager',
+        isActive: true,
+      };
+      const mockEngagement = { id: 'engagement-1', code: 'ENG-001', workspaceId: validUUID };
+
+      const arrangeRoleAssignmentPresent = () => {
+        vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+        vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
+        vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(mockActiveAssignment as never);
+        vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockActiveAssignment] as never);
+      };
+
+      it('looks up ENG-001 in the membership workspace and reports no backfill when it does not exist', async () => {
+        arrangeRoleAssignmentPresent();
+        vi.mocked(db.engagement.findFirst).mockResolvedValueOnce(null);
+
+        const response = await demoPermissionRoute.POST(createMockRequest('POST', diagnosticKey));
+
+        expect(response.status).toBe(200);
+        expect(vi.mocked(db.engagement.findFirst)).toHaveBeenCalledWith({
+          where: { code: 'ENG-001', workspaceId: validUUID },
+        });
+        expect(vi.mocked(db.engagementMembership.findFirst)).not.toHaveBeenCalled();
+        expect(vi.mocked(db.engagementMembership.create)).not.toHaveBeenCalled();
+        expect(vi.mocked(db.engagementMembership.update)).not.toHaveBeenCalled();
+        const data = await response.json();
+        expect(data.status).toBe('success');
+        expect(data.engagementMembershipBackfilled).toBe(false);
+      });
+
+      it('creates the engagement membership when missing', async () => {
+        arrangeRoleAssignmentPresent();
+        vi.mocked(db.engagement.findFirst).mockResolvedValueOnce(mockEngagement as never);
+        vi.mocked(db.engagementMembership.findFirst).mockResolvedValueOnce(null);
+        vi.mocked(db.engagementMembership.create).mockResolvedValueOnce({ id: 'em-1' } as never);
+
+        const response = await demoPermissionRoute.POST(createMockRequest('POST', diagnosticKey));
+
+        expect(response.status).toBe(200);
+        expect(vi.mocked(db.engagementMembership.findFirst)).toHaveBeenCalledWith({
+          where: { userId: 'user-1', engagementId: 'engagement-1' },
+        });
+        expect(vi.mocked(db.engagementMembership.create)).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(db.engagementMembership.create).mock.calls[0][0]).toMatchObject({
+          data: { userId: 'user-1', engagementId: 'engagement-1', role: 'member', isActive: true },
+        });
+        expect(vi.mocked(db.engagementMembership.update)).not.toHaveBeenCalled();
+        const data = await response.json();
+        expect(data.engagementMembershipBackfilled).toBe(true);
+      });
+
+      it('reactivates an inactive engagement membership instead of creating a duplicate', async () => {
+        arrangeRoleAssignmentPresent();
+        vi.mocked(db.engagement.findFirst).mockResolvedValueOnce(mockEngagement as never);
+        vi.mocked(db.engagementMembership.findFirst).mockResolvedValueOnce({ id: 'em-1', isActive: false } as never);
+        vi.mocked(db.engagementMembership.update).mockResolvedValueOnce({ id: 'em-1', isActive: true } as never);
+
+        const response = await demoPermissionRoute.POST(createMockRequest('POST', diagnosticKey));
+
+        expect(response.status).toBe(200);
+        expect(vi.mocked(db.engagementMembership.create)).not.toHaveBeenCalled();
+        expect(vi.mocked(db.engagementMembership.update)).toHaveBeenCalledWith({
+          where: { id: 'em-1' },
+          data: { isActive: true },
+        });
+        const data = await response.json();
+        expect(data.engagementMembershipBackfilled).toBe(true);
+      });
+
+      it('is a no-op when the engagement membership is already active', async () => {
+        arrangeRoleAssignmentPresent();
+        vi.mocked(db.engagement.findFirst).mockResolvedValueOnce(mockEngagement as never);
+        vi.mocked(db.engagementMembership.findFirst).mockResolvedValueOnce({ id: 'em-1', isActive: true } as never);
+
+        const response = await demoPermissionRoute.POST(createMockRequest('POST', diagnosticKey));
+
+        expect(response.status).toBe(200);
+        expect(vi.mocked(db.engagementMembership.create)).not.toHaveBeenCalled();
+        expect(vi.mocked(db.engagementMembership.update)).not.toHaveBeenCalled();
+        const data = await response.json();
+        expect(data.status).toBe('success');
+        expect(data.engagementMembershipBackfilled).toBe(false);
       });
     });
 
@@ -499,8 +600,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
       };
 
       // First GET: no assignment
-      vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-      vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+      vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+      vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
       vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(null);
       vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([]);
 
@@ -518,11 +619,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint
         isActive: true,
       };
 
-      vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
-      vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+      vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as never);
+      vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as never);
       vi.mocked(db.userRoleAssignment.findFirst).mockResolvedValueOnce(null);
-      vi.mocked(db.userRoleAssignment.create).mockResolvedValueOnce(mockNewAssignment as any);
-      vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockNewAssignment] as any);
+      vi.mocked(db.userRoleAssignment.create).mockResolvedValueOnce(mockNewAssignment as never);
+      vi.mocked(db.userRoleAssignment.findMany).mockResolvedValueOnce([mockNewAssignment] as never);
 
       const postRequest = createMockRequest('POST', diagnosticKey);
       const postResponse = await demoPermissionRoute.POST(postRequest);
