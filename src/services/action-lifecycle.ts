@@ -114,10 +114,22 @@ export async function validateStateTransition(
   }
 }
 
-export async function enforceActionRules(action: ActionRuleSubject): Promise<string[]> {
+/**
+ * Rule ids that read state the Action model does not persist. "action.evidence.required.completed"
+ * reads `action.evidence`, but Action has no evidence column or relation, so the rule can never be
+ * satisfied server-side (deferred defect: where action evidence lives is an open owner decision).
+ */
+export const UNSATISFIABLE_ACTION_RULE_IDS = ["action.evidence.required.completed"] as const;
+
+export async function enforceActionRules(
+  action: ActionRuleSubject,
+  options?: { skipRuleIds?: readonly string[] }
+): Promise<string[]> {
   const violations: string[] = [];
+  const skip = new Set(options?.skipRuleIds ?? []);
 
   for (const rule of ENFORCEMENT_RULES) {
+    if (skip.has(rule.ruleId)) continue;
     try {
       if (!rule.check(action)) {
         violations.push(`[${rule.ruleId}] ${rule.error}`);

@@ -9,7 +9,7 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
-import { enforceActionRules } from "@/services/action-lifecycle";
+import { enforceActionRules, UNSATISFIABLE_ACTION_RULE_IDS } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import { recordActionUsage } from "@/services/usage.service";
@@ -281,7 +281,8 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
  */
 async function prepareActionStatusChange(
   action: { status: string; metadata: unknown } & Record<string, unknown>,
-  requested: { status?: string; blockerReason?: string | null }
+  requested: { status?: string; blockerReason?: string | null },
+  options?: { skipRuleIds?: readonly string[] }
 ): Promise<{ previousStatus: ActionStatus; newStatus: ActionStatus; blockerReason: string | null; metadataPatch: ActionMetadataPatch }> {
   const previousStatus = action.status as ActionStatus;
   const newStatus = (requested.status ?? action.status) as ActionStatus;
@@ -291,7 +292,7 @@ async function prepareActionStatusChange(
   }
   const blockerReason =
     requested.blockerReason ?? (newStatus === previousStatus ? readActionBlockerReason(action.metadata) : null);
-  const violations = await enforceActionRules({ ...action, status: newStatus, blockerReason });
+  const violations = await enforceActionRules({ ...action, status: newStatus, blockerReason }, options);
   if (violations.length > 0) {
     throw new ValidationError(`Action enforcement rules violated:\n${violations.join("\n")}`);
   }
@@ -488,7 +489,14 @@ export async function updateAction(
   // A status change (or a new blocker reason) goes through the same rules as updateActionStatus.
   const statusChange =
     input.status !== undefined || input.blockerReason !== undefined
-      ? await prepareActionStatusChange(action, { status: input.status, blockerReason: input.blockerReason })
+      ? await prepareActionStatusChange(
+          action,
+          { status: input.status, blockerReason: input.blockerReason },
+          // The Action Center path never enforced the evidence rule, which reads a non-existent
+          // column and would make every completion fail; keep completion working here. The
+          // blocked-needs-reason rule, status vocabulary and transition map still apply.
+          { skipRuleIds: UNSATISFIABLE_ACTION_RULE_IDS }
+        )
       : null;
 
   // The exact column values this call writes (also what it audits).

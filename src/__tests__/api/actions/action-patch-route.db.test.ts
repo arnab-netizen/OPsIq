@@ -96,7 +96,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PATCH /api/actions/[actionId] (Actio
     expect(reEval).not.toBeNull();
   });
 
-  it("[db] blocked without a reason is refused (422) and nothing changes", async () => {
+  it("[db] blocked without a reason is refused (400 ValidationError) and nothing changes", async () => {
     const id = await makeAction("in_progress");
     await expect(patch(wsA, id, { status: "blocked", version: 1 })).rejects.toBeInstanceOf(ValidationError);
     expect(await row(id)).toEqual({ status: "in_progress", version: 1, metadata: null });
@@ -137,4 +137,33 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PATCH /api/actions/[actionId] (Actio
     expect(res.version).toBe(2);
     expect(Object.keys(res).sort()).toEqual(shape);
   });
+
+  it("[db] Complete via PATCH /api/actions/{id} still succeeds (200) — the broken evidence rule is not applied here", async () => {
+    const id = await makeAction("in_progress");
+    const res = await patch(wsA, id, { status: "completed", version: 1 });
+    expect(res.status).toBe("completed");
+    expect(await row(id)).toMatchObject({ status: "completed", version: 2 });
+  });
+
+  // Every status move the Action Center UI can send (src/ui/action-center.tsx STATE_MACHINE, for the
+  // statuses an Action really has), with the outcome updateAction had before this PR.
+  const UI_MOVES: Array<{ from: string; to: string; body?: Record<string, unknown>; expected: number }> = [
+    { from: "in_progress", to: "blocked", body: { blockerReason: "vendor" }, expected: 200 },
+    { from: "in_progress", to: "completed", expected: 200 },
+    { from: "in_progress", to: "created", expected: 400 }, // "Reset": not an Action status (route schema)
+    { from: "blocked", to: "in_progress", expected: 400 }, // "Start": not in the transition map (ValidationError)
+    { from: "blocked", to: "created", expected: 400 }, // "Reset": not an Action status
+    { from: "blocked", to: "cancelled", expected: 200 },
+    { from: "completed", to: "verified", expected: 400 }, // "Verify": completed is terminal in the map (ValidationError)
+  ];
+  for (const move of UI_MOVES) {
+    it(`[db] UI move ${move.from} → ${move.to} keeps its pre-PR outcome (${move.expected})`, async () => {
+      const id = await makeAction(move.from, engagementA, move.from === "blocked" ? { blockerReason: "existing" } : undefined);
+      const outcome = await patch(wsA, id, { status: move.to, version: 1, ...(move.body ?? {}) }).then(
+        () => 200,
+        (e: unknown) => (e as { statusCode?: number }).statusCode ?? 500
+      );
+      expect(outcome).toBe(move.expected);
+    });
+  }
 });

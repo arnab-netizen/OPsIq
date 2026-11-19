@@ -115,7 +115,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PATCH /api/engagements/[engagementId
     expect(payload).toMatchObject({ previousStatus: "in_progress", newStatus: "blocked", blockerReason: reason });
   });
 
-  it("[db] blocked without a reason is refused (422) and nothing changes", async () => {
+  it("[db] blocked without a reason is refused (400 ValidationError) and nothing changes", async () => {
     const id = await makeAction("in_progress");
     await expect(patch(wsA, engagementA, id, { status: "blocked", version: 1 })).rejects.toBeInstanceOf(ValidationError);
     expect(await row(id)).toMatchObject({ status: "in_progress", version: 1 });
