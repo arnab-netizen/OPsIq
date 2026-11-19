@@ -281,6 +281,32 @@ export async function verifyRoleTopology(c: ClientBase, names: RoleTopologyNames
   return { result: checks.every((x) => x.ok) ? "PASS" : "FAIL", checks, facts };
 }
 
+/**
+ * Verification inside an EXPLICITLY enforced read-only transaction. Never relies on PGOPTIONS or connection-string `options=`:
+ * node-postgres lets a URL's `options` override the environment, and a session default can be flipped by anyone with a URL.
+ * Only an in-transaction `BEGIN READ ONLY` is authoritative. Before any catalog query it (1) reads the EFFECTIVE mode
+ * (`SHOW transaction_read_only` must be `on`) and (2) proves a write-class statement is rejected with SQLSTATE 25006 inside a
+ * savepoint. Any other outcome refuses to verify. The transaction is always rolled back, including on failure.
+ */
+export async function verifyRoleTopologyReadOnly(c: ClientBase, names: RoleTopologyNames, options: RoleTopologyOptions = {}): Promise<TopologyReport> {
+  await c.query("BEGIN READ ONLY ISOLATION LEVEL REPEATABLE READ");
+  try {
+    const mode = String((await c.query(`SHOW transaction_read_only`)).rows[0]?.transaction_read_only);
+    if (mode !== "on") throw new Error("READ_ONLY_NOT_ENFORCED: effective transaction mode is not read-only");
+    await c.query("SAVEPOINT zz_read_only_probe");
+    const blocked = await c.query("CREATE TEMP TABLE zz_read_only_probe (i int)").then(() => false, (e: { code?: string }) => e?.code === "25006");
+    await c.query("ROLLBACK TO SAVEPOINT zz_read_only_probe");
+    if (!blocked) throw new Error("READ_ONLY_NOT_ENFORCED: a write-class statement was not rejected");
+    const report = await verifyRoleTopology(c, names, options);
+    report.facts.read_only_enforced = true;
+    await c.query("ROLLBACK");
+    return report;
+  } catch (e) {
+    await c.query("ROLLBACK").catch(() => undefined); // never let a failed ROLLBACK replace the original error
+    throw e;
+  }
+}
+
 export interface ApplyAndVerifyResult { statements: string[]; report: TopologyReport; committed: boolean }
 
 /**
