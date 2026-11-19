@@ -3,6 +3,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
+import { AppError, PlanLimitError } from "@/infra/errors";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -193,6 +194,10 @@ export interface BulkCreateResult {
   failed: Array<{
     title: string;
     reason: string;
+    /** The refusal's error code when it was a domain refusal (e.g. "PLAN_LIMIT_EXCEEDED"). */
+    code?: string;
+    /** Present (true) when the refusal may clear on retry (e.g. the entitlement could not be read). */
+    retryable?: true;
   }>;
   summary: {
     total: number;
@@ -215,7 +220,7 @@ export async function createDecisionsBulk(
   }
 
   const successful: CreateDecisionResult[] = [];
-  const failed: Array<{ title: string; reason: string }> = [];
+  const failed: BulkCreateResult["failed"] = [];
 
   for (const decision of decisions) {
     try {
@@ -226,6 +231,8 @@ export async function createDecisionsBulk(
       failed.push({
         title: decision.title,
         reason: governed.operatorMessage,
+        ...(error instanceof AppError ? { code: error.code } : {}),
+        ...(error instanceof AppError && error.telemetry.retryable ? { retryable: true as const } : {}),
       });
       logger.warn("Failed to create decision in bulk", {
         title: decision.title,
@@ -250,6 +257,19 @@ export async function createDecisionsBulk(
       failed: failed.length,
     },
   };
+}
+
+/**
+ * The 402 a bulk create answers with when the plan refused EVERY item (no decision persisted): the status
+ * contract of POST /api/decisions/create, which refused a bulk request at the plan limit as a whole. A bulk
+ * that persisted at least one decision is a 200 carrying its per-item failures; null then.
+ */
+export function bulkPlanLimitRefusal(result: BulkCreateResult): PlanLimitError | null {
+  if (result.summary.succeeded > 0 || result.failed.length === 0) return null;
+  if (!result.failed.every((f) => f.code === "PLAN_LIMIT_EXCEEDED")) return null;
+  return new PlanLimitError(CAPABILITIES.DECISION_CREATE, result.failed[0].reason, undefined, {
+    entitlementUnverifiable: result.failed.some((f) => f.retryable === true),
+  });
 }
 
 function calculatePriorityScore(impact: number, confidence: number): number {

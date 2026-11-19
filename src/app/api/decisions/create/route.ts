@@ -4,10 +4,11 @@ import {
   createDecision,
   createDecisionsBulk,
   parseCSV,
+  bulkPlanLimitRefusal,
   type VerifiedDecisionInput,
 } from "@/services/decisions/decision-creation-service";
 import { logger } from "@/infra/logger";
-import { UnauthorizedError, ValidationError } from "@/infra/errors";
+import { PlanLimitError, UnauthorizedError, ValidationError } from "@/infra/errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   checkIdempotencyKey,
@@ -58,6 +59,9 @@ export const POST = withCanonicalEnforcement(
 
         try {
           const result = await createDecisionsBulk({ decisions });
+          // The plan refused every item: the whole request is a 402, as it was before usage was recorded.
+          const refusal = bulkPlanLimitRefusal(result);
+          if (refusal) throw refusal;
 
           logger.info("Bulk decisions created via API", {
             workspaceId,
@@ -162,6 +166,9 @@ export const POST = withCanonicalEnforcement(
           verifiedActorId: actorId,
         }));
         const result = await createDecisionsBulk({ decisions: verifiedDecisions });
+        // The plan refused every item: the whole request is a 402, as it was before usage was recorded.
+        const refusal = bulkPlanLimitRefusal(result);
+        if (refusal) throw refusal;
 
         logger.info("Bulk decisions created via CSV upload", {
           workspaceId,
@@ -174,6 +181,10 @@ export const POST = withCanonicalEnforcement(
         await recordIdempotencyResponse(idempotencyKey, 200, serialized, workspaceId);
         return result;
       } catch (parseError) {
+        if (parseError instanceof PlanLimitError) {
+          await recordIdempotencyError(idempotencyKey, parseError, workspaceId);
+          throw parseError;
+        }
         const governed = classifyOperatorError(parseError instanceof Error ? parseError : new Error(String(parseError)), { context: 'action' });
         const wrappedError = new UnauthorizedError(governed.operatorMessage);
         await recordIdempotencyError(idempotencyKey, wrappedError, workspaceId);
