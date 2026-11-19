@@ -4,6 +4,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { NotFoundError } from "@/infra/errors";
 import { captureLearning } from "@/services/experiment/experiment-lifecycle.service";
@@ -44,7 +45,7 @@ export const POST = withCanonicalEnforcement(
     const { experimentId } = params;
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const validated = learningSchema.parse(body);
+    const validated = parseOrThrow(learningSchema, body);
 
     const experiment = experimentStore.get(experimentId);
     if (!experiment) {

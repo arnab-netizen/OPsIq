@@ -15,6 +15,7 @@ import { requestContext } from "@/runtime/request-context";
 import { runtimeLogger } from "@/runtime/runtime-logger";
 import { executionEnforcer } from "@/runtime/enforcement/execution-enforcer";
 import { queueDurabilityEngine, QueueJob } from "@/runtime/queue/queue-durability";
+import { RuntimeError } from "@/runtime/runtime-errors";
 
 describe("PHASE I10.4: Queue Worker Enforcement", () => {
   let testJob: QueueJob;
@@ -246,14 +247,45 @@ describe("PHASE I10.4: Queue Worker Enforcement", () => {
         throw new Error("Persistent failure");
       };
 
+      let caught: unknown;
       try {
         await withEnforcedQueueWorker(processor, jobNearLimit);
         expect.fail("Should have thrown error");
       } catch (error) {
-        // Expected to throw due to max retries exceeded
-        expect(error).toBeTruthy();
-        expect(error instanceof Error && error.message).toContain("dead-letter queue");
+        caught = error;
       }
+
+      // Expected to throw a classified RuntimeError due to max retries exceeded.
+      // Contract (R30 operator-safe errors, commit 32ccd4768): the dead-letter
+      // technical detail lives in the ops-only internal diagnostic and the
+      // structured DLQ log; the user-visible message is governed copy.
+      expect(caught).toBeInstanceOf(RuntimeError);
+      const runtimeError = caught as RuntimeError;
+      expect(runtimeError.metadata.classification).toBe("INFRASTRUCTURE");
+      expect(runtimeError.metadata.requires_escalation).toBe(true);
+      expect(runtimeError.toInternalDiagnostic().internal_diagnostic.original_message).toBe(
+        "Queue job failed after 3 retries and moved to dead-letter queue",
+      );
+      expect(runtimeError.message).not.toContain("dead-letter");
+      expect(runtimeError.message).not.toContain("retries");
+      expect(JSON.stringify(runtimeError.toOperatorSafeJSON())).not.toContain("dead-letter");
+      expect(runtimeError.toOperatorSafeJSON().message).toBe(
+        "Infrastructure error. Operations team notified.",
+      );
+
+      const dlqLogs = runtimeLogger
+        .getLogs()
+        .filter((log) => log.tags.includes("queue_dead_letter"));
+      expect(dlqLogs).toHaveLength(1);
+      expect(dlqLogs[0].level).toBe("ERROR");
+      expect(dlqLogs[0].message).toContain("dead-letter queue");
+      expect(dlqLogs[0].correlation_id).toBe(jobNearLimit.correlation_id);
+      expect(dlqLogs[0].context).toMatchObject({
+        job_id: jobNearLimit.job_id,
+        queue_name: jobNearLimit.queue_name,
+        retry_count: 2,
+        max_retries: 3,
+      });
     });
 
     it("should log poison job with detailed context", async () => {

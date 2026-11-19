@@ -76,6 +76,7 @@ export const POST = withCanonicalEnforcement(
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
+      workspaceId: ctx.verifiedWorkspaceId,
       operationName: "linkLeadToEngagement",
       actorId: ctx.verifiedActorId,
       payload: { leadId, engagementId: body.engagementId, clientId: body.clientId },
