@@ -1,0 +1,45 @@
+name: Release Reconcile Watchdog
+
+# UNPRIVILEGED continuity monitor for production-release-reconcile.yml (inert draft until activated with it). No secrets, no environment, no
+# database or deployment access: it only reads Actions run history and opens/updates ONE GitHub issue when the scheduled reconcile has not
+# SUCCEEDED recently (GitHub may delay or drop scheduled runs; an hourly schedule alone is not proof of continuity). Idempotent: one open
+# issue at most; closed automatically when a fresh success is seen. Bounded: 4 runs a day, no retries, no paid service.
+on:
+  schedule:
+    - cron: '41 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: release-watchdog
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    name: Check scheduled reconcile continuity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the last successful reconcile run and open/close the alert issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_HOURS: '4'
+          WORKFLOW_FILE: production-release-reconcile.yml
+        run: |
+          set -euo pipefail
+          TITLE="Production release reconcile has not succeeded recently"
+          LAST=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].updated_at // ""')
+          NOW=$(date -u +%s)
+          if [ -n "$LAST" ]; then AGE=$(( (NOW - $(date -u -d "$LAST" +%s)) / 3600 )); else AGE=99999; fi
+          echo "last success: ${LAST:-none} (age ${AGE}h, limit ${MAX_AGE_HOURS}h)"
+          OPEN=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number // ""')
+          if [ "$AGE" -gt "$MAX_AGE_HOURS" ]; then
+            BODY="No successful run of \`${WORKFLOW_FILE}\` on main in the last ${MAX_AGE_HOURS}h (last success: ${LAST:-never}). Scheduled runs may have been dropped, may be waiting for environment approval, or are failing: open the workflow's run history. This issue is closed automatically after the next success."
+            if [ -z "$OPEN" ]; then gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"; else gh issue comment "$OPEN" --repo "$GITHUB_REPOSITORY" --body "Still stale (last success: ${LAST:-never})."; fi
+            exit 0
+          fi
+          if [ -n "$OPEN" ]; then gh issue close "$OPEN" --repo "$GITHUB_REPOSITORY" --comment "A successful reconcile run was observed at ${LAST}."; fi

@@ -7,11 +7,13 @@ name: Production Release Reconcile
 # One run, in order, all in the protected `production-operator` environment (its approval/branch rules are NOT changed here):
 #   1. exact release SHA = main HEAD at run start; CI (`branch-protection`) must already be green at that exact SHA, else no-op
 #   2. production identity: exact pinned direct host (repository variable PRODUCTION_DATABASE_HOST) AND the database's own identity
-#   3. REAL migration ledger vs the complete committed chain (read-only transaction): NOOP / MIGRATE / BLOCK. This workflow NEVER applies
-#      migrations. MIGRATE or BLOCK fails the run (visible alert) and stops before any write; migrations are applied by migrate-production.yml.
-#   4. runtime-role reconcile + strict least-privilege gate ONLY IF drift (a conforming role causes no write and no lock)
-#   5. exact-SHA deployment: GitHub Deployments API for THIS sha; if no successful production build, trigger the deploy hook ONCE
-#      (bounded: one trigger per run, runs are hourly, BLOCK after 5 failed builds of the same SHA), then verify THIS sha reached success
+#   3. REAL migration ledger vs the complete committed chain (read-only transaction): NOOP / MIGRATE / BLOCK.
+#   4. Phase 2: MIGRATE (every pending migration allowlisted, ascending order) applies them ONLY with a fresh verified backup, then the ledger
+#      must be NOOP; BLOCK (failed/modified/out-of-order/destructive/unknown) fails the run for a human and applies nothing
+#   5. runtime-role reconcile + strict least-privilege gate ONLY IF drift (a conforming role causes no write and no lock)
+#   6. exact-SHA deployment: fast-forward-only advance of `release/production` (the Vercel Production Branch) to THIS sha, with durable
+#      attempt refs written BEFORE any trigger (max 3 per SHA per 24h, auto-refilling); the optional branch deploy hook only retries the same
+#      SHA. Acceptance = the PUBLIC site's /api/health reports HTTP 200, database healthy and commit == the release SHA
 #
 # It does not introduce a push/workflow_run/pull_request trigger and uses no `secrets: inherit`; only OPERATOR_DATABASE_URL and the
 # optional deploy hook are referenced. Documented in docs/opsiq/ci/AUTONOMOUS_RELEASE_PIPELINE_PROPOSAL.md.
@@ -34,7 +36,7 @@ jobs:
     timeout-minutes: 40
     environment: production-operator
     permissions:
-      contents: read
+      contents: write   # ONLY to fast-forward the release branch and write durable attempt refs (refs/release-attempts/*); main is ruleset-protected
       checks: read
       deployments: read
 
@@ -129,6 +131,7 @@ jobs:
         run: node scripts/validate-expected-db-host.mjs
 
       - name: Release plan from the REAL migration ledger (read-only; never applies)
+        id: plan
         if: steps.ci.outputs.ready == 'true'
         env:
           OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
@@ -141,9 +144,26 @@ jobs:
           npx tsx scripts/release/release-plan-cli.ts --target production | tee "$RUNNER_TEMP/plan.txt"
           RC=${PIPESTATUS[0]}
           set -e
-          if [ "$RC" -eq 0 ] && grep -q '^RELEASE_PLAN=NOOP$' "$RUNNER_TEMP/plan.txt"; then exit 0; fi
-          echo "::error::Release plan is not NOOP (exit $RC). Migrations are applied only by the Migrate Production workflow; this run stops before any write."
+          A=$(grep -m1 '^RELEASE_PLAN=' "$RUNNER_TEMP/plan.txt" | cut -d= -f2 | tr -cd 'A-Z')
+          echo "action=$A" >> "$GITHUB_OUTPUT"
+          echo "PLAN_FILE=$RUNNER_TEMP/plan.txt" >> "$GITHUB_ENV"
+          if [ "$A" = "NOOP" ] && [ "$RC" -eq 0 ]; then exit 0; fi
+          if [ "$A" = "MIGRATE" ] && [ "$RC" -eq 3 ]; then exit 0; fi
+          echo "::error::Release plan is $A (exit $RC): a human must authorize and apply these changes; nothing was written."
           exit 1
+
+      - name: Phase 2 - apply pending migrations in order (only when plan is MIGRATE, fresh verified backup required)
+        if: steps.plan.outputs.action == 'MIGRATE'
+        env:
+          OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ vars.PRODUCTION_DATABASE_HOST }}
+          GITHUB_TOKEN: ${{ github.token }}
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+        run: |
+          set -euo pipefail
+          node scripts/release/auto-migrate-cli.mjs | tee "$RUNNER_TEMP/auto-migrate.txt"
+          grep -q '^AUTO_MIGRATE=OK$' "$RUNNER_TEMP/auto-migrate.txt"
 
       - name: Runtime-role reconcile and strict least-privilege gate (only if drift)
         if: steps.ci.outputs.ready == 'true'
@@ -160,41 +180,52 @@ jobs:
           node scripts/release/runtime-role-reconcile-gate.mjs | tee "$RUNNER_TEMP/rr-gate.txt"
           grep -q '^RUNTIME_ROLE_GATE=PASS$' "$RUNNER_TEMP/rr-gate.txt"
 
-      - name: Exact-SHA production deployment decision
+      - name: Release decision (public site serves the exact SHA? durable attempts left?)
         id: decide
         if: steps.ci.outputs.ready == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          node scripts/release/redeploy-decision.mjs decide | tee "$RUNNER_TEMP/decision.txt"
-          D=$(grep -m1 '^DEPLOY_DECISION=' "$RUNNER_TEMP/decision.txt" | cut -d= -f2 | tr -cd 'A-Z_')
+          node scripts/release/release-state.mjs decide | tee "$RUNNER_TEMP/decision.txt"
+          D=$(grep -m1 '^RELEASE_DECISION=' "$RUNNER_TEMP/decision.txt" | cut -d= -f2 | tr -cd 'A-Z_')
           echo "decision=$D" >> "$GITHUB_OUTPUT"
 
-      - name: Trigger the production deploy hook ONCE (only when this exact SHA has no successful build)
-        if: steps.decide.outputs.decision == 'REDEPLOY'
+      - name: Trigger exact-SHA release (record durable attempt, then fast-forward release/production)
+        id: trigger
+        if: steps.decide.outputs.decision == 'TRIGGER'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/release/release-state.mjs trigger | tee "$RUNNER_TEMP/trigger.txt"
+          H=$(grep -m1 '^HOOK_NEEDED=' "$RUNNER_TEMP/trigger.txt" | cut -d= -f2 | tr -cd 'a-z')
+          echo "hook_needed=$H" >> "$GITHUB_OUTPUT"
+
+      - name: Retry the SAME sha through the release/production branch deploy hook (only when the branch already pointed at it)
+        if: steps.trigger.outputs.hook_needed == 'true'
         env:
           DEPLOY_HOOK_URL: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK_URL }}
         run: |
           set -euo pipefail
           if [ -z "$DEPLOY_HOOK_URL" ]; then
-            echo "::error::VERCEL_PRODUCTION_DEPLOY_HOOK_URL is not configured; redeploy main in Vercel manually. This run cannot deploy."
+            echo "::error::VERCEL_PRODUCTION_DEPLOY_HOOK_URL (bound to the release/production branch) is not configured; this retry cannot run."
             exit 1
           fi
           curl -fsS --max-redirs 0 -X POST --max-time 30 -o /dev/null "$DEPLOY_HOOK_URL"
-          echo "hook triggered"
+          echo "branch deploy hook triggered"
 
-      - name: Verify THIS exact SHA reached a successful production deployment
-        if: steps.decide.outputs.decision == 'REDEPLOY' || steps.decide.outputs.decision == 'WAIT'
+      - name: Verify the PUBLIC site serves THIS exact SHA and is healthy
+        if: steps.decide.outputs.decision == 'TRIGGER' || steps.decide.outputs.decision == 'WAIT'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           for i in $(seq 1 40); do
-            if node scripts/release/redeploy-decision.mjs verify > "$RUNNER_TEMP/verify.txt" 2>&1; then echo "production deployment verified for $RELEASE_SHA"; exit 0; fi
-            sleep 20
+            if node scripts/release/release-state.mjs verify > "$RUNNER_TEMP/verify.txt" 2>&1; then echo "production serves $RELEASE_SHA"; exit 0; fi
+            sleep 45
           done
-          echo "::error::no successful production deployment recorded for $RELEASE_SHA within the verification window"
+          echo "::error::the public site did not report commit $RELEASE_SHA and healthy within the verification window; the durable attempt is already recorded"
           exit 1
 
       - name: Summary
@@ -206,5 +237,6 @@ jobs:
             echo "|---|---|"
             echo "| Release SHA | \`${RELEASE_SHA:-unknown}\` |"
             echo "| CI green at SHA | ${{ steps.ci.outputs.ready }} |"
-            echo "| Deploy decision | ${{ steps.decide.outputs.decision }} |"
+            echo "| Ledger plan | ${{ steps.plan.outputs.action }} |"
+            echo "| Release decision | ${{ steps.decide.outputs.decision }} |"
           } >> "$GITHUB_STEP_SUMMARY"

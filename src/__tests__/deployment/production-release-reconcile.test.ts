@@ -10,7 +10,9 @@ import { join, resolve } from "path";
 import YAML from "js-yaml";
 import { Client } from "pg";
 // @ts-expect-error -- plain ESM script without type declarations
-import { decideRedeploy, collectDeployments, MAX_FAILURES_PER_SHA } from "../../../scripts/release/redeploy-decision.mjs";
+import { decideRelease, evaluateServed, isProductionDeployment, collectDeployments, collectAttempts, recordAttempt, ensureReleaseBranch, fetchHealth, MAX_ATTEMPTS, RETRY_WINDOW_MS, RELEASE_BRANCH } from "../../../scripts/release/release-state.mjs";
+// @ts-expect-error -- plain ESM script without type declarations
+import { decideAutoMigrate, applyAndVerify, evaluateBackup, lastBackupSuccessMs, BACKUP_MAX_AGE_MS } from "../../../scripts/release/auto-migrate.mjs";
 // @ts-expect-error -- plain ESM script without type declarations
 import { runReconcileGate } from "../../../scripts/release/runtime-role-reconcile-gate.mjs";
 import { computeReleasePlan } from "../../../scripts/release/release-plan-cli";
@@ -19,39 +21,104 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 const ROOT = resolve(__dirname, "../../..");
 const SHA = "a".repeat(40);
 const NOW = 1_800_000_000_000;
-const dep = (o: Partial<{ sha: string; environment: string; createdAtMs: number; state: string }> = {}) => ({ sha: SHA, environment: "Production", createdAtMs: NOW - 3_600_000, state: "failure", ...o });
+const HEALTH_OK = (commit: string | null) => ({ status: 200, body: { status: "healthy", commit, checks: { database: { status: "healthy" } } } });
 
-describe("exact-SHA redeploy decision (bounded)", () => {
-  it("NONE only when THIS exact sha has a successful PRODUCTION build; other SHAs and preview builds never count", () => {
-    expect(decideRedeploy({ releaseSha: SHA, deployments: [dep({ state: "success" })], nowMs: NOW }).action).toBe("NONE");
-    expect(decideRedeploy({ releaseSha: SHA, deployments: [dep({ sha: "b".repeat(40), state: "success" })], nowMs: NOW }).action).toBe("REDEPLOY");
-    expect(decideRedeploy({ releaseSha: SHA, deployments: [dep({ environment: "Preview", state: "success" })], nowMs: NOW }).action).toBe("REDEPLOY");
+describe("production acceptance = the PUBLIC site serves the exact SHA and is healthy (not a build or deployment record)", () => {
+  it("accepts only HTTP 200 + database healthy + commit exactly equal to the release SHA", () => {
+    expect(evaluateServed({ releaseSha: SHA, health: HEALTH_OK(SHA) })).toMatchObject({ served: true });
+    expect(evaluateServed({ releaseSha: SHA, health: HEALTH_OK("b".repeat(40)) })).toMatchObject({ served: false, code: "OTHER_COMMIT_SERVED" });
+    expect(evaluateServed({ releaseSha: SHA, health: HEALTH_OK(null) })).toMatchObject({ served: false, code: "COMMIT_NOT_REPORTED" });
+    expect(evaluateServed({ releaseSha: SHA, health: { status: 503, body: { commit: SHA, checks: { database: { status: "healthy" } } } } })).toMatchObject({ served: false, code: "HEALTH_UNAVAILABLE" });
+    expect(evaluateServed({ releaseSha: SHA, health: { status: 200, body: { commit: SHA, checks: { database: { status: "unhealthy" } } } } })).toMatchObject({ served: false, code: "DATABASE_NOT_HEALTHY" });
+    expect(evaluateServed({ releaseSha: SHA, health: null }).served).toBe(false);
+    expect(evaluateServed({ releaseSha: "main", health: HEALTH_OK(SHA) }).served).toBe(false);
   });
-  it("WAITs while a build of this sha is in flight (no duplicate deployment), but a stale in-flight record does not block forever", () => {
-    expect(decideRedeploy({ releaseSha: SHA, deployments: [dep({ state: "in_progress", createdAtMs: NOW - 60_000 })], nowMs: NOW }).action).toBe("WAIT");
-    expect(decideRedeploy({ releaseSha: SHA, deployments: [dep({ state: "pending", createdAtMs: NOW - 3 * 3_600_000 })], nowMs: NOW }).action).toBe("REDEPLOY");
+  it("fetchHealth refuses unapproved origins, never follows redirects", async () => {
+    await expect(fetchHealth({ origin: "https://evil.example" })).rejects.toThrow(/not approved/);
+    let seen: RequestInit | undefined;
+    const r = await fetchHealth({ origin: "https://opsiq.solutions", fetchImpl: (async (_u: string, init: RequestInit) => { seen = init; return { status: 200, json: async () => ({ status: "healthy" }) }; }) as never });
+    expect(r.status).toBe(200);
+    expect(seen?.redirect).toBe("error");
   });
-  it("REDEPLOYs after a failed build and when none is recorded; BLOCKs (no retry storm) after the failure budget", () => {
-    expect(decideRedeploy({ releaseSha: SHA, deployments: [dep()], nowMs: NOW })).toMatchObject({ action: "REDEPLOY", code: "PREVIOUS_BUILD_FAILED" });
-    expect(decideRedeploy({ releaseSha: SHA, deployments: [], nowMs: NOW })).toMatchObject({ action: "REDEPLOY", code: "NO_PRODUCTION_BUILD_RECORDED" });
-    const many = Array.from({ length: MAX_FAILURES_PER_SHA }, () => dep());
-    expect(decideRedeploy({ releaseSha: SHA, deployments: many, nowMs: NOW })).toMatchObject({ action: "BLOCK", code: "RETRY_BUDGET_EXHAUSTED" });
+});
+
+describe("verified production environment identification", () => {
+  it("only environment 'Production' exactly; preview, preproduction, staging, test, case variants and substrings are rejected", () => {
+    expect(isProductionDeployment({ environment: "Production" })).toBe(true);
+    for (const e of ["Preview", "Preproduction", "pre-production", "production", "PRODUCTION", "Production (staging)", "staging", "test", "Production2", "", undefined, null]) expect(isProductionDeployment({ environment: e }), String(e)).toBe(false);
+    expect(isProductionDeployment({ environment: "Production", productionEnvironment: false })).toBe(false);
   });
-  it("a malformed release sha blocks", () => {
-    for (const bad of ["", "main", "A".repeat(40), "a".repeat(39)]) expect(decideRedeploy({ releaseSha: bad, deployments: [], nowMs: NOW }).action).toBe("BLOCK");
+});
+
+describe("release decision with durable bounded retry accounting", () => {
+  const base = { releaseSha: SHA, served: false, deployments: [] as never[], attemptsMs: [] as number[], nowMs: NOW };
+  it("NONE only when served; a historical successful build of this SHA never counts", () => {
+    expect(decideRelease({ ...base, served: true }).action).toBe("NONE");
+    const d = [{ sha: SHA, environment: "Production", productionEnvironment: true, createdAtMs: NOW - 3_600_000, state: "success" }];
+    expect(decideRelease({ ...base, deployments: d as never }).action).toBe("TRIGGER");
+  });
+  it("WAITs for an in-flight PRODUCTION build of this SHA; preview builds and stale records do not block", () => {
+    const inflight = (o: object) => [{ sha: SHA, environment: "Production", productionEnvironment: true, createdAtMs: NOW - 60_000, state: "in_progress", ...o }] as never;
+    expect(decideRelease({ ...base, deployments: inflight({}) }).action).toBe("WAIT");
+    expect(decideRelease({ ...base, deployments: inflight({ environment: "Preview" }) }).action).toBe("TRIGGER");
+    expect(decideRelease({ ...base, deployments: inflight({ createdAtMs: NOW - 3 * 3_600_000 }) }).action).toBe("TRIGGER"); // timed out
+    expect(decideRelease({ ...base, deployments: inflight({ sha: "b".repeat(40) }) }).action).toBe("TRIGGER");
+  });
+  it("counts attempts from durable refs, not provider records: hook accepted but no deployment ever appears still exhausts the budget", () => {
+    const attempts = Array.from({ length: MAX_ATTEMPTS }, (_, i) => NOW - (i + 1) * 3_600_000);
+    const d = decideRelease({ ...base, attemptsMs: attempts });
+    expect(d).toMatchObject({ action: "BLOCK", code: "RETRY_BUDGET_EXHAUSTED" });
+    expect(d.retryAfterMs).toBeGreaterThan(0);
+    expect(decideRelease({ ...base, attemptsMs: attempts.slice(0, MAX_ATTEMPTS - 1) })).toMatchObject({ action: "TRIGGER", attemptsInWindow: MAX_ATTEMPTS - 1 });
+  });
+  it("recovers automatically as old attempts age out of the window (never retries indefinitely, never blocked forever)", () => {
+    const old = Array.from({ length: MAX_ATTEMPTS }, () => NOW - RETRY_WINDOW_MS - 1);
+    expect(decideRelease({ ...base, attemptsMs: old }).action).toBe("TRIGGER");
+    const mixed = [NOW - RETRY_WINDOW_MS - 1, NOW - 1000, NOW - 2000];
+    expect(decideRelease({ ...base, attemptsMs: mixed }).action).toBe("TRIGGER"); // only 2 inside the window
+    expect(decideRelease({ ...base, attemptsMs: [...mixed, NOW - 3000] }).action).toBe("BLOCK");
+  });
+  it("a malformed release sha blocks; non-finite attempt data is ignored", () => {
+    for (const bad of ["", "main", "A".repeat(40), "a".repeat(39)]) expect(decideRelease({ ...base, releaseSha: bad }).action).toBe("BLOCK");
+    expect(decideRelease({ ...base, attemptsMs: [Number.NaN, Infinity] as never }).action).toBe("TRIGGER");
+  });
+});
+
+describe("durable provider interactions (injected GitHub API)", () => {
+  it("collectAttempts parses only well-formed refs for THIS sha; a bad response throws (fail closed, no trigger on API errors)", async () => {
+    const refs = [{ ref: `refs/release-attempts/${SHA}/1800000000000` }, { ref: `refs/release-attempts/${SHA}/notanumber` }, { ref: `refs/release-attempts/${"c".repeat(40)}/1800000000001` }];
+    expect(await collectAttempts({ fetchJson: async () => refs, repo: "o/r", sha: SHA })).toEqual([1800000000000]);
+    await expect(collectAttempts({ fetchJson: async () => ({ message: "x" }), repo: "o/r", sha: SHA })).rejects.toThrow();
+    await expect(collectAttempts({ fetchJson: async () => { throw new Error("boom"); }, repo: "o/r", sha: SHA })).rejects.toThrow();
+  });
+  it("recordAttempt writes a ref BEFORE any trigger, pointing at the release commit", async () => {
+    const posts: [string, unknown][] = [];
+    await recordAttempt({ postJson: async (p: string, b: unknown) => { posts.push([p, b]); }, repo: "o/r", sha: SHA, nowMs: NOW });
+    expect(posts).toEqual([["/repos/o/r/git/refs", { ref: `refs/release-attempts/${SHA}/${NOW}`, sha: SHA }]]);
   });
   it("collectDeployments reads the latest status per deployment and ignores other SHAs", async () => {
-    const calls: string[] = [];
-    const fetchJson = async (path: string) => {
-      calls.push(path);
-      if (path.includes("/statuses")) return [{ state: "success" }];
-      return [{ id: 1, sha: SHA, environment: "Production", created_at: "2026-11-19T00:00:00Z" }, { id: 2, sha: "c".repeat(40), environment: "Production", created_at: "2026-11-19T00:00:00Z" }];
-    };
+    const fetchJson = async (path: string) => path.includes("/statuses") ? [{ state: "success" }] : [{ id: 1, sha: SHA, environment: "Production", production_environment: true, created_at: "2026-11-19T00:00:00Z" }, { id: 2, sha: "c".repeat(40), environment: "Production", created_at: "2026-11-19T00:00:00Z" }];
     const out = await collectDeployments({ fetchJson, repo: "o/r", sha: SHA });
     expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({ sha: SHA, environment: "Production", state: "success" });
-    expect(calls.filter((c) => c.includes("/statuses"))).toHaveLength(1);
-    await expect(collectDeployments({ fetchJson: async () => ({ message: "nope" }), repo: "o/r", sha: SHA })).rejects.toThrow();
+    expect(out[0]).toMatchObject({ environment: "Production", productionEnvironment: true, state: "success" });
+  });
+  it("ensureReleaseBranch: creates, no-ops at the same SHA, fast-forwards, and BLOCKS a non-fast-forward without forcing", async () => {
+    const calls: string[] = [];
+    const mk = (tip: string | null, status = "ahead") => ({
+      fetchJson: async (p: string) => { if (p.includes("/git/ref/heads/")) { if (tip === null) { const e = new Error("nf") as Error & { status: number }; e.status = 404; throw e; } return { object: { sha: tip } }; } return { status }; },
+      postJson: async (p: string, b: unknown) => { calls.push(`POST ${p} ${JSON.stringify(b)}`); },
+      patchJson: async (p: string, b: unknown) => { calls.push(`PATCH ${p} ${JSON.stringify(b)}`); },
+      repo: "o/r", sha: SHA,
+    });
+    expect(await ensureReleaseBranch(mk(null))).toMatchObject({ advanced: true, code: "BRANCH_CREATED_AT_RELEASE_SHA" });
+    expect(await ensureReleaseBranch(mk(SHA))).toMatchObject({ advanced: false, code: "BRANCH_ALREADY_AT_RELEASE_SHA" });
+    expect(await ensureReleaseBranch(mk("d".repeat(40), "ahead"))).toMatchObject({ advanced: true, code: "BRANCH_FAST_FORWARDED" });
+    const blockedCalls = calls.length;
+    expect(await ensureReleaseBranch(mk("d".repeat(40), "diverged"))).toMatchObject({ advanced: false, blocked: true, code: "NOT_A_FAST_FORWARD" });
+    expect(await ensureReleaseBranch(mk("d".repeat(40), "behind"))).toMatchObject({ blocked: true });
+    expect(calls.length).toBe(blockedCalls); // no write on a blocked advance
+    expect(calls.filter((c) => c.startsWith("PATCH")).every((c) => c.includes('"force":false'))).toBe(true);
+    expect(RELEASE_BRANCH).toBe("release/production");
   });
 });
 
@@ -154,7 +221,7 @@ describe("workflow trust model (production-release-reconcile draft)", () => {
   });
   it("least privilege: read-only workflow permissions, job adds only checks/deployments read, no secrets: inherit, no continue-on-error", () => {
     expect(wf.permissions).toEqual({ contents: "read" });
-    expect(job.permissions).toEqual({ contents: "read", checks: "read", deployments: "read" });
+    expect(job.permissions).toEqual({ contents: "write", checks: "read", deployments: "read" }); // write ONLY for the release branch + attempt refs
     expect(JSON.stringify(wf)).not.toMatch(/inherit/); // parsed YAML: comments excluded
     expect(job.steps.some((s) => s["continue-on-error"])).toBe(false);
     expect([...text.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).sort()).toEqual(["OPERATOR_DATABASE_URL", "VERCEL_PRODUCTION_DEPLOY_HOOK_URL"]);
@@ -162,28 +229,107 @@ describe("workflow trust model (production-release-reconcile draft)", () => {
   it("shares the production-write concurrency group and never cancels a running release", () => {
     expect(wf.concurrency).toEqual({ group: "migrate-production", "cancel-in-progress": false });
   });
-  it("ordering: guard < checkout < exact SHA < CI < host < ledger plan < gate < decision < hook < verify; every DB/secret step is gated on CI-green", () => {
-    const order = [/Assert workflow origin/, /Checkout main/, /Resolve the exact release SHA/, /Require required CI green/, /Validate the pinned production host/, /Release plan from the REAL migration ledger/, /Runtime-role reconcile and strict/, /Exact-SHA production deployment decision/, /Trigger the production deploy hook ONCE/, /Verify THIS exact SHA/].map(idx);
+  it("ordering: guard < checkout < exact SHA < CI < host < ledger plan < Phase 2 < gate < decision < trigger < hook < verify; every DB/secret step is gated on CI-green", () => {
+    const order = [/Assert workflow origin/, /Checkout main/, /Resolve the exact release SHA/, /Require required CI green/, /Validate the pinned production host/, /Release plan from the REAL migration ledger/, /Phase 2 - apply pending migrations/, /Runtime-role reconcile and strict/, /Release decision/, /Trigger exact-SHA release/, /Retry the SAME sha/, /Verify the PUBLIC site serves/].map(idx);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    for (const re of [/Release plan from/, /Runtime-role reconcile/, /Preflight check - OPERATOR/]) expect(job.steps[idx(re)].if).toContain("steps.ci.outputs.ready == 'true'");
+    for (const re of [/Release plan from/, /Runtime-role reconcile/, /Preflight check - OPERATOR/, /Release decision/]) expect(job.steps[idx(re)].if).toContain("steps.ci.outputs.ready == 'true'");
   });
-  it("never applies migrations: the plan step only runs the read-only CLI and any non-NOOP plan fails the run before the gate", () => {
-    expect(text).not.toMatch(/prisma migrate deploy/);
-    const plan = job.steps[idx(/Release plan from/)].run ?? "";
+  it("Phase 2 applies only a MIGRATE plan through the guarded CLI (backup + ledger re-check inside); BLOCK/unknown plans fail the run before any write", () => {
+    const plan = job.steps[idx(/Release plan from the REAL migration ledger/)].run ?? "";
     expect(plan).toContain("release-plan-cli.ts");
-    expect(plan).toContain("RELEASE_PLAN=NOOP");
     expect(plan).toContain("exit 1");
+    const p2 = job.steps[idx(/Phase 2 - apply pending migrations/)];
+    expect(p2.if).toBe("steps.plan.outputs.action == 'MIGRATE'");
+    expect(p2.run).toContain("auto-migrate-cli.mjs");
+    expect(p2.run).toContain("AUTO_MIGRATE=OK");
+    expect(text.match(/prisma migrate deploy/g)).toBeNull(); // only the guarded CLI may invoke it, never a bare workflow step
   });
-  it("the deploy hook runs only on a REDEPLOY decision, once, with redirects refused and the URL never echoed", () => {
-    const hook = job.steps[idx(/Trigger the production deploy hook ONCE/)];
-    expect(hook.if).toBe("steps.decide.outputs.decision == 'REDEPLOY'");
+  it("the release is bound to the SHA by construction: fast-forward-only release branch advance, durable attempt BEFORE the trigger, hook only for a same-SHA retry", () => {
+    const trig = job.steps[idx(/Trigger exact-SHA release/)];
+    expect(trig.if).toBe("steps.decide.outputs.decision == 'TRIGGER'");
+    expect(trig.run).toContain("release-state.mjs trigger");
+    const hook = job.steps[idx(/Retry the SAME sha/)];
+    expect(hook.if).toBe("steps.trigger.outputs.hook_needed == 'true'");
     expect(hook.run).toContain("--max-redirs 0");
     expect(hook.run).not.toMatch(/echo[^\n]*\$\{?DEPLOY_HOOK_URL/);
+    const state = readFileSync(join(ROOT, "scripts/release/release-state.mjs"), "utf8");
+    expect(state.indexOf("recordAttempt({ postJson")).toBeGreaterThan(-1);
+    expect(state.indexOf("await recordAttempt(")).toBeLessThan(state.indexOf("await ensureReleaseBranch("));
+    expect(state).not.toMatch(/force:\s*true/);
+  });
+  it("acceptance is the public site serving the exact SHA, checked from an approved origin only", () => {
+    const v = job.steps[idx(/Verify the PUBLIC site serves/)];
+    expect(v.run).toContain("release-state.mjs verify");
+    expect(v.if).toContain("steps.decide.outputs.decision");
   });
   it("the gate runs in drift mode with the exact release SHA and the pinned host", () => {
     const gate = job.steps[idx(/Runtime-role reconcile and strict/)];
     expect(gate.env?.RECONCILE_ONLY_IF_DRIFT).toBe("1");
     expect(gate.env?.EXPECTED_RELEASE_SHA).toContain("github.sha");
     expect(gate.env?.EXPECTED_DATABASE_HOST).toContain("vars.PRODUCTION_DATABASE_HOST");
+  });
+});
+
+
+describe("Phase 2 automatic migration: fail-closed orchestration", () => {
+  const fresh = { fresh: true, code: "BACKUP_FRESH" };
+  const one = { action: "MIGRATE", pending: ["20261120000000_a"] };
+  const many = { action: "MIGRATE", pending: ["20261120000000_a", "20261121000000_b", "20261122000000_c"] };
+  it("zero pending: nothing to do and NOT a failure; one or several compatible pending migrations proceed only with a fresh verified backup", () => {
+    expect(decideAutoMigrate({ plan: { action: "NOOP", pending: [] }, backup: fresh })).toMatchObject({ proceed: false, fail: false, code: "NOTHING_PENDING" });
+    expect(decideAutoMigrate({ plan: one, backup: fresh })).toMatchObject({ proceed: true, pending: one.pending });
+    expect(decideAutoMigrate({ plan: many, backup: fresh })).toMatchObject({ proceed: true, pending: many.pending });
+  });
+  it("refuses without a fresh verified backup (none recorded, stale, malformed) and on any inconsistent or unordered plan", () => {
+    const now = 1_800_000_000_000;
+    expect(evaluateBackup({ lastSuccessMs: NaN, nowMs: now })).toMatchObject({ fresh: false, code: "NO_VERIFIED_BACKUP_RECORDED" });
+    expect(evaluateBackup({ lastSuccessMs: now - BACKUP_MAX_AGE_MS - 1, nowMs: now })).toMatchObject({ fresh: false, code: "BACKUP_STALE" });
+    expect(evaluateBackup({ lastSuccessMs: now - 3_600_000, nowMs: now }).fresh).toBe(true);
+    expect(decideAutoMigrate({ plan: one, backup: { fresh: false, code: "BACKUP_STALE" } })).toMatchObject({ proceed: false, fail: true, code: "BACKUP_STALE" });
+    expect(decideAutoMigrate({ plan: one, backup: undefined }).proceed).toBe(false);
+    for (const plan of [undefined, null, { action: "WHATEVER" }, { action: "MIGRATE", pending: [] }, { action: "MIGRATE", pending: ["../etc/passwd"] }, { action: "MIGRATE", pending: ["20261120000000_a", "20261120000000_a"] }, { action: "MIGRATE", pending: ["20261121000000_b", "20261120000000_a"] }]) {
+      expect(decideAutoMigrate({ plan: plan as never, backup: fresh }).proceed, JSON.stringify(plan)).toBe(false);
+    }
+  });
+  it("a BLOCK plan (failed/modified/out-of-order/destructive/unknown) never auto-applies and fails the run", () => {
+    expect(decideAutoMigrate({ plan: { action: "BLOCK", pending: ["20261120000000_a"] }, backup: fresh })).toMatchObject({ proceed: false, fail: true, code: "PLAN_BLOCKED_NEEDS_HUMAN_AUTHORIZATION" });
+  });
+  it("applies, then requires the ledger to be NOOP: success; deploy failure; partial/interrupted application is detected", async () => {
+    const d = decideAutoMigrate({ plan: many, backup: fresh });
+    const calls: string[] = [];
+    expect(await applyAndVerify({ decision: d, runDeploy: async () => { calls.push("deploy"); return { exitCode: 0 }; }, replan: async () => { calls.push("replan"); return { action: "NOOP", pending: [] }; } })).toMatchObject({ ok: true, code: "MIGRATIONS_APPLIED_AND_VERIFIED", applied: many.pending });
+    expect(calls).toEqual(["deploy", "replan"]);
+    expect(await applyAndVerify({ decision: d, runDeploy: async () => ({ exitCode: 1 }), replan: async () => ({ action: "NOOP", pending: [] }) })).toMatchObject({ ok: false, code: "MIGRATE_DEPLOY_FAILED" });
+    expect(await applyAndVerify({ decision: d, runDeploy: async () => ({ exitCode: null }), replan: async () => ({ action: "NOOP", pending: [] }) })).toMatchObject({ ok: false, code: "MIGRATE_DEPLOY_FAILED" });
+    expect(await applyAndVerify({ decision: d, runDeploy: async () => ({ exitCode: 0 }), replan: async () => ({ action: "MIGRATE", pending: ["20261122000000_c"] }) })).toMatchObject({ ok: false, code: "LEDGER_NOT_CURRENT_AFTER_DEPLOY", remaining: ["20261122000000_c"] });
+  });
+  it("never runs the deploy when the decision does not proceed", async () => {
+    let ran = false;
+    const r = await applyAndVerify({ decision: decideAutoMigrate({ plan: one, backup: { fresh: false, code: "BACKUP_STALE" } }), runDeploy: async () => { ran = true; return { exitCode: 0 }; }, replan: async () => ({ action: "NOOP", pending: [] }) });
+    expect(ran).toBe(false);
+    expect(r).toMatchObject({ ok: false, code: "BACKUP_STALE" });
+  });
+  it("lastBackupSuccessMs reads the latest successful encrypted-backup run; an unexpected response throws (fail closed)", async () => {
+    expect(await lastBackupSuccessMs({ fetchJson: async () => ({ workflow_runs: [{ updated_at: "2026-11-19T00:00:00Z" }] }), repo: "o/r" })).toBe(Date.parse("2026-11-19T00:00:00Z"));
+    expect(Number.isNaN(await lastBackupSuccessMs({ fetchJson: async () => ({ workflow_runs: [] }), repo: "o/r" }))).toBe(true);
+    await expect(lastBackupSuccessMs({ fetchJson: async () => ({}), repo: "o/r" })).rejects.toThrow();
+  });
+});
+
+describe("scheduled-run continuity watchdog (inert draft, unprivileged)", () => {
+  const w = YAML.load(readFileSync(join(ROOT, "docs/opsiq/ci/proposed/release-watchdog.yml.draft"), "utf8")) as { on: Record<string, unknown>; permissions: Record<string, string>; jobs: Record<string, { environment?: string; steps: { run?: string; env?: Record<string, string> }[] }> };
+  const raw = readFileSync(join(ROOT, "docs/opsiq/ci/proposed/release-watchdog.yml.draft"), "utf8");
+  it("is inert, has no secrets/environment/database access, and only reads Actions history + writes one issue", () => {
+    expect(readdirSync(join(ROOT, ".github/workflows"))).not.toContain("release-watchdog.yml");
+    expect(w.permissions).toEqual({ contents: "read", actions: "read", issues: "write" });
+    expect(Object.values(w.jobs).every((j) => j.environment === undefined)).toBe(true);
+    expect(JSON.stringify(w)).not.toMatch(/secrets\.(?!GITHUB_TOKEN)/);
+    expect(JSON.stringify(w)).not.toMatch(/OPERATOR|DATABASE_URL|DEPLOY_HOOK|VERCEL/);
+    expect(Object.keys(w.on).sort()).toEqual(["schedule", "workflow_dispatch"]);
+  });
+  it("detects dropped or stalled schedules (age of the last SUCCESS, not the last run) and recovers by closing its own issue", () => {
+    expect(raw).toContain("status=success");
+    expect(raw).toContain("gh issue close");
+    expect(raw).toContain("MAX_AGE_HOURS: '4'");
   });
 });
