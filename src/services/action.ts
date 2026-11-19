@@ -473,18 +473,31 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: Prisma.ActionUncheckedUpdateManyInput = { version: { increment: 1 } };
-
   if (input.status) {
     validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
-    updates.status = input.status;
   }
-  if (input.title !== undefined) updates.title = input.title;
-  if (input.description !== undefined) updates.description = input.description;
-  if (input.dueDate !== undefined) updates.dueAt = input.dueDate ? new Date(input.dueDate) : null;
-  if (input.assignedTo !== undefined) updates.assignedTo = input.assignedTo;
-  if (input.completedAt !== undefined) updates.completedAt = input.completedAt ? new Date(input.completedAt) : null;
-  if (input.verifiedAt !== undefined) updates.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
+
+  // The exact field values this call writes (also what it returns and audits).
+  const applied: {
+    status?: string;
+    title?: string;
+    description?: string | null;
+    dueAt?: Date | null;
+    assignedTo?: string | null;
+    completedAt?: Date | null;
+    verifiedAt?: Date | null;
+  } = {};
+  if (input.status) applied.status = input.status;
+  if (input.title !== undefined) applied.title = input.title;
+  if (input.description !== undefined) applied.description = input.description;
+  if (input.dueDate !== undefined) applied.dueAt = input.dueDate ? new Date(input.dueDate) : null;
+  if (input.assignedTo !== undefined) applied.assignedTo = input.assignedTo;
+  if (input.completedAt !== undefined) applied.completedAt = input.completedAt ? new Date(input.completedAt) : null;
+  if (input.verifiedAt !== undefined) applied.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
+
+  const nextVersion = action.version + 1;
+  const updatedAt = new Date();
+  const updates: Prisma.ActionUncheckedUpdateManyInput = { ...applied, version: nextVersion, updatedAt };
 
   // Compare-and-set on the version the checks above ran against, so a concurrent writer cannot
   // commit on top of a version it never validated (lost update / unvalidated transition).
@@ -496,12 +509,18 @@ export async function updateAction(
     throw new ConflictError("Action has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
   }
 
-  const updated = await db.action.findFirst({
-    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
-  });
-  if (!updated) throw new NotFoundError("Action", actionId);
+  // Exactly the row this call committed (a re-read could observe a later writer's state).
+  const updated = { ...action, ...applied, version: nextVersion, updatedAt };
 
-  if (input.status) {
+  // Every meaningful edit is audited, with each changed field's previous and new value.
+  const previous = action as unknown as Record<string, unknown>;
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  for (const [field, to] of Object.entries(applied)) {
+    const from = previous[field] ?? null;
+    const same = from instanceof Date && to instanceof Date ? from.getTime() === to.getTime() : from === to;
+    if (!same) changes[field] = { from, to };
+  }
+  if (Object.keys(changes).length > 0) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ACTION_UPDATED,
       actorId,
@@ -509,8 +528,10 @@ export async function updateAction(
       entityId: actionId,
       workspaceId: validatedWorkspaceId,
       payload: {
-        fromStatus: action.status,
-        toStatus: input.status,
+        ...(changes.status ? { fromStatus: action.status, toStatus: applied.status } : {}),
+        changes,
+        previousVersion: action.version,
+        version: nextVersion,
       },
       visibility: "internal",
     });
