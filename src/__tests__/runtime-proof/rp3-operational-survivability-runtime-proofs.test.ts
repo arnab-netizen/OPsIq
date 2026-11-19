@@ -180,6 +180,23 @@ describe("RP3-1 circuit breaker state machine (src/runtime/resilience/circuit-br
     await expect(breaker.execute(ok)).rejects.toThrow("Circuit breaker OPEN. Retry after 400ms");
   });
 
+  it("a failed HALF_OPEN trial re-opens even when the pre-open history would dilute the failure rate", async () => {
+    const wide: CircuitBreakerConfig = { ...config, success_threshold: 5, min_requests_before_eval: 10 };
+    const breaker = new CircuitBreaker(wide);
+    // 4 successes then 6 failures: 60% of 10 opens the circuit.
+    await drive(breaker, ["S", "S", "S", "S", "F", "F", "F", "F", "F", "F"]);
+    expect(breaker.getState()).toBe("OPEN");
+
+    vi.setSystemTime(T0 + 1001);
+    await drive(breaker, ["S", "S", "S"]);
+    expect(breaker.getState()).toBe("HALF_OPEN");
+    // The lifetime rate here would be 7/14 = 50% (not above threshold); the trial failure must still re-open.
+    await expect(breaker.execute(boom)).rejects.toThrow("downstream failure");
+    expect(breaker.getState()).toBe("OPEN");
+    // And it does not close after further successes without a new timeout.
+    await expect(breaker.execute(ok)).rejects.toThrow("Circuit breaker OPEN");
+  });
+
   it("sheds load above max_concurrent_requests without invoking the call, then recovers", async () => {
     const breaker = new CircuitBreaker(config);
     const releases: Array<() => void> = [];

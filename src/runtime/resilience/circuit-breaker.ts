@@ -47,9 +47,12 @@ class CircuitBreaker {
     if (this.state === "OPEN") {
       if (this.shouldAttemptReset()) {
         this.state = "HALF_OPEN";
-        // success_threshold counts successes recorded WHILE half-open; successes
-        // recorded before the circuit opened must not close it early.
+        // The half-open trial is judged on its own outcomes: successes recorded
+        // before the circuit opened must not close it early, and the failure
+        // history that opened it must not dilute or mask a failed trial.
         this.successes = 0;
+        this.failures = 0;
+        this.total_requests = 0;
       } else {
         throw new Error(
           `Circuit breaker OPEN. Retry after ${this.timeUntilReset()}ms`,
@@ -91,6 +94,12 @@ class CircuitBreaker {
     this.failures++;
     this.total_requests++;
     this.last_failure_time = new Date();
+
+    // Any failure of a half-open trial re-opens the circuit immediately.
+    if (this.state === "HALF_OPEN") {
+      this.open();
+      return;
+    }
 
     if (this.total_requests >= this.config.min_requests_before_eval) {
       // Both sides are percentages: getFailureRate() returns 0-100 and
