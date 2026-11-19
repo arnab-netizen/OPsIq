@@ -1,6 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll, vi, afterEach } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
+
+// Pass-through wrapper around the real compare-and-set so one test can inject an interleaved
+// writer right after the real statement commits.
+const { realCas } = vi.hoisted(() => ({ realCas: { fn: null as null | ((...a: unknown[]) => Promise<unknown>) } }));
+vi.mock("@/services/action-store", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/services/action-store")>();
+  realCas.fn = original.compareAndSetAction as (...a: unknown[]) => Promise<unknown>;
+  return { ...original, compareAndSetAction: vi.fn(original.compareAndSetAction) };
+});
+
+import { compareAndSetAction } from "@/services/action-store";
 import { updateAction } from "@/services/action";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
@@ -17,8 +28,8 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
  *  - After the compare-and-set it re-read the row and returned that; a writer committing between
  *    the CAS and the re-read made the call return (and describe) someone else's state.
  *
- * The interleaving is injected deterministically: the real updateMany runs, then a second
- * real write lands before control returns to the service.
+ * The interleaving is injected deterministically: the real compare-and-set statement runs, then
+ * a second real write lands before control returns to the service.
  */
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateAction — complete audit and exact results", () => {
   const stamp = uuidv4();
@@ -62,7 +73,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateAction — complete audit and exact
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.mocked(compareAndSetAction).mockClear();
   });
 
   afterAll(async () => {
@@ -106,12 +117,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateAction — complete audit and exact
 
   it("[db] the result describes this call's write even if another writer commits right after the CAS", async () => {
     const id = await makeAction();
-    const realUpdateMany = db.action.updateMany.bind(db.action);
-    vi.spyOn(db.action, "updateMany").mockImplementationOnce(async (args: Parameters<typeof realUpdateMany>[0]) => {
-      const result = await realUpdateMany(args);
-      // A second, legitimate writer lands between this call's CAS and anything it does next.
-      await realUpdateMany({ where: { id }, data: { title: "Interleaved writer", version: { increment: 1 } } });
-      return result;
+    // The CAS is a single UPDATE ... RETURNING statement; a second, legitimate writer lands right
+    // after it commits and before the service does anything else.
+    vi.mocked(compareAndSetAction).mockImplementationOnce(async (...args) => {
+      const result = await realCas.fn!(...args);
+      await db.action.updateMany({ where: { id }, data: { title: "Interleaved writer", version: { increment: 1 } } });
+      return result as Awaited<ReturnType<typeof compareAndSetAction>>;
     });
     const returned = await updateAction(id, { version: 1, status: "in_progress", title: "Mine" }, ctx, ws);
     expect(returned.version).toBe(2);

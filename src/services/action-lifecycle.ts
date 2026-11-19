@@ -1,10 +1,11 @@
 import { db } from "@/lib/db";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
-import { readActionBlockerReason, withActionBlockerReason } from "@/domain/execution/action-metadata";
+import { blockerReasonPatch } from "@/domain/execution/action-metadata";
+import { compareAndSetAction } from "@/services/action-store";
 import type { Action } from "@/generated/prisma/client";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
@@ -184,23 +185,23 @@ export async function transitionActionState(
     }
   }
 
-  // Update action state
-  const updatedAction = await db.action.update({
-    where: { id: actionId, engagement: { workspaceId: context.workspaceId } },
-    data: {
+  // Update action state: one compare-and-set statement on the version read above. Action has no
+  // blocker-reason / verified-by columns: only the metadata.blockerReason key is patched (kept while
+  // blocked, cleared otherwise) and the reviewer is recorded on the audit event below.
+  const updatedAction = await compareAndSetAction(db, {
+    actionId,
+    workspaceId: context.workspaceId,
+    expectedVersion: action.version,
+    columns: {
       status: nextState,
-      // Action has no blocker-reason / verified-by columns: the reason lives in metadata
-      // (see withActionBlockerReason) and the reviewer is recorded on the audit event below.
-      metadata: withActionBlockerReason(
-        action.metadata,
-        nextState,
-        nextState === "blocked" ? context.reason ?? null : readActionBlockerReason(action.metadata)
-      ) as object,
-      completedAt: nextState === "completed" ? new Date() : action.completedAt,
-      verifiedAt: nextState === "verified" ? new Date() : action.verifiedAt,
-      version: { increment: 1 },
+      ...(nextState === "completed" ? { completedAt: new Date() } : {}),
+      ...(nextState === "verified" ? { verifiedAt: new Date() } : {}),
     },
+    metadata: blockerReasonPatch(nextState, nextState === "blocked" ? context.reason ?? null : null),
   });
+  if (!updatedAction) {
+    throw new ConflictError("Action has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
+  }
 
   // Emit audit event for state transition
   await emitAuditEvent({

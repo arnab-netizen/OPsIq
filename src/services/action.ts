@@ -17,7 +17,8 @@ import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
-import { readActionBlockerReason, withActionBlockerReason } from "@/domain/execution/action-metadata";
+import { readActionBlockerReason, blockerReasonPatch, type ActionMetadataPatch } from "@/domain/execution/action-metadata";
+import { compareAndSetAction, type ActionColumnChanges } from "@/services/action-store";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -272,6 +273,55 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
   });
 }
 
+/**
+ * Shared status-change rules for every Action writer that changes status (updateActionStatus,
+ * updateAction): status vocabulary + transition map, the lifecycle enforcement rules (a blocked
+ * action must carry a reason), and the blocker-reason metadata patch (kept while blocked,
+ * cleared on leaving blocked). Pure — performs no write.
+ */
+async function prepareActionStatusChange(
+  action: { status: string; metadata: unknown } & Record<string, unknown>,
+  requested: { status?: string; blockerReason?: string | null }
+): Promise<{ previousStatus: ActionStatus; newStatus: ActionStatus; blockerReason: string | null; metadataPatch: ActionMetadataPatch }> {
+  const previousStatus = action.status as ActionStatus;
+  const newStatus = (requested.status ?? action.status) as ActionStatus;
+  validateActionStatus(newStatus);
+  if (newStatus !== previousStatus) {
+    validateActionTransition(previousStatus, newStatus);
+  }
+  const blockerReason =
+    requested.blockerReason ?? (newStatus === previousStatus ? readActionBlockerReason(action.metadata) : null);
+  const violations = await enforceActionRules({ ...action, status: newStatus, blockerReason });
+  if (violations.length > 0) {
+    throw new ValidationError(`Action enforcement rules violated:\n${violations.join("\n")}`);
+  }
+  return { previousStatus, newStatus, blockerReason, metadataPatch: blockerReasonPatch(newStatus, blockerReason) };
+}
+
+/** A newly blocked action is an unresolved blocker: route it into governed re-evaluation. */
+async function reEvaluateIfNewlyBlocked(args: {
+  actionId: string;
+  engagementId: string;
+  workspaceId: string;
+  actorId: string;
+  title: string;
+  previousStatus: string;
+  newStatus: string;
+}): Promise<void> {
+  if (args.newStatus === "blocked" && args.previousStatus !== "blocked") {
+    await triggerReEvaluation({
+      changeType: "unresolved_critical_blocker",
+      entityType: "action",
+      entityId: args.actionId,
+      engagementId: args.engagementId,
+      workspaceId: args.workspaceId,
+      severity: "high",
+      description: `Action blocked: ${args.title || "action"}`,
+      triggeredBy: args.actorId,
+    });
+  }
+}
+
 export async function updateActionStatus(
   actionId: string,
   input: UpdateActionInput,
@@ -295,59 +345,25 @@ export async function updateActionStatus(
     );
   }
 
-  const newStatus = (input.status ?? action.status) as ActionStatus;
-  const previousStatus = action.status as ActionStatus;
-
-  // Validate new status value
-  if (newStatus) {
-    validateActionStatus(newStatus);
-    // Only validate transition if status is actually changing
-    if (newStatus !== previousStatus) {
-      validateActionTransition(previousStatus, newStatus);
-    }
-  }
-
-  // Enforce action lifecycle rules
-  const blockerReason =
-    input.blockerReason ?? input.blockageReason ?? (newStatus === previousStatus ? readActionBlockerReason(action.metadata) : null);
-  const updatedActionData = {
-    ...action,
-    status: newStatus,
-    blockerReason,
-  };
-  const violations = await enforceActionRules(updatedActionData);
-  if (violations.length > 0) {
-    throw new ValidationError(
-      `Action enforcement rules violated:\n${violations.join("\n")}`
-    );
-  }
-
-  // Optimistic locking: update only if version matches
-  const nextMetadata = withActionBlockerReason(action.metadata, newStatus, blockerReason);
-  const updateResult = await db.action.updateMany({
-    where: {
-      id: actionId,
-      engagement: { workspaceId: validatedWorkspaceId },
-      version: input.version,
-    },
-    data: {
-      status: newStatus,
-      metadata: nextMetadata as Prisma.InputJsonValue,
-      version: { increment: 1 },
-    },
+  const { previousStatus, newStatus, metadataPatch } = await prepareActionStatusChange(action, {
+    status: input.status,
+    blockerReason: input.blockerReason ?? input.blockageReason,
   });
 
-  if (updateResult.count === 0) {
+  // One statement: status + blocker-reason metadata key + version, conditional on the version.
+  const updated = await compareAndSetAction(db, {
+    actionId,
+    workspaceId: validatedWorkspaceId,
+    expectedVersion: input.version,
+    columns: { status: newStatus },
+    metadata: metadataPatch,
+  });
+  if (!updated) {
     throw new ConflictError(
       "Action has been modified by another process",
       { code: "OPTIMISTIC_LOCK_FAILED" }
     );
   }
-
-  const updated = await db.action.findFirst({
-    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
-  });
-  if (!updated) throw new NotFoundError("Action", actionId);
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ACTION_UPDATED,
@@ -358,24 +374,20 @@ export async function updateActionStatus(
     payload: {
       previousStatus,
       newStatus,
-      blockerReason: readActionBlockerReason(nextMetadata),
+      blockerReason: readActionBlockerReason(updated.metadata),
     },
     visibility: "internal",
   });
 
-  // Trigger re-evaluation due to action status change if blocked
-  if (newStatus !== previousStatus && newStatus === "blocked") {
-    await triggerReEvaluation({
-      changeType: "unresolved_critical_blocker",
-      entityType: "action",
-      entityId: actionId,
-      engagementId: action.engagementId,
-      workspaceId: validatedWorkspaceId,
-      severity: "high",
-      description: `Action blocked: ${input.title || "action"}`,
-      triggeredBy: actorId,
-    });
-  }
+  await reEvaluateIfNewlyBlocked({
+    actionId,
+    engagementId: action.engagementId,
+    workspaceId: validatedWorkspaceId,
+    actorId,
+    title: action.title,
+    previousStatus,
+    newStatus,
+  });
 
   logger.info("Action status updated", {
     actionId,
@@ -473,21 +485,15 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  if (input.status) {
-    validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
-  }
+  // A status change (or a new blocker reason) goes through the same rules as updateActionStatus.
+  const statusChange =
+    input.status !== undefined || input.blockerReason !== undefined
+      ? await prepareActionStatusChange(action, { status: input.status, blockerReason: input.blockerReason })
+      : null;
 
-  // The exact field values this call writes (also what it returns and audits).
-  const applied: {
-    status?: string;
-    title?: string;
-    description?: string | null;
-    dueAt?: Date | null;
-    assignedTo?: string | null;
-    completedAt?: Date | null;
-    verifiedAt?: Date | null;
-  } = {};
-  if (input.status) applied.status = input.status;
+  // The exact column values this call writes (also what it audits).
+  const applied: ActionColumnChanges = {};
+  if (statusChange && statusChange.newStatus !== statusChange.previousStatus) applied.status = statusChange.newStatus;
   if (input.title !== undefined) applied.title = input.title;
   if (input.description !== undefined) applied.description = input.description;
   if (input.dueDate !== undefined) applied.dueAt = input.dueDate ? new Date(input.dueDate) : null;
@@ -495,22 +501,18 @@ export async function updateAction(
   if (input.completedAt !== undefined) applied.completedAt = input.completedAt ? new Date(input.completedAt) : null;
   if (input.verifiedAt !== undefined) applied.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
 
-  const nextVersion = action.version + 1;
-  const updatedAt = new Date();
-  const updates: Prisma.ActionUncheckedUpdateManyInput = { ...applied, version: nextVersion, updatedAt };
-
-  // Compare-and-set on the version the checks above ran against, so a concurrent writer cannot
-  // commit on top of a version it never validated (lost update / unvalidated transition).
-  const updateResult = await db.action.updateMany({
-    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId }, version: input.version },
-    data: updates,
+  // One statement: columns + blocker-reason metadata key + version, conditional on the version the
+  // checks above ran against; RETURNING is exactly the row this call committed.
+  const updated = await compareAndSetAction(db, {
+    actionId,
+    workspaceId: validatedWorkspaceId,
+    expectedVersion: input.version,
+    columns: applied,
+    metadata: statusChange?.metadataPatch,
   });
-  if (updateResult.count === 0) {
+  if (!updated) {
     throw new ConflictError("Action has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
   }
-
-  // Exactly the row this call committed (a re-read could observe a later writer's state).
-  const updated = { ...action, ...applied, version: nextVersion, updatedAt };
 
   // Every meaningful edit is audited, with each changed field's previous and new value.
   const previous = action as unknown as Record<string, unknown>;
@@ -520,6 +522,9 @@ export async function updateAction(
     const same = from instanceof Date && to instanceof Date ? from.getTime() === to.getTime() : from === to;
     if (!same) changes[field] = { from, to };
   }
+  const previousReason = readActionBlockerReason(action.metadata);
+  const nextReason = readActionBlockerReason(updated.metadata);
+  if (previousReason !== nextReason) changes.blockerReason = { from: previousReason, to: nextReason };
   if (Object.keys(changes).length > 0) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ACTION_UPDATED,
@@ -528,12 +533,24 @@ export async function updateAction(
       entityId: actionId,
       workspaceId: validatedWorkspaceId,
       payload: {
-        ...(changes.status ? { fromStatus: action.status, toStatus: applied.status } : {}),
+        ...(changes.status ? { fromStatus: action.status, toStatus: updated.status } : {}),
         changes,
         previousVersion: action.version,
-        version: nextVersion,
+        version: updated.version,
       },
       visibility: "internal",
+    });
+  }
+
+  if (statusChange) {
+    await reEvaluateIfNewlyBlocked({
+      actionId,
+      engagementId: action.engagementId,
+      workspaceId: validatedWorkspaceId,
+      actorId,
+      title: updated.title,
+      previousStatus: statusChange.previousStatus,
+      newStatus: statusChange.newStatus,
     });
   }
 

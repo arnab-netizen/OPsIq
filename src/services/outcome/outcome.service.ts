@@ -7,6 +7,7 @@ import { logger } from "@/infra/logger";
 import { computeDecisionConfidence } from "../decision-confidence/decision-confidence.service";
 import { generateBusinessImpact } from "../business-impact/business-impact.service";
 import { getFinancialDelta } from "../financial/financial-mapping.service";
+import { mergeActionMetadata } from "@/services/action-store";
 
 export interface OutcomeSnapshot {
   predictedImpactLevel: string;
@@ -189,12 +190,12 @@ export async function recordOutcome(
   };
 
     // Store outcome snapshot in the action's metadata JSON (Action has no dedicated
-    // outcomeSnapshot column). Preserve any existing metadata keys.
-    await db.action.update({
-      where: { id: actionId },
-      data: {
-        metadata: { ...actionMetadata, outcomeSnapshot } as object,
-      },
+    // outcomeSnapshot column). Only the outcomeSnapshot key is merged, atomically in SQL, so a
+    // concurrent writer of another key (e.g. metadata.blockerReason) is never overwritten.
+    await mergeActionMetadata(db, {
+      actionId,
+      workspaceId,
+      metadata: { set: { outcomeSnapshot } },
     });
 
     // Emit audit event for outcome recording

@@ -40,10 +40,9 @@ export const PATCH = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, updateActionSchema);
 
-    await updateAction(actionId, body, ctx, ctx.verifiedWorkspaceId);
-
-    const updated = await getActionById(actionId, ctx.verifiedWorkspaceId);
-    return updated;
+    // The service returns exactly the row it committed (same shape as GET); a re-read here could
+    // return a later writer's state instead.
+    return updateAction(actionId, body, ctx, ctx.verifiedWorkspaceId);
   },
   { requireCommercial: "governed_execution",
     requireCapabilities: [CAPABILITIES.ACTION_UPDATE],
