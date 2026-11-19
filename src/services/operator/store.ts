@@ -5,9 +5,10 @@ import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma, OperatorItem as OperatorItemRecord } from "@/generated/prisma/client";
+import { randomUUID } from "crypto";
 
-let calibrationStore: CalibrationRecord[] = [];
+const calibrationStore: CalibrationRecord[] = [];
 
 /**
  * Persist decisions, each atomically with its OPERATOR_ITEM_CREATED audit event in its own transaction.
@@ -39,7 +40,7 @@ export async function addItems(
     // The previous mapping wrote those non-existent fields, so `create` threw a
     // PrismaClientValidationError on every addItems call. Map to the real columns and drop
     // the fields with no column.
-    const data: any = {
+    const data: Record<string, unknown> = {
       id: item.id,
       workspaceId: item.workspaceId,
       ownerUserId: item.ownerUserId,
@@ -89,7 +90,7 @@ export async function addItems(
     // the create committed and the audit was best-effort (.catch → warn), so a decision could
     // persist with the audit trail silently lost. Now a failed audit rolls back the create.
     await db.$transaction(async (tx: Prisma.TransactionClient) => {
-      const created = await tx.operatorItem.create({ data });
+      const created = await tx.operatorItem.create({ data: data as Prisma.OperatorItemUncheckedCreateInput });
       await emitAuditEvent(
         {
           eventName: AUDIT_EVENTS.OPERATOR_ITEM_CREATED,
@@ -114,10 +115,10 @@ export async function addItems(
 export async function getItems(workspaceId: string): Promise<OperatorItem[]> {
   if (!workspaceId) throw new Error("getItems requires a workspaceId for workspace isolation");
 
-  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
+  const records: OperatorItemRecord[] = await db.operatorItem.findMany({
     where: { workspaceId },
   });
-  return records.map((r: any) => ({
+  return records.map((r) => ({
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,
@@ -157,7 +158,7 @@ export async function getItems(workspaceId: string): Promise<OperatorItem[]> {
     engineVersion: r.engineVersion || "v1.0.0",
     createdAt: r.createdAt.toISOString(),
     blockingDependencies: Array.isArray(r.blockingDependencies) ? (r.blockingDependencies as string[]) : [],
-  }));
+  })) as OperatorItem[];
 }
 
 export async function updateItem(
@@ -171,7 +172,7 @@ export async function updateItem(
   if (!workspaceId) {
     throw new Error("updateItem requires a workspaceId for tenant isolation");
   }
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, unknown> = {};
 
   if (updates.problem !== undefined) updateData.problem = updates.problem;
   if (updates.action !== undefined) updateData.action = updates.action;
@@ -337,7 +338,7 @@ export async function getQueuedItems(
     ? [statusFilter]
     : ["pending", "in_progress"];
 
-  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
+  const records: OperatorItemRecord[] = await db.operatorItem.findMany({
     where: {
       workspaceId,
       status: {
@@ -351,7 +352,7 @@ export async function getQueuedItems(
     take: limit,
   });
 
-  return records.map((r: any) => ({
+  return records.map((r) => ({
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,
@@ -395,7 +396,7 @@ export async function getQueuedItems(
     engineVersion: r.engineVersion || "v1.0.0",
     createdAt: r.createdAt.toISOString(),
     blockingDependencies: Array.isArray(r.blockingDependencies) ? (r.blockingDependencies as string[]) : [],
-  }));
+  })) as OperatorItem[];
 }
 
 /**
@@ -426,8 +427,9 @@ export async function addBlockedDecision(params: {
   }
 
   // SCHEMA fix (as in addItems): map to real columns and set required updatedAt.
-  const data: any = {
-    id: require("crypto").randomUUID(),
+  const createdId = randomUUID();
+  const data: Record<string, unknown> = {
+    id: createdId,
     workspaceId: params.workspaceId,
     ownerUserId: params.ownerUserId,
     createdByUserId: params.createdBy,
@@ -459,9 +461,8 @@ export async function addBlockedDecision(params: {
   }
 
   // GAP-AUDIT-01: blocked-decision record + its audit event are written ATOMICALLY.
-  const createdId: string = data.id;
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    const created = await tx.operatorItem.create({ data });
+    const created = await tx.operatorItem.create({ data: data as Prisma.OperatorItemUncheckedCreateInput });
     await emitAuditEvent(
       {
         eventName: AUDIT_EVENTS.OPERATOR_ITEM_BLOCKED,
