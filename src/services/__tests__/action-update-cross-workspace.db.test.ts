@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
-import { updateAction } from "@/services/action";
-import { NotFoundError } from "@/infra/errors";
+import { updateAction, updateActionStatus } from "@/services/action";
+import { NotFoundError, ConflictError } from "@/infra/errors";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
@@ -26,6 +26,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateAction — a foreign workspace's ac
   const clientId = uuidv4();
   const engagementA = uuidv4();
   const actionA = uuidv4();
+  const actionRaceA = uuidv4();
+
+  const ctxFor = (workspaceId: string) => ({
+    verifiedActorId: userId,
+    verifiedActorType: "user",
+    verifiedActor: null,
+    verifiedWorkspaceId: workspaceId,
+    verifiedCapabilities: ["ACTION_UPDATE"],
+    verifiedSessionSnapshot: { actorId: userId, sessionId: uuidv4(), createdAt: new Date() },
+    policy: null,
+  } as unknown as CanonicalAuthContext);
 
   const ctxB = {
     verifiedActorId: userId,
@@ -49,11 +60,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateAction — a foreign workspace's ac
       },
     });
     await db.action.create({ data: { id: actionA, engagementId: engagementA, title: "A private action", status: "assigned", updatedAt: new Date() } });
+    await db.action.create({ data: { id: actionRaceA, engagementId: engagementA, title: "A race action", status: "assigned", updatedAt: new Date() } });
   });
 
   afterAll(async () => {
     try {
-      await db.action.deleteMany({ where: { id: actionA } });
+      await db.action.deleteMany({ where: { id: { in: [actionA, actionRaceA] } } });
       await db.engagement.deleteMany({ where: { id: engagementA } });
       await db.clientAccount.deleteMany({ where: { id: clientId } });
       await db.auditEvent.deleteMany({ where: { workspaceId: { in: [wsA, wsB] } } });
@@ -80,5 +92,41 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateAction — a foreign workspace's ac
   it("[db] all checks passing → NotFound (not a raw Prisma 500) and nothing changes", async () => {
     await expect(updateAction(actionA, { version: 1, status: "in_progress", title: "hijacked" }, ctxB, wsB)).rejects.toBeInstanceOf(NotFoundError);
     expect(await snapshot()).toEqual({ status: "assigned", version: 1, title: "A private action" });
+  });
+
+  it("[db] updateActionStatus: foreign id with a wrong version → NotFound, no 'Current version' disclosure", async () => {
+    const err = await updateActionStatus(actionA, { version: 99, status: "in_progress" }, ctxB, wsB).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(NotFoundError);
+    expect(String((err as Error).message)).not.toMatch(/version/i);
+    expect(await snapshot()).toEqual({ status: "assigned", version: 1, title: "A private action" });
+  });
+
+  it("[db] updateActionStatus: foreign id with an invalid transition → NotFound (no status disclosure)", async () => {
+    const err = await updateActionStatus(actionA, { version: 1, status: "verified" }, ctxB, wsB).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(NotFoundError);
+    expect(String((err as Error).message)).not.toMatch(/assigned/);
+    expect(await snapshot()).toEqual({ status: "assigned", version: 1, title: "A private action" });
+  });
+
+  it("[db] updateAction: two concurrent writers from the same version → exactly one wins, the other gets 409", async () => {
+    const ctxA = ctxFor(wsA);
+    const results = await Promise.allSettled([
+      updateAction(actionRaceA, { version: 1, title: "writer one" }, ctxA, wsA),
+      updateAction(actionRaceA, { version: 1, title: "writer two" }, ctxA, wsA),
+    ]);
+    const ok = results.filter((r) => r.status === "fulfilled");
+    const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    expect(ok).toHaveLength(1);
+    expect(failed).toHaveLength(1);
+    expect(failed[0].reason).toBeInstanceOf(ConflictError);
+    const row = await db.action.findUniqueOrThrow({ where: { id: actionRaceA }, select: { version: true, title: true } });
+    expect(row.version).toBe(2);
+  });
+
+  it("[db] updateAction: a stale version is a 409 ConflictError and nothing changes", async () => {
+    const ctxA = ctxFor(wsA);
+    const before = await db.action.findUniqueOrThrow({ where: { id: actionRaceA }, select: { version: true, title: true } });
+    await expect(updateAction(actionRaceA, { version: 1, title: "stale" }, ctxA, wsA)).rejects.toBeInstanceOf(ConflictError);
+    expect(await db.action.findUniqueOrThrow({ where: { id: actionRaceA }, select: { version: true, title: true } })).toEqual(before);
   });
 });
