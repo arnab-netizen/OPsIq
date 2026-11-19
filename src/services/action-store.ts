@@ -32,7 +32,9 @@ function timestampValue(value: Date | null): Prisma.Sql {
 function metadataExpression(patch: ActionMetadataPatch): Prisma.Sql {
   const unset = JSON.stringify(patch.unset ?? []);
   const set = JSON.stringify(patch.set ?? {});
-  return Prisma.sql`(COALESCE(a.metadata, '{}'::jsonb) - ARRAY(SELECT jsonb_array_elements_text(${unset}::jsonb))) || ${set}::jsonb`;
+  // Only a JSON object is a valid base: SQL NULL, JSON null, a scalar or an array is treated as {}
+  // (jsonb `-` on a scalar raises 22023, and `array || object` would append, corrupting metadata).
+  return Prisma.sql`((CASE WHEN jsonb_typeof(a.metadata) = 'object' THEN a.metadata ELSE '{}'::jsonb END) - ARRAY(SELECT jsonb_array_elements_text(${unset}::jsonb))) || ${set}::jsonb`;
 }
 
 const TIMESTAMP_KEYS = ["due_at", "started_at", "completed_at", "verified_at", "created_at", "updated_at"] as const;
