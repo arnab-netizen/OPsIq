@@ -9,7 +9,16 @@ import type { Prisma } from "@/generated/prisma/client";
 
 let calibrationStore: CalibrationRecord[] = [];
 
-export async function addItems(items: OperatorItem[]): Promise<void> {
+/**
+ * Persist decisions, each atomically with its OPERATOR_ITEM_CREATED audit event in its own transaction.
+ * `onItemPersisted`, when given, runs as the LAST statement of each item's transaction (e.g. settling that
+ * decision's reserved plan-quota unit), so it commits exactly when that item does. A failure stops the
+ * batch: items before it stay committed, the failing item and the rest are not written.
+ */
+export async function addItems(
+  items: OperatorItem[],
+  onItemPersisted?: (tx: Prisma.TransactionClient) => Promise<void>
+): Promise<void> {
   for (const item of items) {
     // Fail closed: require workspaceId on item (route layer already verifies via canonical enforcement)
     if (!item.workspaceId) {
@@ -97,6 +106,7 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
         },
         tx
       );
+      if (onItemPersisted) await onItemPersisted(tx);
     });
   }
 }

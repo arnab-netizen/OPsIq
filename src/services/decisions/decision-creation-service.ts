@@ -162,9 +162,10 @@ export async function persistDecisionItemWithinQuota(
 
 /**
  * Persist the decisions produced by a decision-engine run (POST /api/run) under the decision:create plan
- * quota: one unit per decision, reserved atomically before the write (PlanLimitError 402 when the run would
- * exceed the limit) and returned if the write fails. addItems writes through the global db in its own
- * per-item transactions, so the reservation cannot share one transaction with it.
+ * quota: one unit per decision, reserved atomically before any write (PlanLimitError 402 when the run would
+ * exceed the limit). addItems writes each decision in its own transaction, and each decision's unit is
+ * settled inside that transaction, so usage always equals the decisions actually persisted: on a failure at
+ * item k, the k committed decisions stay counted and only the units of the unwritten items are returned.
  */
 export async function addDecisionItemsWithinQuota(workspaceId: string, items: OperatorItem[]): Promise<void> {
   enforceWorkspaceId(workspaceId, "addDecisionItemsWithinQuota", "OperatorItem");
@@ -172,10 +173,12 @@ export async function addDecisionItemsWithinQuota(workspaceId: string, items: Op
   if (items.some((item) => item.workspaceId !== workspaceId)) {
     throw new Error("Decision items must belong to the verified workspace");
   }
-  await withCapabilityQuota(workspaceId, CAPABILITIES.DECISION_CREATE, () => addItems(items), {
-    amount: items.length,
-    keptFromResult: () => items.length,
-  });
+  await withCapabilityQuota(
+    workspaceId,
+    CAPABILITIES.DECISION_CREATE,
+    (reservation) => addItems(items, (tx) => reservation.settle(tx)),
+    { amount: items.length }
+  );
 }
 
 export interface BulkCreateInput {
