@@ -6,90 +6,10 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 23,
-  "total_failing_tests": 62,
-  "nondeterministic_files": 3,
+  "total_files": 1,
+  "total_failing_tests": 1,
+  "nondeterministic_files": 0,
   "files": [
-    {
-      "path": "src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts",
-      "failed": 22,
-      "cluster": "http-runtime-proof",
-      "classification": "PRE_EXISTING_ON_MAIN / ENVIRONMENT_HARNESS",
-      "reason": "Hostile-HTTP proofs expect a running HTTP server; res.status is undefined without one (expected undefined to be 401).",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts",
-      "failed": 3,
-      "cluster": "http-runtime-proof",
-      "classification": "PRE_EXISTING_ON_MAIN / ENVIRONMENT_HARNESS",
-      "reason": "Health/readiness/liveness proofs require a running server endpoint not started in the unit harness.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts",
-      "failed": 9,
-      "cluster": "event-persistence",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_API_OR_RUNTIME_DEFECT",
-      "reason": "EventEmitterService.getAggregateEvents is not a function (test references an API not present).",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-3-event-emitter-integration.test.ts",
-      "failed": 5,
-      "cluster": "event-persistence",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_API_OR_RUNTIME_DEFECT",
-      "reason": "EventEmitterService.getAggregateEvents is not a function (same root as rp1).",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-i/phase-i10-error-normalization.test.ts",
-      "failed": 3,
-      "cluster": "error-sanitization-expectation",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
-      "reason": "Asserts raw technical detail (OOM/test_operation/Error message) but governance returns sanitized operator messages.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-i/phase-i-runtime-discipline.test.ts",
-      "failed": 1,
-      "cluster": "error-sanitization-expectation",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
-      "reason": "Expects diagnostic detail separate from operator message; current sanitization differs.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts",
-      "failed": 1,
-      "cluster": "error-sanitization-expectation",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
-      "reason": "Expects 'dead-letter queue' substring in a now-sanitized operator message.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/p2b/path-convergence.test.ts",
-      "failed": 2,
-      "cluster": "fraud-threshold",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION_OR_LOGIC",
-      "reason": "Fraud-risk assessment threshold mismatch (expected high->medium, medium->low). NOT a protected P2B-42 file.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/demo-engagement-proof-backfill.test.ts",
-      "failed": 1,
-      "cluster": "db-contract",
-      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
-      "reason": "PrismaClientValidationError during demo engagement proof backfill.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/demo-permission-proof-backfill.test.ts",
-      "failed": 1,
-      "cluster": "db-contract",
-      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
-      "reason": "PrismaClientValidationError during demo permission proof backfill.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
     {
       "path": "src/__tests__/signup-schema-contract.test.ts",
       "failed": 1,
@@ -97,103 +17,8 @@
       "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
       "reason": "UserRoleAssignment owner OWNER_VIEW capability contract assertion fails.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/first-value.test.ts",
-      "failed": 1,
-      "cluster": "db-contract",
-      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
-      "reason": "Prisma/DB contract failure during first-value flow.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/security/diagnostic-key-validation.test.ts",
-      "failed": 1,
-      "cluster": "security-auth",
-      "classification": "PRE_EXISTING_ON_MAIN / TEST_COLLECTION_ERROR",
-      "reason": "Suite fails during collection (0 tests collected) under the full-suite harness.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/security/ops-endpoints-auth.test.ts",
-      "failed": 1,
-      "cluster": "security-auth",
-      "classification": "PRE_EXISTING_ON_MAIN / TEST_COLLECTION_ERROR",
-      "reason": "Suite fails during collection (0 tests collected) under the full-suite harness.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/p2a/p2a-production-path.test.ts",
-      "failed": 1,
-      "cluster": "test-defect",
-      "classification": "PRE_EXISTING_ON_MAIN / TEST_DEFECT",
-      "reason": "Imports @jest/globals under the vitest environment (collection error).",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/infra/__tests__/critical-readiness.test.ts",
-      "failed": 1,
-      "cluster": "test-mock",
-      "classification": "PRE_EXISTING_ON_MAIN / TEST_DEFECT",
-      "reason": "vi.mock of @/lib/db is missing the getDbInstance export.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/ci-cd/workflow-validation.test.ts",
-      "failed": 1,
-      "cluster": "workflow-assertion",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
-      "reason": "Assertion on deploy-staging.yml trigger ('should trigger on push to main') no longer matches the workflow.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-3-serialization-hardening.test.ts",
-      "failed": 1,
-      "cluster": "concurrency-flake",
-      "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
-      "reason": "Concurrent-replay-under-contention test ('should replay deterministically while concurrent writes are happening') intermittently asserts an off-by-one event count (e.g. expected 46 to be 45). Non-deterministic: passes 7/7 in isolation and on most full-suite runs, but intermittently fails the maintained blocking lane (main CI run 26996823006). Not in the bootable-production surface; not a protected Phase D/P2B/P2C test. Quarantined to make the blocking lane deterministic; still runs in the visible non-blocking lane.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-3-concurrency-proofs.test.ts",
-      "failed": 1,
-      "cluster": "concurrency-flake",
-      "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
-      "reason": "Same contention-driven flake class as phase-3-serialization-hardening: this suite drives concurrent writes/replay (6 Promise.all concurrent-write blocks across 'monotonic eventNumbers across concurrent updates', 'deterministic replay across concurrent operations', 'concurrent mutations on same aggregate', 'event loss under concurrent pressure'). Produces the same off-by-one event-count non-determinism under the CI runner's contention. After phase-3-serialization-hardening was quarantined, the maintained blocking lane still failed intermittently (CI run 27001605179) on this cluster. Authorized cluster quarantine: only the two maintained event-sourcing suites that exercise concurrent contended writes are excluded; all deterministic event-sourcing suites (authoritative-replay, event-replay-engine, event-sourcing-truth, hardening-proofs, idempotency-proofs, snapshot-engine, projection-engine, db-smoke) remain in the blocking lane. Not in the bootable-production surface; not a protected Phase D/P2B/P2C test. Still runs in the visible non-blocking lane.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-e/e2-replay-determinism-proof.test.ts",
-      "failed": 1,
-      "cluster": "concurrency-flake",
-      "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
-      "reason": "Replay-determinism proof with a wall-clock PERFORMANCE assertion: 'should replay 1000 events with consistent performance' asserts expect(duration2).toBeLessThan(duration1 * 2) on two in-process Date.now() replay timings. This is machine-timing nondeterministic (GC/JIT/CI contention) and intermittently fails (e.g. 'expected 7 to be less than 4') -- CI run 27076172614 and reproduced locally -- while the deterministic assertions in the same test (replay1.hash === replay2.hash, eventCount === 1000) pass. Same nondeterministic replay class as phase-3-serialization-hardening and phase-3-concurrency-proofs. Not in the bootable-production surface; touches no production/launch user journey; not a protected Phase D/P2B/P2C test. Quarantined to keep the maintained blocking lane deterministic during launch week; still runs in the visible non-blocking lane.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/services/diagnosis-legal-governance-textual.test.ts",
-      "failed": 1,
-      "cluster": "legal-governance-heuristic",
-      "classification": "PRE_EXISTING / HEURISTIC_CONFLICT_P2_VS_P3G",
-      "reason": "Deterministic single-test conflict surfaced when CI first ran the DB-backed maintained suite past the (previously red) governance/lint gates on 2026-06-24 (CI run 28065415725: 1 failed / 10692 passed / 6 skipped). Case 'P2 fix — non-governance cases do NOT fire > 2 items each with only 1 weak LEGAL_TEXT term ... boundary guard' asserts .not.toBe(LEGAL_GOVERNANCE_RISK), but consulting-engine/diagnosis-engine.ts fin_isLegalGovernanceByText fires because the item 'RBI ... regulatory intervention increasingly probable' matches STRONG_LEGAL_TEXT (P3-G terms 'regulatory intervention' / 'rbi.*intervention'), making it substantive. This is a genuine semantic conflict between the P2 false-positive guard and the P3-G RBI-intervention detection -- a consulting-engine product judgment OUTSIDE Owner Mode scope, with regression risk to real RBI-takeover/licence-revocation cases either way. NOT authored by the Owner Mode Decision OS branch; the file's other 17 tests pass. Quarantined (owner-approved) to make the blocking lane green; still runs in the visible non-blocking lane. Resolve under the consulting-engine heuristic owner, not Owner Mode.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/workflows/ci-cd-foundations.test.ts",
-      "failed": 3,
-      "cluster": "workflow-assertion",
-      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
-      "reason": "Three tests assert workflowContent.on.push.branches and workflowContent.on.pull_request.branches on .github/workflows/ci-cd-foundations.yml, but that file uses only workflow_dispatch (no push/pull_request triggers). TypeError: Cannot read properties of undefined (reading 'branches') at lines 32 and 38. Last modified ebd66cde (predates A7.7 merge d5594f76); proven present on main before A7.7.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/services/__tests__/recommendation.reranking.test.ts",
-      "failed": 9,
-      "cluster": "test-mock",
-      "classification": "PRE_EXISTING_ON_MAIN / MOCK_CONTRACT_DRIFT",
-      "reason": "All 9 tests call vi.spyOn(db.recommendation, 'findMany') but db.recommendation lacks findMany in the Prisma mock; Error: The property 'findMany' is not defined on the object. Mock contract has drifted from the Prisma model definition. Last modified 1383008f (predates A7.7 merge d5594f76); proven present on main before A7.7. Resolve by updating mock to match current Prisma schema.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     }
   ],
-  "_remediation_note": "TEST-02: route-scanner + phase-i10-enforcement-scanner un-quarantined into the blocking lane after fixing the exemption registry (reassessment-scan token-auth exemption; scanners now consult the canonical PUBLIC_ROUTE_EXEMPTIONS). 0 unprotected/unwrapped routes remain."
+  "_remediation_note": "TEST-02: route-scanner + phase-i10-enforcement-scanner un-quarantined into the blocking lane after fixing the exemption registry (reassessment-scan token-auth exemption; scanners now consult the canonical PUBLIC_ROUTE_EXEMPTIONS). 0 unprotected/unwrapped routes remain.",
+  "_remediation_note_session7": "2026-11-19: 22 of 23 entries released after the fixes merged (#688 #690 #692 #697 #699 #700 #701 #689 ... see ledger session 7). Evidence: all 23 files passed on the integrated main with a DB in two consecutive runs (562 tests), and the 14 that the non-DB lane runs pass with TEST_WITH_DB=false. Config-excluded runtime proofs and phase-* tests are now run by the MANDATORY manifest step in db-verify. Remaining entry (signup-schema-contract) is fixed by PR #693; remove it there or in the next change. Released: src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts, src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts, src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts, src/__tests__/phase-3-event-emitter-integration.test.ts, src/__tests__/phase-i/phase-i10-error-normalization.test.ts, src/__tests__/phase-i/phase-i-runtime-discipline.test.ts, src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts, src/__tests__/p2b/path-convergence.test.ts, src/__tests__/demo-engagement-proof-backfill.test.ts, src/__tests__/demo-permission-proof-backfill.test.ts, src/__tests__/first-value.test.ts, src/__tests__/security/diagnostic-key-validation.test.ts, src/__tests__/security/ops-endpoints-auth.test.ts, src/__tests__/p2a/p2a-production-path.test.ts, src/infra/__tests__/critical-readiness.test.ts, src/__tests__/ci-cd/workflow-validation.test.ts, src/__tests__/phase-3-serialization-hardening.test.ts, src/__tests__/phase-3-concurrency-proofs.test.ts, src/__tests__/phase-e/e2-replay-determinism-proof.test.ts, src/__tests__/services/diagnosis-legal-governance-textual.test.ts, src/__tests__/workflows/ci-cd-foundations.test.ts, src/services/__tests__/recommendation.reranking.test.ts"
 }
