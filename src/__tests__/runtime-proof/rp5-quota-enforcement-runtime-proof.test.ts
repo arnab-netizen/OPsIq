@@ -259,7 +259,7 @@ describe("Phase RP5: Quota Enforcement Runtime Proof (real quota code, real DB)"
       expect(after.body.remaining.experiments).toBe(0);
     });
 
-    it("N+k PARALLEL increments never exceed N: exactly N succeed, k are refused 402, and the counter ends at N", async () => {
+    it("N+k PARALLEL requests through the wrapper: exactly N succeed, k are refused 402 (not 500), and the counter ends at N", async () => {
       const t = await seedTenant("quota-parallel");
       const k = 5;
 

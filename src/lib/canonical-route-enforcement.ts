@@ -42,7 +42,7 @@ import {
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
-import { safeDiagnosticMessage } from "@/infra/telemetry-sanitizer";
+import { safeDiagnosticMessage, sanitizedErrorForLog } from "@/infra/telemetry-sanitizer";
 import { isCanonicalJsonResponse, stringifyRouteResponse } from "@/lib/canonical-json-response";
 import { db } from "@/lib/db";
 import { verifyDiagnosticKey } from "@/lib/security/diagnostic-key";
@@ -177,6 +177,12 @@ export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string
 
 /** 4xx statuses an owner-safe domain AppError uses to reject a request it understood. */
 const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
+
+/** The message of a thrown AppError that reports a 4xx status: owner-safe by construction (see src/infra/errors.ts). */
+function readOwnerSafeMessage(thrown: unknown): string {
+  const message = thrown !== null && typeof thrown === "object" ? (thrown as { message?: unknown }).message : undefined;
+  return typeof message === "string" ? message : String(thrown);
+}
 
 /**
  * True when a handler rejected the request on purpose with an owner-safe domain AppError
@@ -756,7 +762,9 @@ export function withCanonicalEnforcement(
         const appError = error as { statusCode?: unknown; code?: unknown };
         const statusCode = typeof appError.statusCode === "number" ? appError.statusCode : 500;
         const errorCode = typeof appError.code === "string" ? appError.code : "INTERNAL_ERROR";
-        const errorMessage = safeDiagnosticMessage(error);
+        // A 4xx AppError carries an owner-safe message by construction and is shown to the client verbatim (a
+        // 5xx message never reaches the client), so only the 5xx text is passed through the diagnostic sanitizer.
+        const errorMessage = statusCode >= 400 && statusCode < 500 ? readOwnerSafeMessage(error) : safeDiagnosticMessage(error);
 
         classifiedError = new ClassifiedApiError(
           errorMessage,
@@ -811,7 +819,7 @@ export function withCanonicalEnforcement(
 
       try {
         if (traceManager) {
-          traceManager.recordStage("HANDLER_FAILED", "failed", String(error));
+          traceManager.recordStage("HANDLER_FAILED", "failed", safeDiagnosticMessage(error));
           const failedTrace = traceManager.finalize({
             allowed: false,
             statusCode: 500,
@@ -858,7 +866,7 @@ export function withCanonicalEnforcement(
       } else {
         // The error goes in the error slot (the context was previously passed there and logged
         // as "[object Object]").
-        logger.error("[WRAPPER_FAILED]", error, wrapperLogContext);
+        logger.error("[WRAPPER_FAILED]", sanitizedErrorForLog(error), wrapperLogContext);
       }
 
       const clientFacingMessage = isKnownSafeClientError

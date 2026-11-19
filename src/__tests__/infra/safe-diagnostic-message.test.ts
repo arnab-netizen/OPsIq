@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { safeDiagnosticMessage } from "@/infra/telemetry-sanitizer";
+import { safeDiagnosticMessage, sanitizedErrorForLog } from "@/infra/telemetry-sanitizer";
 
 describe("safeDiagnosticMessage", () => {
   it("returns an ordinary Error message unchanged", () => {
@@ -28,5 +28,29 @@ describe("safeDiagnosticMessage", () => {
     const out = safeDiagnosticMessage(new Error("x".repeat(5000)));
     expect(out.length).toBeLessThanOrEqual(501);
     expect(out.endsWith("…")).toBe(true);
+  });
+
+  it.each([
+    ["token assignment", "failed with token=abc123def456", "abc123def456"],
+    ["client secret", "client_secret: s3cr3tvalue", "s3cr3tvalue"],
+    ["stripe live key", "bad key sk_live_51Habcdefghijklmnop", "sk_live_51Habcdefghijklmnop"],
+    ["basic auth header", "Authorization: Basic dXNlcjpwYXNzd29yZA==", "dXNlcjpwYXNzd29yZA=="],
+    ["scheme-less credentials", "connect u:hunter2@db.internal:5432 refused", "hunter2"],
+    ["prisma unique key value", "Unique constraint failed. Key (email)=(alice@corp.com) already exists", "alice@corp.com"],
+  ])("redacts %s", (_label, input, secret) => {
+    expect(safeDiagnosticMessage(new Error(input))).not.toContain(secret);
+  });
+
+  it("never throws for a value whose String() throws", () => {
+    const hostile = { toString() { throw new Error("nope"); } };
+    expect(safeDiagnosticMessage(hostile)).toBe("[unprintable error]");
+  });
+
+  it("sanitizedErrorForLog keeps the error name and scrubs message and stack", () => {
+    const original = new TypeError("db at postgresql://u:pw@h.example/db failed");
+    const safe = sanitizedErrorForLog(original);
+    expect(safe.name).toBe("TypeError");
+    expect(safe.message).not.toContain("pw@");
+    expect(safe.stack ?? "").not.toContain("u:pw@h.example");
   });
 });

@@ -162,24 +162,52 @@ export function redactTenantExistence(value: unknown, redactWorkspaceId: boolean
  * of known owner-safe 4xx errors (see canonical-route-enforcement).
  */
 const DIAGNOSTIC_MESSAGE_MAX_LENGTH = 500;
+const DIAGNOSTIC_STACK_MAX_LENGTH = 8000;
 
-export function safeDiagnosticMessage(thrown: unknown): string {
-  let text: string;
-  if (thrown instanceof Error) {
-    text = thrown.message;
-  } else if (typeof thrown === "string") {
-    text = thrown;
-  } else {
-    text = String(thrown);
+// Credential shapes the generic SENSITIVE_PATTERNS do not cover. Kept local to the diagnostic path so the
+// behaviour of redactSecrets() for other callers is unchanged.
+const DIAGNOSTIC_EXTRA_PATTERNS: ReadonlyArray<[RegExp, string]> = [
+  [/\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]+/g, REDACTED],
+  [/\b(?:client[_-]?secret|access[_-]?key|private[_-]?key|secret|token)\s*[=:]\s*[^\s,;}]+/gi, REDACTED],
+  [/\bBasic\s+[A-Za-z0-9+/=]{8,}/gi, `Basic ${REDACTED}`],
+  [/\b[\w.-]+:[^\s@/:]+@[\w.-]+(?::\d+)?/g, `${REDACTED}@host`],
+  [/Key \([^)]*\)=\([^)]*\)/g, "Key (…)=(…)"],
+];
+
+function readThrownText(thrown: unknown): string {
+  try {
+    if (thrown instanceof Error) return thrown.message;
+    if (typeof thrown === "string") return thrown;
+    return String(thrown);
+  } catch {
+    return "[unprintable error]";
   }
+}
+
+export function safeDiagnosticMessage(thrown: unknown, maxLength: number = DIAGNOSTIC_MESSAGE_MAX_LENGTH): string {
+  const text = readThrownText(thrown);
   // URL-shaped values (connection strings, webhook URLs with embedded credentials)
   // keep only their scheme, matching the scrub applied to driver errors in classified-error.
-  const withoutUrls = text.replace(/[a-z][a-z0-9+.-]*:\/\/[^\s]+/gi, (match: string) => `${match.split("://")[0]}://***`);
-  const redacted = redactSecrets(withoutUrls);
-  const result = typeof redacted === "string" ? redacted : "[REDACTED]";
-  return result.length > DIAGNOSTIC_MESSAGE_MAX_LENGTH
-    ? `${result.slice(0, DIAGNOSTIC_MESSAGE_MAX_LENGTH)}…`
-    : result;
+  let scrubbed = text.replace(/[a-z][a-z0-9+.-]*:\/\/[^\s]+/gi, (match: string) => `${match.split("://")[0]}://***`);
+  for (const [pattern, replacement] of DIAGNOSTIC_EXTRA_PATTERNS) {
+    scrubbed = scrubbed.replace(pattern, replacement);
+  }
+  const redacted = redactSecrets(scrubbed);
+  const result = typeof redacted === "string" ? redacted : REDACTED;
+  return result.length > maxLength ? `${result.slice(0, maxLength)}…` : result;
+}
+
+/**
+ * The thrown value in a form that is safe to hand to the logger: the same name, with message and stack passed
+ * through safeDiagnosticMessage (stack lines can embed the message, a URL or a query).
+ */
+export function sanitizedErrorForLog(thrown: unknown): Error {
+  const safe = new Error(safeDiagnosticMessage(thrown));
+  if (thrown instanceof Error) {
+    safe.name = thrown.name;
+    safe.stack = thrown.stack ? safeDiagnosticMessage(thrown.stack, DIAGNOSTIC_STACK_MAX_LENGTH) : undefined;
+  }
+  return safe;
 }
 
 /**

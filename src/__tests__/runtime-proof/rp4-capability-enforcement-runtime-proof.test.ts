@@ -10,7 +10,8 @@
  * + policies/capability-check). Only the Next.js cookie jar is stubbed, to carry the seeded session token.
  *
  * Contracts exercised (from the code, not invented):
- *   - PATCH /api/recommendations/[id] declares requireCapabilities [RECOMMENDATION_APPROVE];
+ *   - PATCH /api/recommendations/[id] requires RECOMMENDATION_APPROVE (declared on the wrapper and re-checked in the
+ *     handler, so these tests prove the behaviour of the two layers together, not the wrapper declaration alone);
  *   - POST  /api/recommendations      declares requireCapabilities [RECOMMENDATION_CREATE];
  *   - ROLE_CAPABILITIES: ADMIN_OR_PORTFOLIO_MANAGER holds approve+create; EXPERIENCED_CONSULTANT holds create but
  *     NOT approve; BEGINNER_CONSULTANT holds neither; a self-serve owner (ADMIN_OR_PORTFOLIO_MANAGER with
