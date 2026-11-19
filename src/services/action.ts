@@ -15,6 +15,8 @@ import { requireServiceContext } from "@/lib/service-auth";
 import { recordActionUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
+import type { Prisma } from "@/generated/prisma/client";
+import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -88,7 +90,7 @@ export async function createAction(
       idempotencyKey,
       "action.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: Prisma.TransactionClient) => {
           const action = await tx.action.create({
             data: {
               id: randomUUID(),
@@ -466,7 +468,7 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  const updates: Prisma.ActionUncheckedUpdateInput = { version: { increment: 1 } };
 
   if (input.status) {
     validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
@@ -502,10 +504,18 @@ export async function updateAction(
   return updated;
 }
 
-export async function listActions(workspaceId: string, params: any) {
+export interface ListActionsParams {
+  engagementId?: string;
+  status?: string;
+  assignedTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listActions(workspaceId: string, params: ListActionsParams) {
   enforceWorkspaceId(workspaceId, "listActions", "action");
 
-  const where: any = {};
+  const where: Prisma.ActionWhereInput = {};
   if (params.engagementId) {
     where.engagementId = params.engagementId;
     where.engagement = { workspaceId };
@@ -538,7 +548,7 @@ export async function listActions(workspaceId: string, params: any) {
 
 export async function createActionsFromInterventions(
   engagementId: string,
-  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  interventions: PrioritizedIntervention[],
   authContext: CanonicalAuthContext,
   workspaceId: string
 ) {

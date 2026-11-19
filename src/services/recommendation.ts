@@ -17,6 +17,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
+import type { Prisma } from "@/generated/prisma/client";
 import { validateRecommendationTransition } from "@/policies/state-transition";
 import type { RecommendationStatus } from "@/domain/constants/statuses";
 import { assertCapability } from "@/services/entitlement.service";
@@ -471,7 +472,7 @@ export async function createRecommendation(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return db.$transaction(async (tx: any) => {
+        return db.$transaction(async (tx: Prisma.TransactionClient) => {
           const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
           const recommendation = await tx.recommendation.create({
