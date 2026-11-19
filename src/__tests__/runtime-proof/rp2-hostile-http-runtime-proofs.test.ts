@@ -57,7 +57,6 @@ const RUN = randomUUID().slice(0, 8);
 const DAY = 24 * 60 * 60 * 1000;
 const SESSION_COOKIE = "opsiq_session";
 const DIAGNOSTIC_KEY = `rp2-diag-${randomBytes(16).toString("hex")}`;
-const GENERIC_500 = "Something went wrong on our side. Nothing was saved. Please try again.";
 
 type RouteHandler = (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<Response>;
 
@@ -350,12 +349,19 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
       const own = await call("GET", `/api/notifications/${theirId}`, { session: adminB.token });
       expect(own.status).toBe(200);
       expect(own.body.notification.id).toBe(theirId);
-      // Spoofed header claiming WS_B: denied by the handler's workspace check, no record in the body.
+      // Spoofed header claiming WS_B: the workspace-scoped lookup finds nothing -> tenant-safe 404
+      // (#708: indistinguishable from a non-existent id). Only the caller-supplied id is echoed;
+      // no field of the other workspace's record and not its workspace id.
       const spoof = await call("GET", `/api/notifications/${theirId}`, { session: adminA.token, headers: { "x-workspace-id": WS_B } });
-      expect(spoof.status).toBe(401);
-      expect(spoof.body).toMatchObject({ error: "Access denied", correlationId: spoof.correlationId });
-      expect(spoof.text).not.toContain(theirId);
+      expect(spoof.status).toBe(404);
+      expect(spoof.body).toEqual({
+        error: `Notification not found: ${theirId}`,
+        correlationId: spoof.correlationId,
+        classification: "handler_invocation_not_found",
+        stage: "handler_invocation",
+      });
       expect(spoof.text).not.toContain("ws-b private");
+      expect(spoof.text).not.toContain(WS_B);
     });
   });
 
@@ -374,12 +380,17 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
       expect(Object.keys(owner.body).sort()).toEqual(envelope);
 
       // Same request from workspace A, even naming WS_B in the header: the workspace-scoped lookup
-      // finds nothing. Current contract is the wrapper's generic 500 (handler throws a raw Error);
-      // see the RP2 report finding (expected 404).
+      // finds nothing -> tenant-safe 404 (#708/#710 typed not-found; formerly a generic 500).
       const cross = await call("GET", `/api/decision/export?decisionId=${ITEM_B}`, { session: adminA.token, headers: { "x-workspace-id": WS_B } });
-      expect(cross.status).toBe(500);
-      expect(cross.body).toEqual({ error: GENERIC_500, correlationId: cross.correlationId, classification: "handler_invocation_failed", stage: "handler_invocation" });
+      expect(cross.status).toBe(404);
+      expect(cross.body).toEqual({
+        error: `Decision not found: ${ITEM_B}`,
+        correlationId: cross.correlationId,
+        classification: "handler_invocation_not_found",
+        stage: "handler_invocation",
+      });
       expect(cross.text).not.toContain(ITEM_B_PROBLEM);
+      expect(cross.text).not.toContain(WS_B);
     });
   });
 
@@ -525,11 +536,17 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
   });
 
   describe("14. Malformed JSON -> fails closed", () => {
-    it("authenticated malformed body -> generic 500 with no parser detail; well-formed body -> 200", async () => {
+    it("authenticated malformed body -> 400 with no parser detail (#708); well-formed body -> 200", async () => {
       const bad = await call("POST", "/api/verify", { session: adminA.token, raw: "{invalid json}" });
-      expect(bad.status).toBe(500);
-      expect(bad.body).toEqual({ error: GENERIC_500, correlationId: bad.correlationId, classification: "handler_invocation_failed", stage: "handler_invocation" });
-      expect(bad.text).not.toMatch(/JSON|Unexpected token|position/i);
+      expect(bad.status).toBe(400);
+      expect(bad.body).toEqual({
+        error: "Invalid JSON in request body",
+        correlationId: bad.correlationId,
+        classification: "handler_invocation_validation_error",
+        stage: "handler_invocation",
+      });
+      // The fixed client message names the fault class only; no parser internals leak.
+      expect(bad.text).not.toMatch(/Unexpected token|position \d|SyntaxError|at JSON\.parse/i);
 
       const good = await call("POST", "/api/verify", { session: adminA.token, json: { inputs: {}, decisionHash: "test" } });
       expect(good.status).toBe(200);
