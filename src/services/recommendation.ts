@@ -17,6 +17,9 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
+import type { Prisma } from "@/generated/prisma/client";
+import { validateRecommendationTransition, type RecommendationStoredStatus } from "@/policies/state-transition";
+import type { RecommendationStatus } from "@/domain/constants/statuses";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
@@ -412,6 +415,23 @@ export async function createRecommendation(
     throw new NotFoundError("Engagement", input.engagementId);
   }
 
+  // Recommendation.findingId has no composite FK binding it to the same engagement/workspace,
+  // so a caller-supplied findingId must be proven to belong to the verified engagement before
+  // it is written (otherwise a workspace-B recommendation could hang off a workspace-A finding).
+  if (input.findingId) {
+    const finding = await db.finding.findFirst({
+      where: {
+        id: input.findingId,
+        engagementId: input.engagementId,
+        engagement: { workspaceId: validatedWorkspaceId },
+      },
+      select: { id: true },
+    });
+    if (!finding) {
+      throw new NotFoundError("Finding", input.findingId);
+    }
+  }
+
   const evidenceAssessment = await evaluateEngagementEvidence(
     input.engagementId,
     validatedWorkspaceId
@@ -452,7 +472,7 @@ export async function createRecommendation(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return db.$transaction(async (tx: any) => {
+        return db.$transaction(async (tx: Prisma.TransactionClient) => {
           const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
           const recommendation = await tx.recommendation.create({
@@ -1277,12 +1297,24 @@ export async function updateRecommendation(
   }
 
   if (rec.version !== input.version) {
-    throw new Error("Recommendation was modified. Please refresh and try again.");
+    throw new ConflictError(
+      "Recommendation has been modified by another process. Please refresh and try again.",
+      { code: "STALE_VERSION" }
+    );
   }
 
   const updates: Record<string, unknown> = { version: { increment: 1 } };
 
-  if (input.status) {
+  // Status changes on a governed Recommendation go through the centralized lifecycle
+  // (policies/state-transition RECOMMENDATION_TRANSITIONS; the stored initial "pending" mirrors
+  // "proposed"). Any other stored status outside the lifecycle has no allowed transitions, so it
+  // fails closed with InvalidStateTransitionError rather than being silently rewritten.
+  const statusChanged = input.status !== undefined && input.status !== rec.status;
+  if (statusChanged) {
+    validateRecommendationTransition(
+      rec.status as RecommendationStoredStatus,
+      input.status as RecommendationStatus
+    );
     updates.status = input.status;
   }
 
@@ -1311,10 +1343,32 @@ export async function updateRecommendation(
     updates.constraintsConsidered = mergedConstraints;
   }
 
-  const updated = await db.recommendation.update({
-    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
+  // Compare-and-set on version + the status the transition was validated against, so a
+  // concurrent writer cannot slip a second (unvalidated) transition past the check above.
+  const updateResult = await db.recommendation.updateMany({
+    where: {
+      id: recommendationId,
+      workspaceId: validatedWorkspaceId,
+      version: input.version,
+      status: rec.status,
+    },
     data: updates,
   });
+
+  if (updateResult.count === 0) {
+    throw new ConflictError(
+      "Recommendation has been modified by another process",
+      { code: "OPTIMISTIC_LOCK_FAILED" }
+    );
+  }
+
+  const updated = await db.recommendation.findUnique({
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
+  });
+
+  if (!updated) {
+    throw new NotFoundError("Recommendation", recommendationId);
+  }
 
   await emitAuditEvent({
     eventName: "recommendation.updated",
@@ -1322,14 +1376,23 @@ export async function updateRecommendation(
     entityType: "recommendation",
     entityId: recommendationId,
     workspaceId: validatedWorkspaceId,
-    payload: updates,
+    payload: {
+      previousStatus: rec.status,
+      status: updated.status,
+      statusChanged,
+      previousVersion: rec.version,
+      version: updated.version,
+      ...(input.priority ? { previousPriority: rec.priority, priority: updated.priority } : {}),
+      ...(hasExpectationField ? { constraintsConsidered: updates.constraintsConsidered } : {}),
+    },
     visibility: "internal",
   });
 
   // Emit canonical event to maintain event sourcing trail
   const eventPayload: Record<string, unknown> = {};
-  if (input.status) {
+  if (statusChanged) {
     eventPayload.status = input.status;
+    eventPayload.previousStatus = rec.status;
   }
   if (input.priority) {
     eventPayload.priority = input.priority;
