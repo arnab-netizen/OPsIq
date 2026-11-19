@@ -9,7 +9,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { assertCapability, resolveWorkspaceTier } from "@/services/entitlement.service";
-import { PlanLimitError } from "@/infra/errors";
+import { PlanLimitError, ValidationError } from "@/infra/errors";
 import { RateLimitError } from "@/infra/rate-limit";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
 
@@ -47,7 +47,7 @@ export const POST = withCanonicalEnforcement(
     // Require Idempotency-Key (fail-closed)
     const idempotencyKey = ctx.request?.headers.get("Idempotency-Key");
     if (!idempotencyKey) {
-      throw new Error("Idempotency-Key header required");
+      throw new ValidationError("Idempotency-Key header required");
     }
 
     // Check rate limiting: workspace requests/hour limit.

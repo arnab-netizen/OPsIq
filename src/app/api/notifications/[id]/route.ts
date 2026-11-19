@@ -6,7 +6,7 @@
 
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 import {
   getNotification,
   markAsRead,
@@ -24,7 +24,7 @@ export const GET = withCanonicalEnforcement(async (
   const { id } = params;
 
   if (!id) {
-    throw new Error("Notification ID is required");
+    throw new ValidationError("Notification ID is required");
   }
 
   const workspaceId = ctx.verifiedWorkspaceId;
@@ -53,7 +53,7 @@ export const PATCH = withCanonicalEnforcement(async (
   const { id } = params;
 
   if (!id) {
-    throw new Error("Notification ID is required");
+    throw new ValidationError("Notification ID is required");
   }
 
   const workspaceId = ctx.verifiedWorkspaceId;

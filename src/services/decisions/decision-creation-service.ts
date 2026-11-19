@@ -3,7 +3,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
-import { AppError, PlanLimitError } from "@/infra/errors";
+import { AppError, PlanLimitError, ValidationError } from "@/infra/errors";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -47,16 +47,16 @@ export async function createDecision(
 
   // Validate input
   if (!title?.trim()) {
-    throw new Error("Decision title is required");
+    throw new ValidationError("Decision title is required");
   }
   if (!type?.trim()) {
-    throw new Error("Decision type is required");
+    throw new ValidationError("Decision type is required");
   }
   if (!Number.isFinite(impact) || impact <= 0) {
-    throw new Error("Impact must be a positive number");
+    throw new ValidationError("Impact must be a positive number");
   }
   if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
-    throw new Error("Confidence must be between 0 and 1");
+    throw new ValidationError("Confidence must be between 0 and 1");
   }
   if (!workspaceId) {
     throw new Error("Workspace ID is required");
@@ -212,11 +212,11 @@ export async function createDecisionsBulk(
   const { decisions } = input;
 
   if (!Array.isArray(decisions) || decisions.length === 0) {
-    throw new Error("At least one decision is required");
+    throw new ValidationError("At least one decision is required");
   }
 
   if (decisions.length > 1000) {
-    throw new Error("Cannot create more than 1000 decisions at once");
+    throw new ValidationError("Cannot create more than 1000 decisions at once");
   }
 
   const successful: CreateDecisionResult[] = [];

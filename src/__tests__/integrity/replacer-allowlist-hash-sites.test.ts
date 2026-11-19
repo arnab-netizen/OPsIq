@@ -8,9 +8,12 @@
  * The three hash sites now use the repo's canonical serializer (stableStringify: recursively sorted keys,
  * undefined omitted, ISO dates). Compatibility: none of these values is ever persisted or compared across
  * processes (ExecutionJobSafety keys live in an in-memory Map; AuditOutputGenerator has no production importer;
- * chaos lock hashes are computed and verified inside one run). In addition, for the flat inputs they hash today
- * the new bytes are IDENTICAL to the old ones — proven below against the legacy formula — so no previously
- * produced value changes; only inputs that used to collide now differ.
+ * chaos lock hashes are computed and verified inside one run). In addition, for the flat, plain-JSON inputs they
+ * hash today the new bytes are IDENTICAL to the old ones — proven below against the legacy formula — so no
+ * previously produced value changes; only inputs that used to collide now differ. Byte identity is NOT general:
+ * integer-like keys are now emitted in ascending numeric order ahead of other keys (JS object key order), not
+ * string-sorted, and stableStringify ignores toJSON except for Date, so values such as Decimal, URL or Buffer are
+ * serialized from their own enumerable properties rather than their toJSON output.
  */
 import { describe, it, expect } from "vitest";
 import { createHash } from "crypto";

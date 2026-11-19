@@ -1,5 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getItems } from "@/services/operator/store";
 import { computeCalibration, computeCalibrationBySegment } from "@/services/calibration/engine";
@@ -18,7 +18,7 @@ export const GET = withCanonicalEnforcement(
     }
 
     if (!canView(role)) {
-      throw new Error("Insufficient permissions");
+      throw new ForbiddenError("Insufficient permissions");
     }
 
     const actorId = ctx.verifiedActorId;
