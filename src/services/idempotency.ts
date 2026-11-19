@@ -23,7 +23,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 export interface IdempotencyOptions {
   idempotencyKey: string;
   operationName: string;
-  authContext?: any;
+  authContext?: unknown;
   actorId?: string;
   workspaceId?: string;
   payload: Record<string, unknown>;
@@ -90,8 +90,8 @@ export async function checkIdempotencyKey(
             expiresAt,
           },
         });
-      } catch (err: any) {
-        if (err.code === "P2002") {
+      } catch (err: unknown) {
+        if ((err as { code?: unknown } | null)?.code === "P2002") {
           // Unique constraint violation due to concurrent request
           // Fetch the newly created record from concurrent request
           const concurrent = await db.idempotencyRecord.findFirst({
@@ -147,9 +147,9 @@ export async function checkIdempotencyKey(
         expiresAt,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Handle concurrent creation race
-    if (err.code === "P2002") {
+    if ((err as { code?: unknown } | null)?.code === "P2002") {
       // Another request won the race - fetch and check its status
       const concurrent = await db.idempotencyRecord.findFirst({
         where: { idempotencyKey },
