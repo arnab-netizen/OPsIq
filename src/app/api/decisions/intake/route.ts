@@ -58,7 +58,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     try {
-      // Plan quota: decision:create is checked and recorded atomically with the insert (402 at the limit).
+      // decision:create usage is recorded atomically with the insert (record-only: intake is free by contract).
       const decision = await persistDecisionItemWithinQuota(
         workspaceId,
         buildIntakeOperatorItemData(input, workspaceId, actorId)

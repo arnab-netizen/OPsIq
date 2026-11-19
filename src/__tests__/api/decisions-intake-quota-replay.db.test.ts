@@ -1,7 +1,7 @@
 /**
- * POST /api/decisions/intake consumes the decision:create plan quota exactly once per decision: a replay with
- * the same idempotency key returns the cached response without consuming a second unit, and a new request
- * at the limit is refused with 402 PLAN_LIMIT_EXCEEDED.
+ * POST /api/decisions/intake records decision:create usage exactly once per decision: a replay with the same
+ * idempotency key returns the cached response without recording a second unit. Intake is free by contract
+ * (record-only), so a request past the plan limit is recorded, never refused.
  *
  * The real route handler runs through withCanonicalEnforcement against a real database; only the
  * session/policy facts are supplied (the repo has no cookie/session harness outside the Next runtime), the
@@ -55,7 +55,7 @@ async function post(idempotencyKey: string, title: string): Promise<{ status: nu
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/decisions/intake decision:create quota", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/decisions/intake decision:create usage", () => {
   const stamp = randomUUID().slice(0, 8);
   let plan: PlanEntitlementFixture | undefined;
 
@@ -83,7 +83,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/decisions/intake decision:
     }
   });
 
-  it("[db] a replay with the same idempotency key does not consume a second unit; a new request at the limit gets 402", async () => {
+  it("[db] a replay with the same idempotency key does not record a second unit; a request past the limit is recorded, not refused", async () => {
     const key = `intake-${stamp}-a`;
     const first = await post(key, `Intake decision ${stamp}`);
     expect(first.status).toBe(200);
@@ -95,17 +95,17 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/decisions/intake decision:
     expect(await usageSum(ids.workspaceId)).toBe(1);
     expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(1);
 
-    const overLimit = await post(`intake-${stamp}-b`, `Second intake ${stamp}`);
-    expect(overLimit.status).toBe(402);
-    expect(String(overLimit.body.error)).toContain("exceeds limit 1");
-    expect(await usageSum(ids.workspaceId)).toBe(1);
-    expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(1);
+    // Intake is free by contract and was never plan-gated: past the limit it is recorded, never refused.
+    const pastLimit = await post(`intake-${stamp}-b`, `Second intake ${stamp}`);
+    expect(pastLimit.status).toBe(200);
+    expect(await usageSum(ids.workspaceId)).toBe(2);
+    expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(2);
 
-    // Retrying the refused key replays its recorded 402; it never creates a decision or consumes a unit.
-    const refusedReplay = await post(`intake-${stamp}-b`, `Second intake ${stamp}`);
-    expect(refusedReplay.status).toBe(402);
-    expect(refusedReplay.body.error).toBe(overLimit.body.error);
-    expect(await usageSum(ids.workspaceId)).toBe(1);
-    expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(1);
+    // Its replay returns the cached response and consumes nothing more.
+    const pastLimitReplay = await post(`intake-${stamp}-b`, `Second intake ${stamp}`);
+    expect(pastLimitReplay.status).toBe(200);
+    expect(pastLimitReplay.body.decisionId).toBe(pastLimit.body.decisionId);
+    expect(await usageSum(ids.workspaceId)).toBe(2);
+    expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(2);
   }, 60_000);
 });

@@ -391,8 +391,12 @@ export async function createRecommendation(
   // Plan quota: generate_recommendation is reserved atomically before the write (PlanLimitError 402 at the
   // limit) and kept only by settling it inside the recommendation insert's transaction. A failed write or
   // an idempotent replay settles nothing, so the unit is returned.
-  const outcome = await withCapabilityQuota(workspaceId, "generate_recommendation", (reservation) =>
-    persistRecommendation(input, authContext, workspaceId, reservation, idempotencyKey)
+  // Enforced: createRecommendation asserted generate_recommendation before usage was recorded here.
+  const outcome = await withCapabilityQuota(
+    workspaceId,
+    "generate_recommendation",
+    (reservation) => persistRecommendation(input, authContext, workspaceId, reservation, idempotencyKey),
+    { enforce: true }
   );
   return outcome.recommendation;
 }

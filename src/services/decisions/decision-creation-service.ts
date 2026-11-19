@@ -68,7 +68,8 @@ export async function createDecision(
     const decision = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       // Plan quota: decision:create is checked and recorded atomically in the SAME transaction as the
       // decision row and its audit event (PlanLimitError 402 at the limit); a failed insert rolls it back.
-      await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE);
+      // Enforced: POST /api/decisions/create (the only caller) asserted decision:create before this PR.
+      await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE, 1, { enforce: true });
       const created = await tx.operatorItem.create({
         data: {
           id: randomUUID(),
@@ -142,9 +143,8 @@ export async function createDecision(
 }
 
 /**
- * Persist one caller-built decision OperatorItem (POST /api/decisions/intake) under the decision:create
- * plan quota: the limit check, the usage record and the insert run in ONE transaction under the capability
- * lock, so concurrent intakes can never exceed the limit (PlanLimitError 402 at the limit).
+ * Persist one caller-built decision OperatorItem (POST /api/decisions/intake) and record its decision:create
+ * usage in ONE transaction under the capability lock (record-only: never a PlanLimitError).
  */
 export async function persistDecisionItemWithinQuota(
   workspaceId: string,
@@ -155,15 +155,17 @@ export async function persistDecisionItemWithinQuota(
     throw new Error("Decision data must belong to the verified workspace");
   }
   return db.$transaction(async (tx: Prisma.TransactionClient) => {
-    await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE);
+    // Record-only: intake is free by contract (PAYWALL_BOUNDARY: FREE_FOUNDATION) and was never plan-gated,
+    // so its decision:create usage is recorded atomically with the insert but never refused.
+    await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE, 1, { enforce: false });
     return tx.operatorItem.create({ data });
   });
 }
 
 /**
- * Persist the decisions produced by a decision-engine run (POST /api/run) under the decision:create plan
- * quota: one unit per decision, reserved atomically before any write (PlanLimitError 402 when the run would
- * exceed the limit). addItems writes each decision in its own transaction, and each decision's unit is
+ * Persist the decisions produced by a decision-engine run (POST /api/run) and record their decision:create
+ * usage: one unit per decision, reserved atomically before any write (record-only: never a PlanLimitError).
+ * addItems writes each decision in its own transaction, and each decision's unit is
  * settled inside that transaction, so usage always equals the decisions actually persisted: on a failure at
  * item k, the k committed decisions stay counted and only the units of the unwritten items are returned.
  */
@@ -177,7 +179,8 @@ export async function addDecisionItemsWithinQuota(workspaceId: string, items: Op
     workspaceId,
     CAPABILITIES.DECISION_CREATE,
     (reservation) => addItems(items, (tx) => reservation.settle(tx)),
-    { amount: items.length }
+    // Record-only: POST /api/run was never plan-gated on decision:create, so usage is recorded, never refused.
+    { amount: items.length, enforce: false }
   );
 }
 

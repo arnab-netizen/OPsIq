@@ -105,18 +105,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] decision:create usage equals the dec
     });
   }
 
-  it("POST /api/run write path: a full batch keeps every unit; a run that would exceed the limit is 402 before any write", async () => {
+  it("POST /api/run write path: a full batch keeps every unit, and (record-only) a run past the limit is never refused", async () => {
     const ws = await freshWorkspace(6);
     await addDecisionItemsWithinQuota(ws.workspaceId, runItems(ws, 4, null));
     expect(await persisted(ws.workspaceId)).toBe(4);
     expect(await usageSum(ws.workspaceId)).toBe(4);
 
-    await expect(addDecisionItemsWithinQuota(ws.workspaceId, runItems(ws, 3, null))).rejects.toMatchObject({
-      statusCode: 402,
-      code: "PLAN_LIMIT_EXCEEDED",
-    });
-    expect(await persisted(ws.workspaceId)).toBe(4);
-    expect(await usageSum(ws.workspaceId)).toBe(4);
+    // /api/run was never plan-gated: usage is recorded, the limit never produces a 402.
+    await addDecisionItemsWithinQuota(ws.workspaceId, runItems(ws, 3, null));
+    expect(await persisted(ws.workspaceId)).toBe(7);
+    expect(await usageSum(ws.workspaceId)).toBe(7);
   });
 
   it("bulk create path (createDecisionsBulk): usage equals the decisions persisted when item k fails in the database or at the limit", async () => {

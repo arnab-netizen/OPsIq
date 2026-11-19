@@ -6,7 +6,7 @@
  * key answered 500 instead of 402 (and the same for 404, 409, ...). The fix persists the status, code and
  * owner-safe message (never a 5xx message) and rebuilds the matching AppError subclass on replay.
  *
- * 402 runs through the real POST /api/decisions/intake handler (plan quota). 404 / 409 / 5xx run through a
+ * 402 runs through the real POST /api/decisions/create handler (enforced decision:create plan quota). 404 / 409 / 5xx run through a
  * handler wrapped by the real withCanonicalEnforcement, using the exact check → replay → record pattern
  * every idempotent route uses, so the replayed response is rendered by the production error path. Only the
  * session/policy facts are supplied (the same approach as decisions-intake-quota-replay.db.test.ts).
@@ -43,14 +43,14 @@ vi.mock("@/services/auth", () => {
   };
 });
 
-import { POST as intakePost } from "@/app/api/decisions/intake/route";
+import { POST as createPost } from "@/app/api/decisions/create/route";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { checkIdempotencyKey, recordIdempotencyError } from "@/services/idempotency";
 
 type Outcome = "not_found" | "conflict" | "internal";
 let executions = 0;
 
-/** The idempotent-route pattern (decisions/*, intake, create): claim, replay a cached outcome, else run and record. */
+/** The idempotent-route pattern (the decision routes, intake, create): claim, replay a cached outcome, else run and record. */
 const idempotentPost = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const key = ctx.request!.headers.get("idempotency-key")!;
@@ -72,7 +72,7 @@ const idempotentPost = withCanonicalEnforcement(
 );
 
 async function call(
-  handler: typeof intakePost,
+  handler: typeof createPost,
   path: string,
   idempotencyKey: string,
   body: Record<string, unknown>
@@ -108,7 +108,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] a retried idempotency key replays th
     await db.user.create({ data: { id: ids.actorId, email: `idem-replay-${stamp}@example.com`, isActive: true, updatedAt: new Date() } });
     await db.workspace.create({ data: { id: ids.workspaceId, name: "Idempotency replay", slug: `idem-replay-${stamp}` } });
     await db.workspaceMembership.create({ data: { userId: ids.actorId, workspaceId: ids.workspaceId, role: "admin", isActive: true } });
-    // decision:create is in the plan with a limit of 0: every intake is refused with 402.
+    // decision:create is in the plan with a limit of 0: every enforced decision create is refused with 402.
     plan = await seedPlanEntitlement([ids.workspaceId], ["decision:create"], { "decision:create": 0 });
   });
 
@@ -128,12 +128,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] a retried idempotency key replays th
   });
 
   it("402: a plan-limit refusal replays as 402 PLAN_LIMIT_EXCEEDED with the same body; the retry creates and consumes nothing", async () => {
-    const key = `intake-${stamp}-402`;
-    const first = await call(intakePost, "/api/decisions/intake", key, { title: `Refused intake ${stamp}` });
+    const key = `create-${stamp}-402`;
+    const decision = { title: `Refused decision ${stamp}`, type: "pricing", impact: 1000, confidence: 0.5 };
+    const first = await call(createPost, "/api/decisions/create", key, decision);
     expect(first.status).toBe(402);
     expect(first.body.classification).toBe("handler_invocation_plan_limit_exceeded");
 
-    const retry = await call(intakePost, "/api/decisions/intake", key, { title: `Refused intake ${stamp}` });
+    const retry = await call(createPost, "/api/decisions/create", key, decision);
     expect(retry.status).toBe(402);
     expect(shape(retry.body)).toEqual(shape(first.body));
     expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(0);

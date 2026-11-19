@@ -383,14 +383,30 @@ function capabilityQuotaLockKey(workspaceId: string, key: string): string {
  * Throws PlanLimitError (HTTP 402, PLAN_LIMIT_EXCEEDED) when the limit would be exceeded or the
  * entitlement cannot be verified (fail closed, the same contract as assertCapability). When the caller's
  * business write runs in the same transaction, a failed write rolls the usage back with it.
+ *
+ * With `{ enforce: false }` (record-only) the same lock is taken and the same usage row is written, but no
+ * plan limit or entitlement is evaluated, so it never throws PlanLimitError. A database failure still
+ * propagates, so a business write in the same transaction never commits without its usage row.
  */
 export async function consumeCapabilityUsage(
   tx: Prisma.TransactionClient,
   workspaceId: string,
   key: string,
-  amount: number = 1
+  amount: number = 1,
+  options: CapabilityUsageMode = {}
 ): Promise<CapabilityCheck> {
-  return recordCapabilityUsageWithinLimit(tx, workspaceId, key, amount, null);
+  return recordCapabilityUsageWithinLimit(tx, workspaceId, key, amount, null, options.enforce ?? true);
+}
+
+/**
+ * Whether a quota-recorded operation is also LIMITED by the plan. `enforce: true` (the default) refuses
+ * with PlanLimitError (402) at the limit, and is used only where the released code already gated the
+ * operation on the plan capability. `enforce: false` records usage exactly (same ledger rows, same
+ * reservation recovery) but never refuses: for operations that were never plan-gated, so recording usage
+ * cannot newly produce a 402.
+ */
+export interface CapabilityUsageMode {
+  enforce?: boolean;
 }
 
 /** UsageEvent.reservationEntry values written by a quota reservation (see the UsageEvent model). */
@@ -419,7 +435,8 @@ async function recordCapabilityUsageWithinLimit(
   workspaceId: string,
   key: string,
   amount: number,
-  reservationId: string | null
+  reservationId: string | null,
+  enforce: boolean
 ): Promise<CapabilityCheck> {
   if (!workspaceId || !key) {
     throw new ValidationError("workspaceId and key are required");
@@ -430,15 +447,17 @@ async function recordCapabilityUsageWithinLimit(
 
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${capabilityQuotaLockKey(workspaceId, key)}, 0))`;
 
-  let check: CapabilityCheck;
-  try {
-    check = evaluateCapability(await resolveEntitlements(workspaceId, tx), key, amount);
-  } catch (error) {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`);
-  }
-  if (!check.allowed) {
-    throw new PlanLimitError(key, check.reason || "Plan limit exceeded");
+  let check: CapabilityCheck = { allowed: true };
+  if (enforce) {
+    try {
+      check = evaluateCapability(await resolveEntitlements(workspaceId, tx), key, amount);
+    } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`);
+    }
+    if (!check.allowed) {
+      throw new PlanLimitError(key, check.reason || "Plan limit exceeded");
+    }
   }
 
   await tx.usageEvent.create({
@@ -452,7 +471,7 @@ async function recordCapabilityUsageWithinLimit(
     },
   });
 
-  return { ...check, usage: (check.usage ?? 0) + amount };
+  return enforce ? { ...check, usage: (check.usage ?? 0) + amount } : check;
 }
 
 /**
@@ -475,7 +494,7 @@ export interface CapabilityReservation {
   settle(tx: Prisma.TransactionClient): Promise<void>;
 }
 
-export interface CapabilityQuotaOptions<T> {
+export interface CapabilityQuotaOptions<T> extends CapabilityUsageMode {
   /** Units reserved before the operation runs (default 1). */
   amount?: number;
   /**
@@ -581,7 +600,8 @@ async function finalizeReservationInTransaction(
  *
  * 1. Reserve: the limit check and a durable reservation row are written atomically in their own short
  *    transaction under the capability lock. Throws PlanLimitError (402) here, before the operation runs,
- *    when the limit would be exceeded.
+ *    when the limit would be exceeded. With `enforce: false` (record-only) the reservation is written
+ *    without any limit check and never refused; a database failure still fails before the operation.
  * 2. Run: the operation receives the reservation and keeps each unit it consumes with
  *    `reservation.settle(tx)` inside the transaction of the business write consuming it.
  * 3. Finalize: when the operation returns or throws, every unit not settled is returned with one
@@ -598,18 +618,20 @@ export async function withCapabilityQuota<T>(
   options: CapabilityQuotaOptions<T> = {}
 ): Promise<T> {
   const amount = options.amount ?? 1;
+  const enforce = options.enforce ?? true;
   const reservationId = randomUUID();
 
   try {
     await withStatementTimeout(
       db,
       CAPABILITY_QUOTA_TRANSACTION_TIMEOUT_MS,
-      (tx) => recordCapabilityUsageWithinLimit(tx, workspaceId, key, amount, reservationId),
+      (tx) => recordCapabilityUsageWithinLimit(tx, workspaceId, key, amount, reservationId, enforce),
       `capability_quota.reserve:${key}`
     );
   } catch (error) {
-    // Fail closed, as assertCapability does: an unverifiable entitlement is a denial.
-    if (error instanceof PlanLimitError || error instanceof ValidationError) throw error;
+    // Record-only: never a 402; a failed reservation write fails the operation before it runs.
+    if (!enforce || error instanceof PlanLimitError || error instanceof ValidationError) throw error;
+    // Enforced: fail closed, as assertCapability does: an unverifiable entitlement is a denial.
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`);
   }

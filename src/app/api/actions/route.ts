@@ -79,7 +79,8 @@ export const POST = withCanonicalEnforcement(
     const { isNew: _isNew, result } = await withIdempotency(
       idempotencyKey,
       "action.create",
-      async () => createAction(body, ctx, workspaceId),
+      // Enforced: this route was plan-gated on action_create before usage was recorded (see the check above).
+      async () => createAction(body, ctx, workspaceId, undefined, { enforce: true }),
       body,
       ctx.verifiedActorId
     );

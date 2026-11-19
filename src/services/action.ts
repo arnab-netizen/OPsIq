@@ -12,7 +12,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { enforceActionRules } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { withCapabilityQuota, type CapabilityReservation } from "@/services/entitlement.service";
+import { withCapabilityQuota, type CapabilityReservation, type CapabilityUsageMode } from "@/services/entitlement.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
 import type { Prisma } from "@/generated/prisma/client";
@@ -76,15 +76,21 @@ export async function createAction(
   input: CreateActionInput,
   authContext: CanonicalAuthContext,
   workspaceId: string,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  quotaMode: CapabilityUsageMode = { enforce: false }
 ) {
-  // Plan quota: action_create is reserved atomically before the write (PlanLimitError 402 at the limit),
-  // for every caller (route, consulting pipeline, execute workflow), and kept only by settling it inside
-  // the action insert's transaction. A failed write or an idempotent replay settles nothing, so the unit
-  // is returned. Auth and workspace context are verified first, before any database access.
+  // Plan quota: action_create usage is reserved atomically before the write and kept only by settling it
+  // inside the action insert's transaction; a failed write or an idempotent replay settles nothing, so the
+  // unit is returned. The action_create LIMIT (PlanLimitError 402) applies only when the caller enforces
+  // it: POST /api/actions, the one path that was plan-gated before usage was recorded here. The execute
+  // workflow and the consulting pipeline were never gated, so by default usage is recorded, never refused.
+  // Auth and workspace context are verified first, before any database access.
   requireServiceContext(authContext, workspaceId);
-  const outcome = await withCapabilityQuota(workspaceId, "action_create", (reservation) =>
-    persistAction(input, authContext, workspaceId, reservation, idempotencyKey)
+  const outcome = await withCapabilityQuota(
+    workspaceId,
+    "action_create",
+    (reservation) => persistAction(input, authContext, workspaceId, reservation, idempotencyKey),
+    { enforce: quotaMode.enforce ?? false }
   );
   return outcome.action;
 }

@@ -32,7 +32,8 @@ export async function runConsultingPipeline(
     workspaceId,
     "decision_engine",
     () => executeConsultingPipeline(engagementId, authContext, workspaceId),
-    { keptFromResult: (result) => (result.status === "SUCCESS" ? 1 : 0) }
+    // Enforced: the pipeline asserted decision_engine before usage was recorded here.
+    { enforce: true, keptFromResult: (result) => (result.status === "SUCCESS" ? 1 : 0) }
   );
 }
 

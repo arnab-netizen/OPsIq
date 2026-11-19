@@ -102,8 +102,12 @@ export async function createEngagement(
   // Plan quota: create_engagement is reserved atomically before the write (PlanLimitError 402 at the
   // limit) and kept only by settling it inside the engagement insert's transaction. A failed create or an
   // idempotent replay of the same engagement settles nothing, so the unit is returned.
-  const outcome = await withCapabilityQuota(workspaceId, "create_engagement", (reservation) =>
-    persistEngagement(input, authContext, workspaceId, reservation)
+  // Enforced: createEngagement asserted create_engagement before usage was recorded here.
+  const outcome = await withCapabilityQuota(
+    workspaceId,
+    "create_engagement",
+    (reservation) => persistEngagement(input, authContext, workspaceId, reservation),
+    { enforce: true }
   );
   return { id: outcome.id, code: outcome.code };
 }

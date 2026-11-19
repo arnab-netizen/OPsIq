@@ -1042,7 +1042,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       baselineMetrics,
       recommendationId
     );
-    // Plan quota: one decision:create unit per created decision (PlanLimitError 402 over the limit).
+    // decision:create usage: one unit per persisted decision (record-only: this route was never plan-gated).
     await addDecisionItemsWithinQuota(workspace.workspaceId, operatorItems);
 
     // Get first operator item ID for lifecycle tracking

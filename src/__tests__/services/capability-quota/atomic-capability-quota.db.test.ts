@@ -147,7 +147,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] atomic capability quota under concur
     expect(await usageSum(ws.workspaceId, "create_engagement")).toBe(LIMIT);
   }, 180_000);
 
-  it(`[db] action_create: ${PARALLEL} concurrent createAction calls with limit ${LIMIT} admit exactly ${LIMIT}`, async () => {
+  it(`[db] action_create (POST /api/actions, enforced): ${PARALLEL} concurrent createAction calls with limit ${LIMIT} admit exactly ${LIMIT}`, async () => {
     const ws = await freshWorkspace({ action_create: LIMIT });
     const outcomes = await race(ws, "action", (i) => ({ engagementId: ws.engagementId, title: `Race action ${stamp} ${i}` }));
     const { ok, denied, other } = tally(outcomes);
@@ -207,26 +207,28 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] atomic capability quota under concur
     expect(await usageSum(ws.workspaceId, "decision:create")).toBe(LIMIT);
   }, 180_000);
 
-  it(`[db] decision:create via POST /api/decisions/intake's write: ${PARALLEL} concurrent intakes with limit ${LIMIT} admit exactly ${LIMIT}`, async () => {
+  // POST /api/decisions/intake and POST /api/run were never plan-gated: their decision:create usage is
+  // record-only. Under the same concurrency, nothing is refused and usage counts every decision exactly.
+  it(`[db] decision:create via POST /api/decisions/intake's write (record-only): ${PARALLEL} concurrent intakes past limit ${LIMIT} all persist and are all counted`, async () => {
     const ws = await freshWorkspace({ "decision:create": LIMIT });
     const outcomes = await race(ws, "intake", (i) => ({ title: `Race intake ${stamp} ${i}` }));
     const { ok, denied, other } = tally(outcomes);
     expect(other).toEqual([]);
-    expect(ok).toHaveLength(LIMIT);
-    expect(denied).toHaveLength(PARALLEL - LIMIT);
-    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(LIMIT);
-    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(LIMIT);
+    expect(denied).toEqual([]);
+    expect(ok).toHaveLength(PARALLEL);
+    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(PARALLEL);
+    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(PARALLEL);
   }, 180_000);
 
-  it(`[db] decision:create via POST /api/run's write: ${PARALLEL} concurrent runs with limit ${LIMIT} admit exactly ${LIMIT}`, async () => {
+  it(`[db] decision:create via POST /api/run's write (record-only): ${PARALLEL} concurrent runs past limit ${LIMIT} all persist and are all counted`, async () => {
     const ws = await freshWorkspace({ "decision:create": LIMIT });
     const outcomes = await race(ws, "run", (i) => ({ title: `Race run ${stamp} ${i}` }));
     const { ok, denied, other } = tally(outcomes);
     expect(other).toEqual([]);
-    expect(ok).toHaveLength(LIMIT);
-    expect(denied).toHaveLength(PARALLEL - LIMIT);
-    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(LIMIT);
-    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(LIMIT);
+    expect(denied).toEqual([]);
+    expect(ok).toHaveLength(PARALLEL);
+    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(PARALLEL);
+    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(PARALLEL);
   }, 180_000);
 
   it(`[db] decision:create: a plan with a null (unlimited) limit admits all ${PARALLEL} concurrent creates`, async () => {

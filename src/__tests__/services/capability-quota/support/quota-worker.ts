@@ -75,6 +75,7 @@ async function run(job: QuotaWorkerJob): Promise<{ id: string; status?: string }
       return { id: eng.id };
     }
     case "action": {
+      // Exactly as POST /api/actions calls it: the one action_create path that enforces the plan limit.
       const action = await createAction(
         {
           engagementId: String(input.engagementId),
@@ -82,7 +83,9 @@ async function run(job: QuotaWorkerJob): Promise<{ id: string; status?: string }
           title: String(input.title),
         },
         ctx,
-        job.workspaceId
+        job.workspaceId,
+        undefined,
+        { enforce: true }
       );
       return { id: action.id };
     }
