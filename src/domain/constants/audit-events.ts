@@ -248,6 +248,7 @@ export const AUDIT_EVENTS = {
   BILLING_EVENT_REJECTED: "billing.event_rejected",
   BILLING_DUPLICATE_SUBSCRIPTION_CANCELED: "billing.duplicate_subscription_canceled",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
+  WEBHOOK_DEAD_LETTERED: "webhook.dead_lettered",
 
   // Owner Mode
   OWNER_DASHBOARD_VIEWED: "owner.dashboard_viewed",

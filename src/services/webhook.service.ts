@@ -363,7 +363,8 @@ function claimOf(
  *    duplicate) instead of surfacing a 500.
  *  - Failed event: the retry claim is a compare-and-set failed -> processing on (id, status,
  *    attempts); concurrent redeliveries that lose it re-read and answer in_progress / duplicate.
- *  - Dead-letter move is the same compare-and-set, so it happens once.
+ *  - Dead-letter move is the same compare-and-set, so it happens once, and commits together with
+ *    its WEBHOOK_DEAD_LETTERED audit row.
  */
 export async function getOrCreateWebhookEvent(
   stripeEventId: string,
@@ -439,17 +440,47 @@ export async function getOrCreateWebhookEvent(
       const now = new Date();
 
       if (nextAttempt > MAX_ATTEMPTS) {
-        // Move to dead-letter (exactly once: compare-and-set on the observed state)
-        const moved: { count: number } = await db.webhookEvent.updateMany({
-          where: casWhere,
-          data: {
-            status: "dead_letter",
-            lastError: `Exceeded max attempts (${MAX_ATTEMPTS})`,
-            attempts: nextAttempt,
-            updatedAt: now,
+        // Move to dead-letter (exactly once: compare-and-set on the observed state) and audit the
+        // move in the SAME transaction: an abandoned financial event is never dead-lettered
+        // without its audit row, and a lost CAS writes no audit row. An audit failure rolls the
+        // move back; the error propagates (500) and the next delivery retries the move.
+        const moved = await withStatementTimeout(
+          db,
+          WEBHOOK_STATEMENT_TIMEOUT_MS,
+          async (tx) => {
+            const transitioned = await tx.webhookEvent.updateMany({
+              where: casWhere,
+              data: {
+                status: "dead_letter",
+                lastError: `Exceeded max attempts (${MAX_ATTEMPTS})`,
+                attempts: nextAttempt,
+                updatedAt: now,
+              },
+            });
+            if (transitioned.count !== 1) return false;
+            await emitAuditEvent(
+              {
+                eventName: AUDIT_EVENTS.WEBHOOK_DEAD_LETTERED,
+                // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): see syncEntitlementsForSubscription.
+                actorType: "system",
+                entityType: "WebhookEvent",
+                entityId: stripeEventId,
+                correlationId: stripeEventId,
+                payload: {
+                  type: existingEvent.type,
+                  attempts: nextAttempt,
+                  maxAttempts: MAX_ATTEMPTS,
+                  previousError: existingEvent.lastError,
+                },
+                visibility: "internal",
+              },
+              tx
+            );
+            return true;
           },
-        });
-        if (moved.count !== 1) continue;
+          "webhook.dead-letter"
+        );
+        if (!moved) continue;
 
         logger.error("Webhook event moved to dead-letter", {
           stripeEventId,
