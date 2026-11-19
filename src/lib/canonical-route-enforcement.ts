@@ -939,6 +939,7 @@ export function withCanonicalEnforcement(
         headers: {
           "x-correlation-id": finalCorrelationId,
           "content-type": "application/json",
+          ...retryAfterHeaderFor(error, classifiedError.statusCode),
         },
       });
     }
@@ -1053,4 +1054,18 @@ async function enforceCommercialRequirement(
   if (!capability) return;
   const { assertCommercialCapability } = await import("@/services/billing/commercial-policy.service");
   await assertCommercialCapability(workspaceId, capability);
+}
+
+/**
+ * Retry-After for a rate-limited (429) error response, when the thrown AppError knows its window
+ * (TooManyRequestsError/RateLimitError carry details.retryAfterSeconds). Any other status, or a 429 without a
+ * known window, gets no header. Structural check (not instanceof) so it works across module boundaries.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+function retryAfterHeaderFor(error: unknown, statusCode: number): Record<string, string> {
+  if (statusCode !== 429 || !error || typeof error !== "object") return {};
+  const details = (error as { details?: unknown }).details;
+  const seconds = details && typeof details === "object" ? (details as { retryAfterSeconds?: unknown }).retryAfterSeconds : undefined;
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) return {};
+  return { "retry-after": String(Math.ceil(seconds)) };
 }
