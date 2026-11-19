@@ -12,7 +12,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { enforceActionRules, UNSATISFIABLE_ACTION_RULE_IDS } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { recordActionUsage } from "@/services/usage.service";
+import { withCapabilityQuota, type CapabilityReservation, type CapabilityUsageMode } from "@/services/entitlement.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
 import type { Prisma } from "@/generated/prisma/client";
@@ -78,6 +78,30 @@ export async function createAction(
   input: CreateActionInput,
   authContext: CanonicalAuthContext,
   workspaceId: string,
+  idempotencyKey?: string,
+  quotaMode: CapabilityUsageMode = { enforce: false }
+) {
+  // Plan quota: action_create usage is reserved atomically before the write and kept only by settling it
+  // inside the action insert's transaction; a failed write or an idempotent replay settles nothing, so the
+  // unit is returned. The action_create LIMIT (PlanLimitError 402) applies only when the caller enforces
+  // it: POST /api/actions, the one path that was plan-gated before usage was recorded here. The execute
+  // workflow and the consulting pipeline were never gated, so by default usage is recorded, never refused.
+  // Auth and workspace context are verified first, before any database access.
+  requireServiceContext(authContext, workspaceId);
+  const outcome = await withCapabilityQuota(
+    workspaceId,
+    "action_create",
+    (reservation) => persistAction(input, authContext, workspaceId, reservation, idempotencyKey),
+    { enforce: quotaMode.enforce ?? false }
+  );
+  return outcome.action;
+}
+
+async function persistAction(
+  input: CreateActionInput,
+  authContext: CanonicalAuthContext,
+  workspaceId: string,
+  reservation: CapabilityReservation,
   idempotencyKey?: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -142,6 +166,8 @@ export async function createAction(
             visibility: "internal",
           }, tx);
 
+          // Keep the reserved action_create unit atomically with the insert (last statement).
+          await reservation.settle(tx);
           return action;
         }, { timeout: 30000 });
       },
@@ -169,33 +195,32 @@ export async function createAction(
         });
       }
 
-      // Record usage for action creation (only on new creation)
-      await recordActionUsage(validatedWorkspaceId, 1, {
-        actionId: result.result.id,
-        engagementId: input.engagementId,
-      });
-
       logger.info("Action created", {
         actionId: result.result.id,
         engagementId: input.engagementId,
       });
     }
 
-    return result.result;
+    return { action: result.result, isNew: result.isNew };
   }
 
-  const action = await db.action.create({
-    data: {
-      id: randomUUID(),
-      engagementId: input.engagementId,
-      recommendationId: input.recommendationId,
-      title: input.title,
-      description: input.description || null,
-      assignedTo: input.assignedTo || null,
-      dueAt: input.dueDate ? new Date(input.dueDate) : null,
-      status: "draft",
-      updatedAt: new Date(),
-    },
+  // The insert and the kept action_create unit commit together.
+  const action = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.action.create({
+      data: {
+        id: randomUUID(),
+        engagementId: input.engagementId,
+        recommendationId: input.recommendationId,
+        title: input.title,
+        description: input.description || null,
+        assignedTo: input.assignedTo || null,
+        dueAt: input.dueDate ? new Date(input.dueDate) : null,
+        status: "draft",
+        updatedAt: new Date(),
+      },
+    });
+    await reservation.settle(tx);
+    return created;
   });
 
   // Emit event sourcing event (non-blocking)
@@ -247,18 +272,12 @@ export async function createAction(
     });
   }
 
-  // Record usage for action creation
-  await recordActionUsage(validatedWorkspaceId, 1, {
-    actionId: action.id,
-    engagementId: input.engagementId,
-  });
-
   logger.info("Action created", {
     actionId: action.id,
     engagementId: input.engagementId,
   });
 
-  return action;
+  return { action, isNew: true };
 }
 
 export async function getActionsForEngagement(engagementId: string, userId: string, workspaceId: string) {

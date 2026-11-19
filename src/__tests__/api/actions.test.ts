@@ -31,6 +31,7 @@ import type { CreateActionInput } from "@/services/action";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { NotFoundError } from "@/infra/errors";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { seedPlanEntitlement, cleanupPlanEntitlement, type PlanEntitlementFixture } from "@/__tests__/test-helpers/plan-entitlement";
 
 function ctxFor(actorId: string, workspaceId: string): CanonicalAuthContext {
   return {
@@ -96,6 +97,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     const otherEngagementId = randomUUID();
     let recommendationId: string;
     let otherRecommendationId: string;
+    let plan: PlanEntitlementFixture | undefined;
 
     beforeAll(async () => {
       // Real actor row so createAction's audit-event actor FK (audit_events_actor_id_fkey) is satisfied.
@@ -144,6 +146,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         data: { engagementId: otherEngagementId, workspaceId: otherWorkspaceId, title: "Rec B", priority: "high" },
       });
       otherRecommendationId = otherRec.id;
+      // createAction consumes the plan's action_create quota; give both workspaces a real active plan.
+      plan = await seedPlanEntitlement([workspaceId, otherWorkspaceId], ["action_create"]);
     });
 
     afterAll(async () => {
@@ -154,6 +158,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
         await db.recommendation.deleteMany({ where: { engagementId: { in: [engagementId, otherEngagementId] } } });
         await db.engagement.deleteMany({ where: { id: { in: [engagementId, otherEngagementId] } } });
         await db.clientAccount.deleteMany({ where: { id: clientId } });
+        await cleanupPlanEntitlement(plan);
         await db.workspace.deleteMany({ where: { id: { in: [workspaceId, otherWorkspaceId] } } });
         await db.user.deleteMany({ where: { id: actorId } });
       } catch {

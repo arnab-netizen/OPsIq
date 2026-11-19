@@ -101,6 +101,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   // Check idempotency after we have workspace context
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
+    workspaceId: ctx.verifiedWorkspaceId,
     operationName: "updateOperatorItem",
     actorId: actorId || "unknown",
     payload: body,
