@@ -1,4 +1,6 @@
+import type { NextRequest } from "next/server";
 import { UnauthorizedError } from "@/infra/errors";
+import { handleRouteError } from "@/infra/error-handler";
 import {
   verifyWebhookSignature,
   checkSignatureTimestamp,
@@ -48,7 +50,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  * - Dead-letter events return 400 (no more retries)
  * - Alert to ops for manual investigation
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     // Step 1: Get raw body for signature verification
     const body = await request.text();
@@ -210,6 +212,14 @@ export async function POST(request: Request) {
       { status: 202 }
     );
   } catch (error) {
+    // Signature / timestamp verification failures (Steps 2-3) are thrown as
+    // UnauthorizedError and must surface as the documented fail-closed 401 via
+    // the centralized error mapper, not be folded into the generic 500 below.
+    // Nothing was recorded or processed on this path.
+    if (error instanceof UnauthorizedError) {
+      return handleRouteError(error, request, { route: "/api/webhooks/stripe" });
+    }
+
     // Catch-all for any unexpected errors
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Webhook handler error", {
