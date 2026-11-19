@@ -17,7 +17,7 @@ interface Action {
   dueDate?: string;
   version: number;
   blockerReason?: string;
-  evidence?: any[];
+  evidence?: unknown[];
   linkedEvidence?: string[];
 }
 
