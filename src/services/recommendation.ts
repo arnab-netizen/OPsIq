@@ -412,6 +412,23 @@ export async function createRecommendation(
     throw new NotFoundError("Engagement", input.engagementId);
   }
 
+  // Recommendation.findingId has no composite FK binding it to the same engagement/workspace,
+  // so a caller-supplied findingId must be proven to belong to the verified engagement before
+  // it is written (otherwise a workspace-B recommendation could hang off a workspace-A finding).
+  if (input.findingId) {
+    const finding = await db.finding.findFirst({
+      where: {
+        id: input.findingId,
+        engagementId: input.engagementId,
+        engagement: { workspaceId: validatedWorkspaceId },
+      },
+      select: { id: true },
+    });
+    if (!finding) {
+      throw new NotFoundError("Finding", input.findingId);
+    }
+  }
+
   const evidenceAssessment = await evaluateEngagementEvidence(
     input.engagementId,
     validatedWorkspaceId
