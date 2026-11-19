@@ -43,24 +43,54 @@ const SIGNATURE_MAX_FUTURE_SKEW_S = SIGNATURE_TIMESTAMP_TOLERANCE_S;
  * on (no unchecked casts). Unknown fields pass through untouched. A payload that fails its schema
  * throws, so the event is marked failed and Stripe retries it, exactly like any other handler error.
  */
+/**
+ * An expandable Stripe reference (SDK type `string | Object`): webhook payloads carry the id, an
+ * expanded payload carries the object; either way the handlers use the id.
+ */
+const StripeIdRefSchema = z.union([
+  z.string().min(1),
+  z.object({ id: z.string().min(1) }).passthrough().transform((ref) => ref.id),
+]);
+
 const StripeCheckoutSessionObjectSchema = z
   .object({
     id: z.string().min(1),
-    customer: z.string().nullish(),
-    subscription: z.string().nullish(),
+    customer: StripeIdRefSchema.nullish(),
+    subscription: StripeIdRefSchema.nullish(),
   })
   .passthrough();
 
-/** customer.subscription.created / .updated: the period bounds are written to the subscription. */
+/**
+ * customer.subscription.created / .updated: the period bounds are written to the subscription.
+ *
+ * Two API shapes are accepted. The installed SDK (stripe 22.x, API 2026-04-22.dahlia) carries the
+ * billing period on each SubscriptionItem (items.data[*].current_period_start/end) and the
+ * cancellation reason on cancellation_details.reason; older API versions carried
+ * current_period_start/end and cancel_reason on the subscription itself. See subscriptionPeriodOf.
+ */
 const StripeSubscriptionObjectSchema = z
   .object({
     id: z.string().min(1),
-    customer: z.string().min(1),
+    customer: StripeIdRefSchema,
     status: z.string().min(1),
-    current_period_start: z.number().int(),
-    current_period_end: z.number().int(),
+    items: z
+      .object({
+        data: z.array(
+          z
+            .object({
+              current_period_start: z.number().int().nullish(),
+              current_period_end: z.number().int().nullish(),
+            })
+            .passthrough()
+        ),
+      })
+      .passthrough()
+      .nullish(),
+    current_period_start: z.number().int().nullish(),
+    current_period_end: z.number().int().nullish(),
     trial_end: z.number().int().nullish(),
     canceled_at: z.number().int().nullish(),
+    cancellation_details: z.object({ reason: z.string().nullish() }).passthrough().nullish(),
     cancel_reason: z.string().nullish(),
   })
   .passthrough();
@@ -69,7 +99,7 @@ const StripeSubscriptionObjectSchema = z
 const StripeSubscriptionDeletedObjectSchema = z
   .object({
     id: z.string().nullish(),
-    customer: z.string().min(1),
+    customer: StripeIdRefSchema,
   })
   .passthrough();
 
@@ -77,6 +107,38 @@ const StripeSubscriptionDeletedObjectSchema = z
 const StripeEventDataSchema = z.object({ object: z.unknown() }).passthrough();
 
 export type StripeSubscriptionEvent = z.infer<typeof StripeSubscriptionObjectSchema>;
+
+/**
+ * The subscription's current billing period, in either API shape: across items (the earliest
+ * item start and the latest item end, so a multi-item subscription is covered end to end), else
+ * the legacy top-level fields. No period in either shape is a malformed payload: throw, so the
+ * event is marked failed and retried rather than applied with a guessed period.
+ */
+export function subscriptionPeriodOf(subscription: StripeSubscriptionEvent): { start: Date; end: Date } {
+  const itemPeriods = (subscription.items?.data ?? []).flatMap((item) =>
+    typeof item.current_period_start === "number" && typeof item.current_period_end === "number"
+      ? [{ start: item.current_period_start, end: item.current_period_end }]
+      : []
+  );
+  if (itemPeriods.length > 0) {
+    return {
+      start: new Date(Math.min(...itemPeriods.map((p) => p.start)) * 1000),
+      end: new Date(Math.max(...itemPeriods.map((p) => p.end)) * 1000),
+    };
+  }
+  if (typeof subscription.current_period_start === "number" && typeof subscription.current_period_end === "number") {
+    return {
+      start: new Date(subscription.current_period_start * 1000),
+      end: new Date(subscription.current_period_end * 1000),
+    };
+  }
+  throw new Error(`Stripe subscription ${subscription.id} carries no current billing period`);
+}
+
+/** Cancellation reason in either API shape (cancellation_details.reason, else cancel_reason). */
+function cancellationReasonOf(subscription: StripeSubscriptionEvent): string | null {
+  return subscription.cancellation_details?.reason || subscription.cancel_reason || null;
+}
 export type StripeCheckoutSessionEvent = z.infer<typeof StripeCheckoutSessionObjectSchema>;
 
 /** The signature-verified, envelope-validated event the route hands to handleWebhookEvent. */
@@ -963,6 +1025,9 @@ async function handleCustomerSubscriptionCreated(
   position: StripeEventPosition,
   event: StripeSubscriptionEvent
 ): Promise<void> {
+  // Malformed (no period in either API shape) fails closed before anything is read or written.
+  const period = subscriptionPeriodOf(event);
+
   // Get account and validate
   const billingAccount = await getBillingAccountByStripeCustomer(tx, event.customer);
 
@@ -980,8 +1045,8 @@ async function handleCustomerSubscriptionCreated(
     {
       stripeSubscriptionId: event.id,
       status: "active",
-      currentPeriodStart: new Date(event.current_period_start * 1000),
-      currentPeriodEnd: new Date(event.current_period_end * 1000),
+      currentPeriodStart: period.start,
+      currentPeriodEnd: period.end,
       trialEndsAt: event.trial_end ? new Date(event.trial_end * 1000) : null,
     }
   );
@@ -1060,6 +1125,9 @@ export async function syncSubscriptionStatus(
     return;
   }
 
+  // Malformed (no period in either API shape) fails closed before anything is read or written.
+  const period = subscriptionPeriodOf(event);
+
   // Find billing account by provider customer ID (backward compat)
   const billingAccount = await tx.billingAccount.findFirst({
     where: {
@@ -1096,11 +1164,11 @@ export async function syncSubscriptionStatus(
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
     {
       status: event.status,
-      currentPeriodStart: new Date(event.current_period_start * 1000),
-      currentPeriodEnd: new Date(event.current_period_end * 1000),
+      currentPeriodStart: period.start,
+      currentPeriodEnd: period.end,
       trialEndsAt: event.trial_end ? new Date(event.trial_end * 1000) : null,
       canceledAt: event.canceled_at ? new Date(event.canceled_at * 1000) : null,
-      cancelReason: event.cancel_reason || null,
+      cancelReason: cancellationReasonOf(event),
     }
   );
   if (!updatedSubscription) return;
