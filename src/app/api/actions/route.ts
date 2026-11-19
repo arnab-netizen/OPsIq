@@ -7,7 +7,7 @@ import { createAction, listActions } from "@/services/action";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
-import { paginationSchema } from "@/lib/validation";
+import { paginationSchema, parseableDateStringSchema } from "@/lib/validation";
 import { assertCapability, resolveWorkspaceTier } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { RateLimitError } from "@/infra/rate-limit";
@@ -18,7 +18,7 @@ const createActionSchema = z.object({
   recommendationId: z.string().uuid(),
   title: z.string().min(1),
   description: z.string().optional(),
-  dueDate: z.string().optional(),
+  dueDate: parseableDateStringSchema.optional(),
   priority: z.enum(["low", "medium", "high", "critical"]),
   assignedTo: z.string().uuid().optional(),
 });

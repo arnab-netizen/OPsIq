@@ -24,6 +24,8 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
 
 import { db } from "@/lib/db";
 import { PATCH } from "@/app/api/actions/[actionId]/route";
+import { POST as postAction } from "@/app/api/actions/route";
+import { seedPlanEntitlement, cleanupPlanEntitlement, type PlanEntitlementFixture } from "@/__tests__/test-helpers/plan-entitlement";
 import { getActionById } from "@/services/action";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -38,6 +40,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PATCH /api/actions/[actionId] (Actio
   const engagementA = randomUUID();
   const engagementB = randomUUID();
   const actionIds: string[] = [];
+  let plan: PlanEntitlementFixture | undefined;
 
   const ctx = (workspaceId: string, body: unknown) => ({
     verifiedActorId: actor,
@@ -62,6 +65,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PATCH /api/actions/[actionId] (Actio
     await db.user.create({ data: { id: actor, email: `action-center-${stamp}@test.local`, updatedAt: new Date() } });
     await db.workspace.create({ data: { id: wsA, name: "Action center A", slug: `action-center-a-${stamp}` } });
     await db.workspace.create({ data: { id: wsB, name: "Action center B", slug: `action-center-b-${stamp}` } });
+    plan = await seedPlanEntitlement([wsA], ["action_create"]);
     await db.clientAccount.create({ data: { id: clientId, name: "Action center client", createdBy: actor, updatedAt: new Date() } });
     for (const [id, workspaceId] of [[engagementA, wsA], [engagementB, wsB]] as const) {
       await db.engagement.create({
@@ -79,6 +83,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PATCH /api/actions/[actionId] (Actio
       await db.engagement.deleteMany({ where: { id: { in: [engagementA, engagementB] } } });
       await db.clientAccount.deleteMany({ where: { id: clientId } });
       await db.auditEvent.deleteMany({ where: { workspaceId: { in: [wsA, wsB] } } });
+      await cleanupPlanEntitlement(plan);
       await db.workspace.deleteMany({ where: { id: { in: [wsA, wsB] } } });
       await db.user.deleteMany({ where: { id: actor } });
     } catch {
@@ -166,4 +171,31 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] PATCH /api/actions/[actionId] (Actio
       expect(outcome).toBe(move.expected);
     });
   }
+
+  for (const field of ["dueDate", "completedAt", "verifiedAt"] as const) {
+    it(`[db] an unparseable ${field} is a 400 ValidationError (was a 500 "Invalid time value") and nothing changes`, async () => {
+      const id = await makeAction("assigned");
+      const err = await patch(wsA, id, { [field]: "garbage", version: 1 }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ValidationError);
+      expect((err as ValidationError).statusCode).toBe(400);
+      expect(await row(id)).toEqual({ status: "assigned", version: 1, metadata: null });
+    });
+  }
+
+  it("[db] a date-only dueDate is still accepted", async () => {
+    const id = await makeAction("assigned");
+    const res = await patch(wsA, id, { dueDate: "2026-12-01", version: 1 });
+    expect(new Date(res.dueAt).toISOString()).toBe("2026-12-01T00:00:00.000Z");
+  });
+
+  it("[db] POST /api/actions: an unparseable dueDate is a 400 ValidationError", async () => {
+    const request = new Request("http://x/api", {
+      method: "POST",
+      headers: { "Idempotency-Key": randomUUID() },
+      body: JSON.stringify({ engagementId: engagementA, recommendationId: randomUUID(), title: "New", priority: "high", dueDate: "garbage" }),
+    });
+    const err = await (postAction as any)({ ...ctx(wsA, {}), request }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as ValidationError).statusCode).toBe(400);
+  });
 });
