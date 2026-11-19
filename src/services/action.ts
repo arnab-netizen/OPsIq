@@ -464,8 +464,11 @@ export async function updateAction(
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const action = await db.action.findUnique({
-    where: { id: actionId },
+  // Scope the pre-read to the caller's workspace (Action has no workspaceId column; it is owned via
+  // its engagement). The version and transition checks below must never run against a foreign row,
+  // or their distinct errors disclose that row's existence, version and status.
+  const action = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
