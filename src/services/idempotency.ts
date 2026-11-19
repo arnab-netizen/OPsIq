@@ -1,6 +1,21 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { ValidationError } from "@/infra/errors";
+import {
+  AppError,
+  BadRequestError,
+  ConflictError,
+  DuplicateSubmissionError,
+  ForbiddenError,
+  InvalidStateTransitionError,
+  NotFoundError,
+  OptimisticLockError,
+  PlanLimitError,
+  PolicyViolationError,
+  TooManyRequestsError,
+  UnauthorizedError,
+  ValidationError,
+  type ErrorCode,
+} from "@/infra/errors";
 import crypto from "crypto";
 import { randomUUID } from "crypto";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -111,18 +126,11 @@ export async function checkIdempotencyKey(
       );
     }
 
-    // If failed, return the cached error
+    // If failed, replay the recorded error with its original status and code
     if (existing.status === "failed") {
-      const errorData = existing.responseBody as Record<string, unknown>;
-      const errorMessage = (errorData?.error as string) || "Unknown error";
-      const errorName = (errorData?.errorName as string) || "Error";
-
-      const error = new Error(errorMessage);
-      error.name = errorName;
-
       return {
         isNew: false,
-        cachedError: error,
+        cachedError: restoreCachedError(existing.responseBody),
       };
     }
   }
@@ -180,16 +188,9 @@ export async function checkIdempotencyKey(
         }
 
         if (concurrent.status === "failed") {
-          const errorData = concurrent.responseBody as Record<string, unknown>;
-          const errorMessage = (errorData?.error as string) || "Unknown error";
-          const errorName = (errorData?.errorName as string) || "Error";
-
-          const error = new Error(errorMessage);
-          error.name = errorName;
-
           return {
             isNew: false,
-            cachedError: error,
+            cachedError: restoreCachedError(concurrent.responseBody),
           };
         }
       }
@@ -230,16 +231,149 @@ export async function recordIdempotencyError(
   // IdempotencyRecord schema does not have workspaceId field
   // Clients must ensure idempotencyKey is globally unique
 
-  const governed = classifyOperatorError(error, { context: "load" });
+  const recorded = toRecordedError(error);
   await db.idempotencyRecord.updateMany({
     where: { idempotencyKey },
     data: {
       status: "failed",
-      responseBody: {
-        error: governed.operatorMessage,
-        errorName: error.name,
-      } as Prisma.InputJsonValue,
+      responseCode: recorded.statusCode,
+      responseBody: recorded as unknown as Prisma.InputJsonValue,
       completedAt: new Date(),
     },
   });
+}
+
+/**
+ * What a failed idempotent request persists so a retry of the same key gets the SAME client answer.
+ * A 4xx AppError keeps its status, code, class name, owner-safe message and JSON-safe details (the message
+ * the client already saw: every 4xx AppError message is owner-safe by contract). Anything else, including
+ * every 5xx, is stored as a generic internal error: its message is never persisted, so it is never replayed.
+ */
+interface RecordedIdempotencyError {
+  error: string;
+  errorName: string;
+  statusCode: number;
+  code: string;
+  details?: Record<string, unknown>;
+}
+
+const GENERIC_INTERNAL_FAILURE_TEXT = "Something went wrong on our side. Nothing was saved. Please try again.";
+
+function isClientAppError(error: unknown): error is AppError {
+  return error instanceof AppError && error.statusCode >= 400 && error.statusCode < 500;
+}
+
+function jsonSafeDetails(details: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!details) return undefined;
+  try {
+    const copy = JSON.parse(JSON.stringify(details)) as unknown;
+    return copy && typeof copy === "object" && !Array.isArray(copy) ? (copy as Record<string, unknown>) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function toRecordedError(error: Error): RecordedIdempotencyError {
+  if (isClientAppError(error)) {
+    const details = jsonSafeDetails(error.details);
+    return {
+      error: error.message,
+      errorName: error.name,
+      statusCode: error.statusCode,
+      code: error.code,
+      ...(details ? { details } : {}),
+    };
+  }
+  // Internal failure: classify for the server log only; the stored record carries no message of it.
+  classifyOperatorError(error, { context: "load" });
+  return { error: GENERIC_INTERNAL_FAILURE_TEXT, errorName: "InternalError", statusCode: 500, code: "INTERNAL_ERROR" };
+}
+
+const LAYER1_CODES = new Set(["AUTH_MISSING", "AUTH_MALFORMED", "AUTH_INVALID", "AUTH_EXPIRED", "AUTH_REVOKED", "AUTH_TAMPERED"]);
+const FORBIDDEN_CODES = new Set([
+  "WORKSPACE_MISSING",
+  "WORKSPACE_MALFORMED",
+  "WORKSPACE_NOT_FOUND",
+  "WORKSPACE_MEMBERSHIP_MISSING",
+  "WORKSPACE_MEMBERSHIP_INACTIVE",
+  "WORKSPACE_INACTIVE",
+  "CAPABILITY_NOT_GRANTED",
+  "CAPABILITY_REVOKED",
+]);
+
+function detail(details: Record<string, unknown>, key: string): string {
+  const value = details[key];
+  return typeof value === "string" ? value : "unknown";
+}
+
+/** The AppError subclass for a recorded 4xx code, built from the recorded owner-safe text and details. */
+function rebuildClientError(code: string, text: string, details: Record<string, unknown>): AppError {
+  switch (code) {
+    case "PLAN_LIMIT_EXCEEDED":
+      return new PlanLimitError(detail(details, "capability"), text);
+    case "VALIDATION_ERROR":
+      return new ValidationError(text, details);
+    case "BAD_REQUEST":
+      return new BadRequestError(text, details);
+    case "NOT_FOUND":
+      return new NotFoundError(detail(details, "entityType"), detail(details, "entityId"));
+    case "CONFLICT":
+      return new ConflictError(text, details);
+    case "DUPLICATE_SUBMISSION":
+      return new DuplicateSubmissionError(detail(details, "idempotencyKey"));
+    case "INVALID_STATE_TRANSITION":
+      return new InvalidStateTransitionError(detail(details, "entityType"), detail(details, "from"), detail(details, "to"));
+    case "OPTIMISTIC_LOCK_FAILURE":
+      return new OptimisticLockError(detail(details, "entityType"), detail(details, "entityId"));
+    case "POLICY_VIOLATION":
+      return new PolicyViolationError(detail(details, "policy"), text);
+    case "RATE_LIMITED":
+      return new TooManyRequestsError(text, details);
+  }
+  if (LAYER1_CODES.has(code)) return new UnauthorizedError(code, text);
+  if (FORBIDDEN_CODES.has(code)) return new ForbiddenError(code, text);
+  return new ValidationError(text, details);
+}
+
+function genericInternalError(): AppError {
+  return new AppError("INTERNAL_ERROR", GENERIC_INTERNAL_FAILURE_TEXT, 500, {
+    telemetryClass: "INTERNAL_ERROR",
+    auditClass: "INTERNAL_ERROR",
+    severity: "HIGH",
+    retryable: false,
+    securityRelevant: false,
+    infrastructureRelevant: true,
+    abuseRelevant: false,
+    handlerAllowed: false,
+    mutationAllowed: false,
+  });
+}
+
+/**
+ * Rebuild the error a failed idempotent request answered with: the matching AppError subclass with the
+ * recorded status, code, message and details, so the canonical wrapper renders the retry exactly like the
+ * first response (402 stays 402, 404 stays 404, ...). A record without a recorded 4xx status (a 5xx, or a
+ * record written before statuses were recorded) replays as a generic 500 that carries no stored message.
+ */
+function restoreCachedError(responseBody: unknown): AppError {
+  const recorded = (responseBody && typeof responseBody === "object" ? responseBody : {}) as Partial<RecordedIdempotencyError>;
+  const { statusCode, code, error: message } = recorded;
+  if (
+    typeof statusCode !== "number" ||
+    statusCode < 400 ||
+    statusCode >= 500 ||
+    typeof code !== "string" ||
+    typeof message !== "string"
+  ) {
+    return genericInternalError();
+  }
+  const details = recorded.details && typeof recorded.details === "object" ? recorded.details : {};
+  let rebuilt = rebuildClientError(code, message, details);
+  if (rebuilt.statusCode !== statusCode || rebuilt.code !== code) {
+    // A recorded code whose class answers with another status: keep the recorded status and code exactly.
+    rebuilt = new AppError(code as ErrorCode, message, statusCode, rebuilt.telemetry, details);
+  }
+  // Constructors that derive their message (NotFoundError, ...) must still replay the recorded text.
+  rebuilt.message = message;
+  return rebuilt;
 }

@@ -101,11 +101,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/decisions/intake decision:
     expect(await usageSum(ids.workspaceId)).toBe(1);
     expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(1);
 
-    // Retrying the refused key replays its recorded failure; it never creates a decision or consumes a unit.
-    // (The replayed failure's status is not asserted: services/idempotency.ts rebuilds a cached error as a
-    // plain Error, which loses the original HTTP status for every cached AppError — a separate defect.)
+    // Retrying the refused key replays its recorded 402; it never creates a decision or consumes a unit.
     const refusedReplay = await post(`intake-${stamp}-b`, `Second intake ${stamp}`);
-    expect(refusedReplay.status).not.toBe(200);
+    expect(refusedReplay.status).toBe(402);
+    expect(refusedReplay.body.error).toBe(overLimit.body.error);
     expect(await usageSum(ids.workspaceId)).toBe(1);
     expect(await db.operatorItem.count({ where: { workspaceId: ids.workspaceId } })).toBe(1);
   }, 60_000);
