@@ -1229,6 +1229,52 @@ export async function reRankRecommendationsInEngagement(
   return { updated: updateCount, recommendations: updated };
 }
 
+/**
+ * The single-recommendation detail shape (GET /api/recommendations/[id] and the PATCH response).
+ */
+const RECOMMENDATION_DETAIL_SELECT = {
+  id: true,
+  engagementId: true,
+  findingId: true,
+  title: true,
+  description: true,
+  priority: true,
+  status: true,
+  // `estimatedImpact` is the real Recommendation column. The previous select requested
+  // `expectedImpact`, `implementationPhase`, `executionCertaintyScore`, and `scoreBreakdown` —
+  // none of which exist on the Recommendation model — so `prisma.recommendation.findUnique`
+  // threw PrismaClientValidationError on EVERY call, i.e. the owner-facing single-recommendation
+  // API route (GET /api/recommendations/[id] and the PATCH re-read) 500'd on every request.
+  // This is the identical defect fixed for the listing path in Phase 2 G2
+  // (`getRecommendationsForEngagement`). Select only real columns.
+  estimatedImpact: true,
+  version: true,
+  createdAt: true,
+  constraintsConsidered: true,
+  engagement: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+    },
+  },
+  finding: {
+    select: {
+      id: true,
+      title: true,
+      severity: true,
+    },
+  },
+} as const;
+
+/** Project a recommendation (with its engagement/finding relations) onto the detail shape. */
+export function toRecommendationDetail<T extends Record<string, unknown>>(rec: T) {
+  const keys = Object.keys(RECOMMENDATION_DETAIL_SELECT) as (keyof typeof RECOMMENDATION_DETAIL_SELECT)[];
+  return Object.fromEntries(keys.map((k) => [k, rec[k as string] ?? null])) as {
+    [K in keyof typeof RECOMMENDATION_DETAIL_SELECT]: unknown;
+  };
+}
+
 export async function getRecommendation(
   recommendationId: string,
   workspaceId: string
@@ -1237,40 +1283,7 @@ export async function getRecommendation(
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId },
-    select: {
-      id: true,
-      engagementId: true,
-      findingId: true,
-      title: true,
-      description: true,
-      priority: true,
-      status: true,
-      // `estimatedImpact` is the real Recommendation column. The previous select requested
-      // `expectedImpact`, `implementationPhase`, `executionCertaintyScore`, and `scoreBreakdown` —
-      // none of which exist on the Recommendation model — so `prisma.recommendation.findUnique`
-      // threw PrismaClientValidationError on EVERY call, i.e. the owner-facing single-recommendation
-      // API route (GET /api/recommendations/[id] and the PATCH re-read) 500'd on every request.
-      // This is the identical defect fixed for the listing path in Phase 2 G2
-      // (`getRecommendationsForEngagement`). Select only real columns.
-      estimatedImpact: true,
-      version: true,
-      createdAt: true,
-      constraintsConsidered: true,
-      engagement: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-        },
-      },
-      finding: {
-        select: {
-          id: true,
-          title: true,
-          severity: true,
-        },
-      },
-    },
+    select: RECOMMENDATION_DETAIL_SELECT,
   });
 
   if (!rec) {
@@ -1293,6 +1306,10 @@ export async function updateRecommendation(
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId: validatedWorkspaceId },
+    include: {
+      engagement: { select: RECOMMENDATION_DETAIL_SELECT.engagement.select },
+      finding: { select: RECOMMENDATION_DETAIL_SELECT.finding.select },
+    },
   });
 
   if (!rec) {
@@ -1365,13 +1382,16 @@ export async function updateRecommendation(
     );
   }
 
-  const updated = await db.recommendation.findUnique({
-    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
-  });
-
-  if (!updated) {
-    throw new NotFoundError("Recommendation", recommendationId);
-  }
+  // Exactly the row this call committed (a re-read could observe a later writer's state).
+  const updated = {
+    ...rec,
+    status: statusChanged ? (updates.status as string) : rec.status,
+    priority: input.priority ?? rec.priority,
+    constraintsConsidered: hasExpectationField
+      ? (updates.constraintsConsidered as typeof rec.constraintsConsidered)
+      : rec.constraintsConsidered,
+    version: rec.version + 1,
+  };
 
   await emitAuditEvent({
     eventName: "recommendation.updated",
