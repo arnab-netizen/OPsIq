@@ -187,4 +187,51 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] GET /api/decision/export — REAL ro
     assertKeysSortedDeep(parsed);
     expect(Object.keys(parsed)).toEqual(["accuracy", "actualOutcome", "auditTrail", "decision", "delta", "expectedImpact", "inputs", "outputs"]);
   });
+
+  it("missing decisionId is a 400 (not a 500)", async () => {
+    const { GET } = await import("@/app/api/decision/export/route");
+    const res = await GET(exportRequest(), { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Missing required parameter: decisionId");
+  });
+
+  it("an unknown id and another workspace's decision are the SAME 404 (tenant non-disclosure)", async () => {
+    const { GET } = await import("@/app/api/decision/export/route");
+    const unknownId = randomUUID();
+    const shape = async (id: string) => {
+      const res = await GET(exportRequest(id), { params: Promise.resolve({}) });
+      const body = await res.json();
+      delete body.correlationId;
+      return { status: res.status, body };
+    };
+    const unknown = await shape(unknownId);
+    const cross = await shape(foreignDecisionId);
+    expect(unknown.status).toBe(404);
+    expect(cross.status).toBe(404);
+    expect(unknown.body.error).toBe(`Decision not found: ${unknownId}`);
+    expect(cross.body.error).toBe(`Decision not found: ${foreignDecisionId}`);
+    expect({ ...cross.body, error: undefined }).toEqual({ ...unknown.body, error: undefined });
+    expect(JSON.stringify(cross.body)).not.toContain(workspaceB);
+  });
+
+  it("GET /api/intelligence/recommendations (same lookup pattern): 400 missing id; unknown and cross-workspace are the same 404", async () => {
+    const { GET } = await import("@/app/api/intelligence/recommendations/route");
+    const call = async (id?: string) => {
+      const url = `https://example.com/api/intelligence/recommendations${id === undefined ? "" : `?decisionId=${id}`}`;
+      const res = await GET(new NextRequest(url, { method: "GET" }), { params: Promise.resolve({}) });
+      const body = await res.json();
+      delete body.correlationId;
+      return { status: res.status, body };
+    };
+    const missing = await call();
+    expect(missing.status).toBe(400);
+    expect(missing.body.error).toBe("Missing required parameter: decisionId");
+    const unknownId = randomUUID();
+    const unknown = await call(unknownId);
+    const cross = await call(foreignDecisionId);
+    expect(unknown.status).toBe(404);
+    expect(cross.status).toBe(404);
+    expect(cross.body.error).toBe(`Decision not found: ${foreignDecisionId}`);
+    expect({ ...cross.body, error: undefined }).toEqual({ ...unknown.body, error: undefined });
+  });
 });

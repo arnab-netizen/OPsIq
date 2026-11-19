@@ -2,6 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { queryAuditEvents } from "@/infra/audit";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 import { stableStringify } from "@/domain/owner-spine/owner-decision-record";
 
 /** The AuditEvent columns the export reads (queryAuditEvents returns full rows). */
@@ -53,7 +54,7 @@ export const GET = withCanonicalEnforcement(
     const decisionId = searchParams.get("decisionId");
 
     if (!decisionId) {
-      throw new Error("Missing required parameter: decisionId");
+      throw new ValidationError("Missing required parameter: decisionId");
     }
 
     // Fetch operator item
@@ -64,8 +65,9 @@ export const GET = withCanonicalEnforcement(
       },
     });
 
+    // Scoped by workspace: another workspace's decision is the same 404 as an unknown id (tenant non-disclosure).
     if (!item) {
-      throw new Error("Decision not found");
+      throw new NotFoundError("Decision", decisionId);
     }
 
     // Fetch audit trail for this decision
