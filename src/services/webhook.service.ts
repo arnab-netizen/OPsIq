@@ -945,6 +945,15 @@ function newerThanWatermark(position: StripeEventPosition, eventIsTerminal: bool
  */
 type SubscriptionIdentity = { mode: "bind" | "match"; stripeSubscriptionId: string };
 
+/**
+ * Whether the event is a full subscription snapshot ("full": customer.subscription.*) or carries
+ * only part of the state ("partial": checkout.session.completed has the subscription id but no
+ * status snapshot, period or trial). A partial event is still ordered (an older one never
+ * overwrites newer state) but does NOT advance the watermark: it cannot speak for the fields it
+ * does not carry, so a full snapshot created before it (but delivered after it) must still apply.
+ */
+type EventCoverage = "full" | "partial";
+
 function identityPredicate(identity: SubscriptionIdentity): Prisma.SubscriptionWhereInput {
   if (identity.mode === "bind") return {};
   return { OR: [{ stripeSubscriptionId: null }, { stripeSubscriptionId: identity.stripeSubscriptionId }] };
@@ -965,8 +974,11 @@ async function applyIfNewer(
   position: StripeEventPosition,
   target: { subscriptionId: string; workspaceId: string },
   identity: SubscriptionIdentity,
+  coverage: EventCoverage,
   data: Prisma.SubscriptionUpdateManyMutationInput
 ): Promise<Subscription | null> {
+  const watermark =
+    coverage === "full" ? { lastEventTimestamp: position.created, lastEventId: position.stripeEventId } : {};
   const applied = await tx.subscription.updateMany({
     where: {
       AND: [
@@ -975,7 +987,7 @@ async function applyIfNewer(
         identityPredicate(identity),
       ],
     },
-    data: { ...data, lastEventTimestamp: position.created, lastEventId: position.stripeEventId },
+    data: { ...data, ...watermark },
   });
 
   if (applied.count === 1) {
@@ -1083,6 +1095,7 @@ async function handleCheckoutSessionCompleted(
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
     { mode: "bind", stripeSubscriptionId: event.subscription },
+    "partial",
     { stripeSubscriptionId: event.subscription, status: "active" }
   );
   if (!updatedSubscription) return;
@@ -1124,6 +1137,7 @@ async function handleCustomerSubscriptionCreated(
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
     { mode: "bind", stripeSubscriptionId: event.id },
+    "full",
     {
       stripeSubscriptionId: event.id,
       status: "active",
@@ -1163,6 +1177,7 @@ async function handleCustomerSubscriptionDeleted(
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
     { mode: "match", stripeSubscriptionId: event.id },
+    "full",
     { status: "canceled", canceledAt: new Date() }
   );
   if (!updatedSubscription) return;
@@ -1246,6 +1261,7 @@ export async function syncSubscriptionStatus(
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
     { mode: "match", stripeSubscriptionId: event.id },
+    "full",
     {
       status: event.status,
       currentPeriodStart: period.start,
