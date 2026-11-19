@@ -61,7 +61,7 @@ export interface StartupSessionSummary {
 
 // ─── Workspace ownership of caller-supplied parent ids ───────────────────────
 //
-// Every /api/owner/startup/sessions/[sessionId]/** route hands the URL sessionId /
+// Every route under /api/owner/startup/sessions/[sessionId] hands the URL sessionId /
 // ideaId (and body ideaId / hypothesisId) straight to this service alongside the
 // verified workspaceId. Those ids feed by-unique-id writes and parent FKs, which the
 // Prisma backstop cannot scope, so each writer/reader that does not already load the
