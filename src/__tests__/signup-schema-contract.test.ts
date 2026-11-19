@@ -203,9 +203,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("Signup Schema Contract", () => {
     expect(roleAssignment.scopeId).toBe(workspace.id);
     expect(roleAssignment.isActive).toBe(true);
 
-    // Cleanup
+    // Cleanup — children before parents. user_role_assignments.user_id is
+    // ON DELETE RESTRICT (init migration), so the role assignment must be
+    // removed before its user or the user delete violates
+    // user_role_assignments_user_id_fkey.
+    await db.userRoleAssignment.deleteMany({ where: { userId } });
     await db.workspaceMembership.deleteMany({ where: { workspaceId: workspace.id } });
     await db.workspace.delete({ where: { id: workspace.id } });
     await db.user.delete({ where: { id: userId } });
+    expect(await db.userRoleAssignment.count({ where: { userId } })).toBe(0);
+    expect(await db.user.count({ where: { id: userId } })).toBe(0);
   });
 });
