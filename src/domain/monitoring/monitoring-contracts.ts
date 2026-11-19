@@ -11,7 +11,13 @@
  * - Structured telemetry (trace IDs, span context)
  */
 
+import { cpus } from "os";
 import { getMemoryPressure, isMemoryExhausted } from "@/infra/memory-pressure";
+
+/** The one client capability the DB-backed assertions use (satisfied by the Prisma client). */
+export interface RawQueryClient {
+  $queryRawUnsafe(query: string): Promise<unknown>;
+}
 
 /**
  * Health Status: What the `/health` endpoint reports
@@ -198,7 +204,7 @@ export interface AlertEngine {
 export const MONITORING_ASSERTIONS = {
   // Database connectivity check
   DATABASE_HEALTHY: {
-    check: async (dbInstance: any) => {
+    check: async (dbInstance: RawQueryClient) => {
       const start = Date.now();
       try {
         await dbInstance.$queryRawUnsafe("SELECT 1");
@@ -211,12 +217,15 @@ export const MONITORING_ASSERTIONS = {
 
   // Queue depth check (webhook jobs pending)
   QUEUE_HEALTHY: {
-    check: async (dbInstance: any) => {
+    check: async (dbInstance: RawQueryClient) => {
       try {
-        const result = await dbInstance.$queryRawUnsafe(
+        const result = (await dbInstance.$queryRawUnsafe(
           "SELECT COUNT(*) as count FROM webhook_events WHERE status='pending' OR status='retrying'"
-        );
-        const depth = result[0]?.count || 0;
+        )) as Array<{ count?: number | bigint }>;
+        // COUNT(*) is a Postgres bigint, which Prisma returns as a JS BigInt. The
+        // ReadinessCheck contract types queue_depth as number, and a BigInt makes
+        // the readiness response body unserialisable (JSON.stringify throws).
+        const depth = Number(result[0]?.count ?? 0);
         return {
           healthy: depth < 10000, // Alert if > 10k pending
           depth,
@@ -245,12 +254,11 @@ export const MONITORING_ASSERTIONS = {
   // CPU saturation check
   CPU_OK: {
     check: async () => {
-      const cpus = require("os").cpus();
       let totalIdle = 0;
       let totalTick = 0;
-      cpus.forEach((cpu: any) => {
-        for (const type in cpu.times) {
-          totalTick += cpu.times[type];
+      cpus().forEach((cpu) => {
+        for (const ticks of Object.values(cpu.times)) {
+          totalTick += ticks;
         }
         totalIdle += cpu.times.idle;
       });
