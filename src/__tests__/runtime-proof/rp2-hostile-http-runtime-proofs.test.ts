@@ -1,46 +1,140 @@
 /**
  * PHASE RP2: Hostile HTTP Runtime Tests
  *
- * Empirically verify auth/security behavior through real HTTP execution.
- * STATUS: RUNTIME_TEST_SUITE_CREATED (awaiting CI HTTP server + integration)
+ * Empirically verify auth/security behavior through real request execution.
+ * Not mocked: every request runs the REAL root middleware and the REAL exported
+ * App Router route handler (withCanonicalEnforcement / the route's own guards)
+ * against the real database.
  *
- * These tests make REAL HTTP requests to running Next.js server.
- * They are NOT mocked. They verify actual HTTP behavior.
- * They require: next dev server running OR CI deployment
+ * Transport (root cause of the former failures, see commit message):
+ *   - Default (in-process): the request is built as a real NextRequest, passed
+ *     through the real root `middleware` (which never short-circuits a protected
+ *     /api route -- asserted below, see middleware.ts) and dispatched to the real
+ *     route module, exactly as Next's router does after middleware. This is the
+ *     repo's supported pattern for route-level runtime proofs
+ *     (e.g. src/__tests__/owner-budget/rbac-unauth.test.ts) and needs no server.
+ *   - TEST_API_URL set: the same requests go over the wire to that live server.
+ *     A network failure now FAILS the test loudly. Previously it was swallowed
+ *     into `{ details }` with no `status`, so with no server listening every
+ *     assertion reported "expected undefined to be 401" -- the suite had never
+ *     actually exercised a single route.
+ *
+ * Lane: runtime-proof/** is excluded unless TEST_WITH_DB=true (vitest.config.ts),
+ * so this file runs in the DB lane (main-integration.yml full suite). The
+ * readiness/membership pipeline inside withCanonicalEnforcement touches the DB.
  */
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { NextRequest } from "next/server";
 
-// NOTE: These tests are designed to run against a live HTTP server
-// Set TEST_API_URL env var or use default localhost:3000
-const TEST_API_URL = process.env.TEST_API_URL || "http://localhost:3000";
+// Request scope for in-process dispatch. Next's server binds `cookies()` /
+// `headers()` from next/headers to the in-flight request; outside its router
+// they throw "called outside a request scope". This binds them to the SAME
+// NextRequest being dispatched (its real Cookie / header values -- nothing is
+// invented), per async context so concurrent requests never see each other's
+// scope. Calling either outside a dispatched request still throws, as in Next.
+const requestScope = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { AsyncLocalStorage } = require("node:async_hooks") as typeof import("node:async_hooks");
+  return new AsyncLocalStorage<import("next/server").NextRequest>();
+});
+vi.mock("next/headers", () => {
+  const current = () => {
+    const req = requestScope.getStore();
+    if (!req) throw new Error("RP2: next/headers used outside a dispatched request scope");
+    return req;
+  };
+  return {
+    cookies: async () => current().cookies,
+    headers: async () => current().headers,
+  };
+});
+import { middleware } from "../../../middleware";
+
+// Optional live-server target. Unset => in-process dispatch to the real handlers.
+const TEST_API_URL = process.env.TEST_API_URL;
+const IN_PROCESS_ORIGIN = "http://localhost:3000";
 const TEST_WORKSPACE_ID = "test-ws-hostile-" + Date.now();
 const TEST_USER_TOKEN = process.env.TEST_AUTH_TOKEN || "invalid-token-for-testing";
 
-describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
-  // Helper to make requests
-  async function makeRequest(method: string, path: string, options: any = {}) {
-    try {
-      const url = new URL(path, TEST_API_URL).toString();
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
-        body: options.body ? JSON.stringify(options.body) : undefined,
-      });
+type RouteHandler = (
+  req: NextRequest,
+  context: { params: Promise<Record<string, string>> }
+) => Promise<Response>;
 
-      return {
-        status: response.status,
-        body: await response.json().catch(() => ({})),
-        headers: response.headers,
-      };
+/**
+ * Resolve a request path to the real App Router route module and its dynamic
+ * params, mirroring src/app/api/** on disk. An unmapped path is a test-authoring
+ * error and throws -- it must never silently pass.
+ */
+const ROUTES: Array<{ pattern: RegExp; load: () => Promise<Record<string, unknown>>; params: (m: RegExpMatchArray) => Record<string, string> }> = [
+  { pattern: /^\/api\/audit$/, load: () => import("@/app/api/audit/route"), params: () => ({}) },
+  { pattern: /^\/api\/value\/7day$/, load: () => import("@/app/api/value/7day/route"), params: () => ({}) },
+  { pattern: /^\/api\/value\/summary$/, load: () => import("@/app/api/value/summary/route"), params: () => ({}) },
+  { pattern: /^\/api\/verify$/, load: () => import("@/app/api/verify/route"), params: () => ({}) },
+  { pattern: /^\/api\/notifications$/, load: () => import("@/app/api/notifications/route"), params: () => ({}) },
+  { pattern: /^\/api\/notifications\/preferences$/, load: () => import("@/app/api/notifications/preferences/route"), params: () => ({}) },
+  { pattern: /^\/api\/notifications\/([^/]+)$/, load: () => import("@/app/api/notifications/[id]/route"), params: (m) => ({ id: m[1] }) },
+  { pattern: /^\/api\/intelligence\/insights$/, load: () => import("@/app/api/intelligence/insights/route"), params: () => ({}) },
+  { pattern: /^\/api\/intelligence\/patterns$/, load: () => import("@/app/api/intelligence/patterns/route"), params: () => ({}) },
+  { pattern: /^\/api\/entitlement\/quota$/, load: () => import("@/app/api/entitlement/quota/route"), params: () => ({}) },
+  { pattern: /^\/api\/decision\/export$/, load: () => import("@/app/api/decision/export/route"), params: () => ({}) },
+  { pattern: /^\/api\/webhooks\/stripe$/, load: () => import("@/app/api/webhooks/stripe/route"), params: () => ({}) },
+  { pattern: /^\/api\/health$/, load: () => import("@/app/api/health/route"), params: () => ({}) },
+  { pattern: /^\/api\/readiness$/, load: () => import("@/app/api/readiness/route"), params: () => ({}) },
+  { pattern: /^\/api\/liveness$/, load: () => import("@/app/api/liveness/route"), params: () => ({}) },
+];
+
+async function dispatchInProcess(req: NextRequest): Promise<Response> {
+  // Real root middleware first, as Next does. It must pass /api requests through
+  // (x-middleware-next) and never answer them itself.
+  const mw = middleware(req);
+  expect(mw.headers.get("x-middleware-next")).toBe("1");
+
+  const pathname = req.nextUrl.pathname;
+  for (const route of ROUTES) {
+    const m = pathname.match(route.pattern);
+    if (!m) continue;
+    const mod = await route.load();
+    const handler = mod[req.method] as RouteHandler | undefined;
+    if (typeof handler !== "function") {
+      // Next answers an unexported method with 405.
+      return new Response(null, { status: 405 });
+    }
+    return requestScope.run(req, () => handler(req, { params: Promise.resolve(route.params(m)) }));
+  }
+  throw new Error(`RP2: no route module mapped for ${req.method} ${pathname}`);
+}
+
+async function send(method: string, path: string, headers: Record<string, string>, body: string | undefined): Promise<Response> {
+  if (TEST_API_URL) {
+    try {
+      return await fetch(new URL(path, TEST_API_URL).toString(), { method, headers, body });
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-      return { details: governed.operatorMessage };
+      throw new Error(`RP2: live server at TEST_API_URL=${TEST_API_URL} unreachable: ${governed.operatorMessage}`);
     }
+  }
+  const req = new NextRequest(new URL(path, IN_PROCESS_ORIGIN), { method, headers, body });
+  return dispatchInProcess(req);
+}
+
+describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
+  // Helper to make requests
+  async function makeRequest(method: string, path: string, options: { headers?: Record<string, string>; body?: unknown } = {}) {
+    const response = await send(
+      method,
+      path,
+      { "Content-Type": "application/json", ...options.headers },
+      options.body ? JSON.stringify(options.body) : undefined
+    );
+    expect(typeof response.status).toBe("number");
+    return {
+      status: response.status,
+      body: await response.json().catch(() => ({})),
+      headers: response.headers,
+    };
   }
 
   describe("1. Missing Auth Token → 401", () => {
@@ -254,21 +348,17 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
 
   describe("14. Malformed JSON → Fail Closed", () => {
     it("POST with invalid JSON returns 400", async () => {
-      try {
-        const response = await fetch(new URL("/api/verify", TEST_API_URL).toString(), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${TEST_USER_TOKEN}`,
-          },
-          body: "{invalid json}",
-        });
+      const response = await send(
+        "POST",
+        "/api/verify",
+        {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${TEST_USER_TOKEN}`,
+        },
+        "{invalid json}"
+      );
 
-        expect([400, 401, 500]).toContain(response.status);
-      } catch (error) {
-        // Network error or parsing error is also acceptable
-        expect(true).toBe(true);
-      }
+      expect([400, 401, 500]).toContain(response.status);
     });
   });
 
@@ -288,6 +378,11 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
 
       // At least some should be rate-limited or succeed (depending on rate limit config)
       expect(results.length).toBeGreaterThan(0);
+      // Every one of the 100 requests got a bounded answer: served (200),
+      // rate-limited (429), or fail-closed unavailable (503) -- never a crash.
+      const servedCount = results.filter((r) => r.status === 200).length;
+      const unavailableCount = results.filter((r) => r.status === 503).length;
+      expect(servedCount + rateLimitedCount + unavailableCount).toBe(100);
     });
   });
 
