@@ -4,7 +4,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
-import { NotFoundError, ValidationError, PlanLimitError, ConflictError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { ClassifiedApiError, hasClassification, extractSafePrismaError } from "@/infra/classified-error";
 import {
   optimisticUpdate,
@@ -21,8 +21,7 @@ import type { EngagementStatus, InterventionMode } from "@/domain/constants/stat
 import { INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { assertCapability } from "@/services/entitlement.service";
-import { recordEngagementCreationUsage } from "@/services/usage.service";
+import { withCapabilityQuota } from "@/services/entitlement.service";
 
 // Service version for diagnostics - exported for route proof endpoint
 export const ENGAGEMENTS_SERVICE_VERSION = "engagements-service-prisma-debug-v2";
@@ -99,12 +98,20 @@ export async function createEngagement(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string; code: string }> {
-  // Check capability: create_engagement
-  const capabilityCheck = await assertCapability(workspaceId, "create_engagement");
-  if (!capabilityCheck.allowed) {
-    throw new PlanLimitError("create_engagement", capabilityCheck.reason || "Plan limit exceeded");
-  }
+  // Plan quota: create_engagement is checked and recorded atomically before the write (PlanLimitError
+  // 402 at the limit). A failed create returns the unit; an idempotent replay of the same engagement
+  // consumes none.
+  const outcome = await withCapabilityQuota(workspaceId, "create_engagement", () => persistEngagement(input, authContext, workspaceId), {
+    consumedAmount: (o) => (o.isNew ? 1 : 0),
+  });
+  return { id: outcome.id, code: outcome.code };
+}
 
+async function persistEngagement(
+  input: CreateEngagementInput,
+  authContext: CanonicalAuthContext,
+  workspaceId: string
+): Promise<{ id: string; code: string; isNew: boolean }> {
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
@@ -219,20 +226,13 @@ export async function createEngagement(
     triggeredBy: actorId,
   });
 
-  // Record usage for engagement creation
-  await recordEngagementCreationUsage(validatedWorkspaceId, {
-    engagementId: result.result.id,
-    code: result.result.code,
-    clientId: input.clientId,
-  });
-
   logger.info("Engagement created", {
     engagementId: result.result.id,
     code: result.result.code,
     clientId: input.clientId,
   });
 
-  return { id: result.result.id, code: result.result.code };
+  return { id: result.result.id, code: result.result.code, isNew: result.isNew };
 }
 
 export async function updateEngagement(

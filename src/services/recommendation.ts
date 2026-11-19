@@ -8,7 +8,6 @@ import {
   NotFoundError,
   ConflictError,
   ValidationError,
-  PlanLimitError,
 } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
@@ -17,10 +16,10 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { assertCapability } from "@/services/entitlement.service";
-import { recordRecommendationUsage } from "@/services/usage.service";
+import { withCapabilityQuota } from "@/services/entitlement.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
+import type { Prisma } from "@/generated/prisma/client";
 import { listEvidence } from "@/services/evidence";
 import { getKPIsForEngagement } from "@/services/kpi";
 
@@ -387,18 +386,23 @@ export async function createRecommendation(
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  const capabilityCheck = await assertCapability(
+  // Plan quota: generate_recommendation is checked and recorded atomically before the write
+  // (PlanLimitError 402 at the limit). A failed write returns the unit; an idempotent replay consumes none.
+  const outcome = await withCapabilityQuota(
     workspaceId,
-    "generate_recommendation"
+    "generate_recommendation",
+    () => persistRecommendation(input, authContext, workspaceId, idempotencyKey),
+    { consumedAmount: (o) => (o.isNew ? 1 : 0) }
   );
+  return outcome.recommendation;
+}
 
-  if (!capabilityCheck.allowed) {
-    throw new PlanLimitError(
-      "generate_recommendation",
-      capabilityCheck.reason || "Plan limit exceeded"
-    );
-  }
-
+async function persistRecommendation(
+  input: CreateRecommendationInput,
+  authContext: CanonicalAuthContext,
+  workspaceId: string,
+  idempotencyKey?: string
+) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
     authContext,
     workspaceId
@@ -452,7 +456,7 @@ export async function createRecommendation(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return db.$transaction(async (tx: any) => {
+        return db.$transaction(async (tx: Prisma.TransactionClient) => {
           const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
           const recommendation = await tx.recommendation.create({
@@ -536,14 +540,9 @@ export async function createRecommendation(
         recommendationId: result.result.id,
         engagementId: input.engagementId,
       });
-
-      await recordRecommendationUsage(validatedWorkspaceId, 1, {
-        recommendationId: result.result.id,
-        engagementId: input.engagementId,
-      });
     }
 
-    return result.result;
+    return { recommendation: result.result, isNew: result.isNew };
   }
 
   const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
@@ -605,17 +604,12 @@ export async function createRecommendation(
     sensitivityClassification: "standard",
   });
 
-  await recordRecommendationUsage(validatedWorkspaceId, 1, {
-    recommendationId: recommendation.id,
-    engagementId: input.engagementId,
-  });
-
   logger.info("Recommendation created", {
     recommendationId: recommendation.id,
     engagementId: input.engagementId,
   });
 
-  return recommendation;
+  return { recommendation, isNew: true };
 }
 
 export async function verifyRecommendationState(

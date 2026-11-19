@@ -7,11 +7,9 @@ import { createRecommendationsFromInterventions } from "@/services/recommendatio
 import { createActionsFromInterventions } from "@/services/action";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import type { Recommendation, Action } from "@/generated/prisma/client";
+import type { Recommendation, Action, Finding } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
-import { assertCapability } from "@/services/entitlement.service";
-import { PlanLimitError } from "@/infra/errors";
-import { recordDecisionEngineUsage } from "@/services/usage.service";
+import { withCapabilityQuota } from "@/services/entitlement.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface ConsultingEnginePipelineResult {
@@ -27,12 +25,21 @@ export async function runConsultingPipeline(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<ConsultingEnginePipelineResult> {
-  // Check capability: decision_engine
-  const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
-  if (!capabilityCheck.allowed) {
-    throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
-  }
+  // Plan quota: one decision_engine unit is checked and recorded atomically before the run (PlanLimitError
+  // 402 at the limit). It stays consumed only for a SUCCESS run; a failed or non-success run returns it.
+  return withCapabilityQuota(
+    workspaceId,
+    "decision_engine",
+    () => executeConsultingPipeline(engagementId, authContext, workspaceId),
+    { consumedAmount: (result) => (result.status === "SUCCESS" ? 1 : 0) }
+  );
+}
 
+async function executeConsultingPipeline(
+  engagementId: string,
+  authContext: CanonicalAuthContext,
+  workspaceId: string
+): Promise<ConsultingEnginePipelineResult> {
   try {
     // 1. Load engagement
     const engagement = await db.engagement.findFirst({
@@ -80,7 +87,8 @@ export async function runConsultingPipeline(
     }
 
     // 3. Map findings to ConsultingEngineInput
-    const evidenceItems = findings.map((finding: any) => ({
+    // Finding has no `description` column; the optional member keeps the summary-less fallback to title typed.
+    const evidenceItems = findings.map((finding: Finding & { description?: string | null }) => ({
       id: finding.id,
       dimension: mapSeverityToDimension(finding.severity),
       finding: finding.description || finding.title,
@@ -160,12 +168,6 @@ export async function runConsultingPipeline(
           status: engineOutput.status,
         },
         visibility: "internal",
-      });
-
-      // 8. Record usage for decision engine execution
-      await recordDecisionEngineUsage(workspaceId || engagement.workspaceId, {
-        engagementId,
-        interventionCount: engineOutput.decisionMemo.recommendedInterventions.length,
       });
 
       logger.info("Consulting pipeline completed successfully", {

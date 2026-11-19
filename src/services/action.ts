@@ -12,9 +12,11 @@ import { withIdempotency } from "@/infra/idempotency";
 import { enforceActionRules } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { recordActionUsage } from "@/services/usage.service";
+import { withCapabilityQuota } from "@/services/entitlement.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
+import type { Prisma } from "@/generated/prisma/client";
+import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -76,6 +78,26 @@ export async function createAction(
   workspaceId: string,
   idempotencyKey?: string
 ) {
+  // Plan quota: action_create is checked and recorded atomically before the write (PlanLimitError 402 at
+  // the limit), for every caller (route, consulting pipeline, execute workflow). A failed write returns
+  // the unit; an idempotent replay consumes none. Auth and workspace context are verified first, before any
+  // database access.
+  requireServiceContext(authContext, workspaceId);
+  const outcome = await withCapabilityQuota(
+    workspaceId,
+    "action_create",
+    () => persistAction(input, authContext, workspaceId, idempotencyKey),
+    { consumedAmount: (o) => (o.isNew ? 1 : 0) }
+  );
+  return outcome.action;
+}
+
+async function persistAction(
+  input: CreateActionInput,
+  authContext: CanonicalAuthContext,
+  workspaceId: string,
+  idempotencyKey?: string
+) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({
@@ -88,7 +110,7 @@ export async function createAction(
       idempotencyKey,
       "action.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: Prisma.TransactionClient) => {
           const action = await tx.action.create({
             data: {
               id: randomUUID(),
@@ -165,19 +187,13 @@ export async function createAction(
         });
       }
 
-      // Record usage for action creation (only on new creation)
-      await recordActionUsage(validatedWorkspaceId, 1, {
-        actionId: result.result.id,
-        engagementId: input.engagementId,
-      });
-
       logger.info("Action created", {
         actionId: result.result.id,
         engagementId: input.engagementId,
       });
     }
 
-    return result.result;
+    return { action: result.result, isNew: result.isNew };
   }
 
   const action = await db.action.create({
@@ -243,18 +259,12 @@ export async function createAction(
     });
   }
 
-  // Record usage for action creation
-  await recordActionUsage(validatedWorkspaceId, 1, {
-    actionId: action.id,
-    engagementId: input.engagementId,
-  });
-
   logger.info("Action created", {
     actionId: action.id,
     engagementId: input.engagementId,
   });
 
-  return action;
+  return { action, isNew: true };
 }
 
 export async function getActionsForEngagement(engagementId: string, userId: string, workspaceId: string) {
@@ -463,7 +473,7 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  const updates: Prisma.ActionUncheckedUpdateInput = { version: { increment: 1 } };
 
   if (input.status) {
     validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
@@ -499,10 +509,18 @@ export async function updateAction(
   return updated;
 }
 
-export async function listActions(workspaceId: string, params: any) {
+export interface ListActionsParams {
+  engagementId?: string;
+  status?: string;
+  assignedTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listActions(workspaceId: string, params: ListActionsParams) {
   enforceWorkspaceId(workspaceId, "listActions", "action");
 
-  const where: any = {};
+  const where: Prisma.ActionWhereInput = {};
   if (params.engagementId) {
     where.engagementId = params.engagementId;
     where.engagement = { workspaceId };
@@ -535,7 +553,7 @@ export async function listActions(workspaceId: string, params: any) {
 
 export async function createActionsFromInterventions(
   engagementId: string,
-  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  interventions: PrioritizedIntervention[],
   authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
