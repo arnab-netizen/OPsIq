@@ -1,4 +1,6 @@
 import type { NextRequest } from "next/server";
+import { z } from "zod";
+import type { WebhookEvent } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import { handleRouteError } from "@/infra/error-handler";
 import {
@@ -45,11 +47,23 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  * 6. On success: mark status=processed + processedAt
  * 7. On failure: mark status=failed + lastError + increment attempts
  *
+ * Event envelope (Step 4): the signature-verified payload is runtime-validated
+ * with StripeEventEnvelopeSchema (non-empty string `id` and `type`; every other
+ * Stripe field passes through untouched to handleWebhookEvent). Anything else
+ * is rejected with 400 "Invalid event structure" before any record is written.
+ *
  * Dead-letter handling:
  * - Events exceeding MAX_ATTEMPTS (5) moved to dead_letter state
  * - Dead-letter events return 400 (no more retries)
  * - Alert to ops for manual investigation
  */
+const StripeEventEnvelopeSchema = z
+  .object({
+    id: z.string().min(1),
+    type: z.string().min(1),
+  })
+  .passthrough();
+
 export async function POST(request: NextRequest) {
   try {
     // Step 1: Get raw body for signature verification
@@ -57,12 +71,12 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get("stripe-signature");
 
     // Step 2: Verify webhook signature (fail-closed)
-    let event: any;
+    let verifiedEvent: unknown;
     let timestamp: number;
 
     try {
       const verified = await verifyWebhookSignature(body, signature || "");
-      event = verified.event;
+      verifiedEvent = verified.event;
       timestamp = verified.timestamp;
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
@@ -84,18 +98,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4: Validate event structure
-    if (!event.id || !event.type) {
+    const envelope = StripeEventEnvelopeSchema.safeParse(verifiedEvent);
+    if (!envelope.success) {
       logger.warn("Webhook event missing id or type", {
-        eventKeys: event ? Object.keys(event) : "no event",
+        eventKeys:
+          verifiedEvent !== null && typeof verifiedEvent === "object"
+            ? Object.keys(verifiedEvent)
+            : "no event",
       });
       return Response.json(
         { error: "Invalid event structure" },
         { status: 400 }
       );
     }
+    const event = envelope.data;
 
     // Step 5: Get or create webhook event record with stale recovery
-    let webhookEvent: any;
+    let webhookEvent: WebhookEvent;
     let shouldProcess = false;
     let isDeadLetter = false;
 
