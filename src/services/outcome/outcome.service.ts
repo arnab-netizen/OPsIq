@@ -192,11 +192,16 @@ export async function recordOutcome(
     // Store outcome snapshot in the action's metadata JSON (Action has no dedicated
     // outcomeSnapshot column). Only the outcomeSnapshot key is merged, atomically in SQL, so a
     // concurrent writer of another key (e.g. metadata.blockerReason) is never overwritten.
-    await mergeActionMetadata(db, {
+    const stored = await mergeActionMetadata(db, {
       actionId,
       workspaceId,
       metadata: { set: { outcomeSnapshot } },
     });
+    if (!stored) {
+      // The action disappeared (or left the workspace) after the pre-read: nothing was recorded,
+      // so no OUTCOME_RECORDED event and no re-evaluation may be emitted for it.
+      throw new NotFoundError("Action", actionId);
+    }
 
     // Emit audit event for outcome recording
     const auditWorkspaceId = workspaceId || engagement?.workspaceId || "unknown";

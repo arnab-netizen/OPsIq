@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ConflictError } from "@/infra/errors";
+import { ConflictError, NotFoundError } from "@/infra/errors";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 /**
@@ -132,5 +133,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Action.metadata — concurrent write
     expect(updated.status).toBe("blocked");
     expect(updated.version).toBe(2);
     expect(await metadataOf(id)).toEqual({ outcomeSnapshot: { kept: true }, blockerReason: "permit" });
+  });
+
+  it("[db] recordOutcome: a row deleted after its pre-read is NotFound and emits no OUTCOME_RECORDED", async () => {
+    const id = await makeAction({ status: "completed", completedAt: new Date(), metadata: { outcomeSnapshot: { predictedImpactLevel: "low", predictedConfidence: 50 } } });
+    interleaveAfterFirstRead("findFirst", () => db.action.deleteMany({ where: { id } }));
+    await expect(recordOutcome(id, actor, undefined, ws)).rejects.toBeInstanceOf(NotFoundError);
+    expect(await db.auditEvent.count({ where: { workspaceId: ws, entityId: id, eventName: AUDIT_EVENTS.OUTCOME_RECORDED } })).toBe(0);
+    expect(triggerReEvaluation).not.toHaveBeenCalledWith(expect.objectContaining({ entityId: id }));
   });
 });
