@@ -153,6 +153,36 @@ export function redactTenantExistence(value: unknown, redactWorkspaceId: boolean
 }
 
 /**
+ * Governed message extraction for server-side diagnostics and classified errors.
+ *
+ * Returns the thrown value's message with secret-shaped substrings redacted
+ * (same patterns as redactSecrets) and capped in length. It is the single
+ * sanctioned way for infrastructure code to carry a caught error's text into a
+ * ClassifiedApiError or a log line; client responses still only expose messages
+ * of known owner-safe 4xx errors (see canonical-route-enforcement).
+ */
+const DIAGNOSTIC_MESSAGE_MAX_LENGTH = 500;
+
+export function safeDiagnosticMessage(thrown: unknown): string {
+  let text: string;
+  if (thrown instanceof Error) {
+    text = thrown.message;
+  } else if (typeof thrown === "string") {
+    text = thrown;
+  } else {
+    text = String(thrown);
+  }
+  // URL-shaped values (connection strings, webhook URLs with embedded credentials)
+  // keep only their scheme, matching the scrub applied to driver errors in classified-error.
+  const withoutUrls = text.replace(/[a-z][a-z0-9+.-]*:\/\/[^\s]+/gi, (match: string) => `${match.split("://")[0]}://***`);
+  const redacted = redactSecrets(withoutUrls);
+  const result = typeof redacted === "string" ? redacted : "[REDACTED]";
+  return result.length > DIAGNOSTIC_MESSAGE_MAX_LENGTH
+    ? `${result.slice(0, DIAGNOSTIC_MESSAGE_MAX_LENGTH)}…`
+    : result;
+}
+
+/**
  * Redact error details from telemetry
  * Raw error messages can leak system internals
  */

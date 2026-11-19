@@ -42,6 +42,7 @@ import {
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
+import { safeDiagnosticMessage } from "@/infra/telemetry-sanitizer";
 import { isCanonicalJsonResponse, stringifyRouteResponse } from "@/lib/canonical-json-response";
 import { db } from "@/lib/db";
 import { verifyDiagnosticKey } from "@/lib/security/diagnostic-key";
@@ -415,7 +416,7 @@ export function withCanonicalEnforcement(
             throw error;
           }
           // Wrap unexpected errors as workspace context invalid
-          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorMsg = safeDiagnosticMessage(error);
           throw new ClassifiedApiError(
             `Failed to derive verified workspace ID from membership: ${errorMsg}`,
             "workspace_context_invalid",
@@ -755,7 +756,7 @@ export function withCanonicalEnforcement(
         const appError = error as { statusCode?: unknown; code?: unknown };
         const statusCode = typeof appError.statusCode === "number" ? appError.statusCode : 500;
         const errorCode = typeof appError.code === "string" ? appError.code : "INTERNAL_ERROR";
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = safeDiagnosticMessage(error);
 
         classifiedError = new ClassifiedApiError(
           errorMessage,
@@ -773,7 +774,7 @@ export function withCanonicalEnforcement(
         const fallbackStage = "handler_invocation";
 
         classifiedError = new ClassifiedApiError(
-          error instanceof Error ? error.message : String(error),
+          safeDiagnosticMessage(error),
           fallbackClassification,
           fallbackStage,
           500,
@@ -846,7 +847,7 @@ export function withCanonicalEnforcement(
         classification: classifiedError.classification,
         statusCode: classifiedError.statusCode,
         errorName: safErrorName,
-        errorMessage: error instanceof Error ? error.message : String(error),
+        errorMessage: safeDiagnosticMessage(error),
         operation: operationName,
       };
       if (expectedClientRejection) {
@@ -859,6 +860,10 @@ export function withCanonicalEnforcement(
         // as "[object Object]").
         logger.error("[WRAPPER_FAILED]", error, wrapperLogContext);
       }
+
+      const clientFacingMessage = isKnownSafeClientError
+        ? classifiedError.message
+        : "Something went wrong on our side. Nothing was saved. Please try again.";
 
       const responseBody: Record<string, unknown> = {
         // A known, owner-safe 4xx AppError (e.g. ValidationError) exposes
@@ -881,7 +886,7 @@ export function withCanonicalEnforcement(
         // specific owner-safe message by classifying the response body
         // themselves (see src/lib/operator-error-governance.ts); this is
         // only the last-resort fallback when no more specific message exists.
-        error: isKnownSafeClientError ? classifiedError.message : "Something went wrong on our side. Nothing was saved. Please try again.",
+        error: clientFacingMessage,
         correlationId: finalCorrelationId,
         classification: classifiedError.classification,
         stage: classifiedError.stage,
