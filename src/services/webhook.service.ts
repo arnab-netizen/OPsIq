@@ -231,7 +231,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Unique-constraint violation on insert: Prisma P2002, or the raw Postgres 23505 surfaced through
  * the pg driver adapter (both shapes occur depending on the Prisma/adapter path).
  */
-function isUniqueViolation(error: unknown): boolean {
+export function isUniqueViolation(error: unknown): boolean {
   if (!isRecord(error)) return false;
   if (error.code === "P2002") return true;
   const cause = error.cause;
@@ -1110,6 +1110,30 @@ async function transitionClaimToProcessed(tx: WebhookTx, stripeEventId: string):
   }
 }
 
+/**
+ * The one way a claimed webhook event (Stripe or Paddle; `eventKey` is the webhook_events key) is
+ * applied: ONE transaction (withStatementTimeout) whose first statement settles the claim
+ * (transitionClaimToProcessed) and whose `apply` performs every mutation + audit on the same tx.
+ * Commit = mutation, audit and `processed` together; any throw rolls all of it back and leaves the
+ * row `processing` for the caller to mark failed (retryable). Never pair a separate "mark
+ * processed" commit with a mutation: a failure between the two re-applies or strands the event.
+ */
+export async function applyClaimedWebhookEvent<T>(
+  eventKey: string,
+  label: string,
+  apply: (tx: WebhookTx) => Promise<T>
+): Promise<T> {
+  return withStatementTimeout(
+    db,
+    WEBHOOK_STATEMENT_TIMEOUT_MS,
+    async (tx) => {
+      await transitionClaimToProcessed(tx, eventKey);
+      return apply(tx);
+    },
+    label
+  );
+}
+
 /** Apply one validated event's billing mutation(s) + audit on the processing transaction. */
 async function applyWebhookEvent(tx: WebhookTx, event: StripeWebhookEventInput): Promise<void> {
   // `data.object` absent: nothing to apply (acknowledged as before). Present: validated per type.
@@ -1181,15 +1205,7 @@ export async function handleWebhookEvent(event: StripeWebhookEventInput): Promis
         await checkEventOrdering(event.id);
       }
 
-      await withStatementTimeout(
-        db,
-        WEBHOOK_STATEMENT_TIMEOUT_MS,
-        async (tx) => {
-          await transitionClaimToProcessed(tx, event.id);
-          await applyWebhookEvent(tx, event);
-        },
-        "stripe-webhook.apply"
-      );
+      await applyClaimedWebhookEvent(event.id, "stripe-webhook.apply", (tx) => applyWebhookEvent(tx, event));
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("Error handling webhook event", {

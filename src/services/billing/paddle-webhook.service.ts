@@ -9,14 +9,18 @@
  *    lastEventTimestamp is ignored (and audited), applied with a guarded updateMany so concurrent
  *    deliveries cannot move state backwards.
  *  - Unknown price id → rejected (fail closed). Transaction events are audited only.
- *  - Mutation + audit are atomic (one $transaction).
- * Duplicate delivery / retry state machine lives in the route via webhook.service helpers.
+ *  - Mutation + audit + the webhook_events claim settlement are atomic: the route applies a
+ *    claimed event with processClaimedPaddleEvent / recordRejectedPaddleEvent, which run on
+ *    webhook.service's applyClaimedWebhookEvent (one transaction: processing -> processed, then
+ *    every write and audit row). There is no separate "mark processed" commit to fail.
+ * Duplicate delivery / retry state machine lives in webhook.service (getOrCreateWebhookEvent).
  */
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { PaddleApiError, cancelSubscriptionImmediately } from "@/services/billing/paddle-client";
+import { applyClaimedWebhookEvent, isUniqueViolation } from "@/services/webhook.service";
 import {
   PADDLE_PROVIDER,
   isPaddleSubscriptionEvent,
@@ -246,62 +250,109 @@ async function auditTransactionEvent(tx: Tx, envelope: PaddleEnvelope): Promise<
   return "audited";
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null && (error as { code?: string }).code === "P2002";
-}
-
-export async function processPaddleEvent(envelope: PaddleEnvelope): Promise<PaddleProcessOutcome> {
-  if (isPaddleSubscriptionEvent(envelope.event_type)) {
-    // Two first events (created + activated) can race to create the single subscription row; the
-    // loser hits the unique index and simply re-runs as an update instead of burning a retry attempt.
-    for (let attempt = 0; ; attempt++) {
-      try {
-        return await db.$transaction((tx: Prisma.TransactionClient) => applySubscriptionEvent(tx, envelope));
-      } catch (error) {
-        if (attempt >= 2 || !isUniqueViolation(error)) throw error;
-      }
-    }
-  }
-  if (isPaddleTransactionEvent(envelope.event_type)) {
-    return db.$transaction((tx: Prisma.TransactionClient) => auditTransactionEvent(tx, envelope));
-  }
+/** Route one validated event to its applier on the caller's transaction. */
+async function applyPaddleEvent(tx: Tx, envelope: PaddleEnvelope): Promise<PaddleProcessOutcome> {
+  if (isPaddleSubscriptionEvent(envelope.event_type)) return applySubscriptionEvent(tx, envelope);
+  if (isPaddleTransactionEvent(envelope.event_type)) return auditTransactionEvent(tx, envelope);
   return "ignored";
 }
 
-/** Audit a rejected (signed but unacceptable) event outside the rolled-back transaction. */
-export async function auditRejectedPaddleEvent(envelope: PaddleEnvelope, error: PaddleEventRejectedError): Promise<void> {
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.BILLING_EVENT_REJECTED,
-    workspaceId: error.workspaceId,
-    actorType: "system",
-    entityType: "WebhookEvent",
-    payload: { providerEventId: envelope.event_id, eventType: envelope.event_type, reason: error.reason },
-    visibility: "internal",
+/**
+ * Two first events (created + activated) can race to create the single subscription row; the
+ * loser hits the unique index, its whole transaction rolls back, and it simply re-runs as an
+ * update instead of burning a retry attempt.
+ */
+async function retryCreateRace<T>(run: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      if (attempt >= 2 || !isUniqueViolation(error)) throw error;
+    }
+  }
+}
+
+/**
+ * Apply an event OUTSIDE the webhook_events state machine (one transaction: mutation + audit).
+ * For callers that hold no delivery claim; the webhook route must use processClaimedPaddleEvent.
+ */
+export async function processPaddleEvent(envelope: PaddleEnvelope): Promise<PaddleProcessOutcome> {
+  return retryCreateRace(() => db.$transaction((tx: Prisma.TransactionClient) => applyPaddleEvent(tx, envelope)));
+}
+
+/**
+ * Apply a delivery this caller holds the `processing` claim for (eventKey = webhook_events key).
+ * Settling the claim, the mutation and its audit rows commit in one transaction or not at all; a
+ * PaddleEventRejectedError rolls the transaction back (claim still held) for recordRejectedPaddleEvent.
+ */
+export async function processClaimedPaddleEvent(eventKey: string, envelope: PaddleEnvelope): Promise<PaddleProcessOutcome> {
+  return retryCreateRace(() =>
+    applyClaimedWebhookEvent(eventKey, "paddle-webhook.apply", (tx) => applyPaddleEvent(tx, envelope)),
+  );
+}
+
+/**
+ * Record a signed but unacceptable event this caller holds the claim for.
+ *
+ * The external side effect runs FIRST: when the rejection is an unwanted duplicate subscription,
+ * it is cancelled at the provider (a provider 4xx — already canceled / unknown — is final; a
+ * 5xx/network failure is rethrown so the event is marked failed and retried, and a re-run of the
+ * cancel is idempotent at the provider). Then ONE claimed transaction settles the event and writes
+ * the rejection audit (and the duplicate-cancel audit): all of it commits, or none of it does and
+ * the event stays retryable. The refund of a duplicate charge stays a manual Paddle-dashboard
+ * action (flagged in the audit).
+ */
+export async function recordRejectedPaddleEvent(
+  eventKey: string,
+  envelope: PaddleEnvelope,
+  error: PaddleEventRejectedError,
+): Promise<void> {
+  const duplicateCancelOutcome = await cancelDuplicateAtProvider(error);
+  await applyClaimedWebhookEvent(eventKey, "paddle-webhook.reject", async (tx) => {
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.BILLING_EVENT_REJECTED,
+        workspaceId: error.workspaceId,
+        actorType: "system",
+        entityType: "WebhookEvent",
+        payload: { providerEventId: envelope.event_id, eventType: envelope.event_type, reason: error.reason },
+        visibility: "internal",
+      },
+      tx,
+    );
+    if (duplicateCancelOutcome !== null) {
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.BILLING_DUPLICATE_SUBSCRIPTION_CANCELED,
+          workspaceId: error.workspaceId,
+          actorType: "system",
+          entityType: "Subscription",
+          payload: {
+            providerEventId: envelope.event_id,
+            duplicateSubscriptionId: error.orphanSubscriptionId,
+            outcome: duplicateCancelOutcome,
+            refundRequired: true,
+          },
+          visibility: "internal",
+        },
+        tx,
+      );
+    }
   });
 }
 
 /**
  * The owner paid twice (two checkouts opened before the first webhook landed). The extra provider
- * subscription grants nothing locally, so cancel it at the provider to stop recurring charges; the
- * refund of the duplicate charge stays a manual Paddle-dashboard action (flagged in the audit).
- * A provider 4xx (already canceled / unknown) is final; a 5xx/network failure is rethrown so the
- * webhook is retried.
+ * subscription grants nothing locally, so cancel it at the provider to stop recurring charges.
+ * Returns the outcome to audit, or null when the rejection is not a duplicate subscription.
  */
-export async function cancelDuplicateSubscription(envelope: PaddleEnvelope, error: PaddleEventRejectedError): Promise<void> {
-  if (error.reason !== "second_live_subscription" || !error.orphanSubscriptionId) return;
-  let outcome = "canceled";
+async function cancelDuplicateAtProvider(error: PaddleEventRejectedError): Promise<string | null> {
+  if (error.reason !== "second_live_subscription" || !error.orphanSubscriptionId) return null;
   try {
     await cancelSubscriptionImmediately(error.orphanSubscriptionId);
+    return "canceled";
   } catch (e) {
-    if (e instanceof PaddleApiError && e.upstreamStatus >= 400 && e.upstreamStatus < 500) outcome = `provider_${e.upstreamStatus}`;
-    else throw e;
+    if (e instanceof PaddleApiError && e.upstreamStatus >= 400 && e.upstreamStatus < 500) return `provider_${e.upstreamStatus}`;
+    throw e;
   }
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.BILLING_DUPLICATE_SUBSCRIPTION_CANCELED,
-    workspaceId: error.workspaceId,
-    actorType: "system",
-    entityType: "Subscription",
-    payload: { providerEventId: envelope.event_id, duplicateSubscriptionId: error.orphanSubscriptionId, outcome, refundRequired: true },
-    visibility: "internal",
-  });
 }
