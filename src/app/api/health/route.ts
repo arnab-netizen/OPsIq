@@ -134,6 +134,9 @@ export async function GET(): Promise<NextResponse> {
       status: overallStatus,
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version ?? "0.1.0",
+      // Public git commit this deployment was built from (open repository, not a secret). Lets release automation prove which commit is
+      // actually being SERVED. Null unless Vercel provided a well-formed 40-hex SHA.
+      commit: /^[0-9a-f]{40}$/.test(process.env.VERCEL_GIT_COMMIT_SHA ?? "") ? process.env.VERCEL_GIT_COMMIT_SHA : null,
       environment: process.env.NODE_ENV ?? "unknown",
       checks,
     },
