@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -41,7 +42,7 @@ export const PATCH = withCanonicalEnforcement(
     }
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const input = UpdateDecisionSchema.parse(body);
+    const input = parseOrThrow(UpdateDecisionSchema, body);
 
     if (!hasPermission(membership.role, input.status === "approved" ? "approve" : "reject")) {
       throw new ForbiddenError(`Insufficient permissions to ${input.status} decision`);

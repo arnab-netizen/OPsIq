@@ -36,6 +36,19 @@ export const SIGNIFICANT_CHANGE_TYPES = [
 
 export type SignificantChangeType = (typeof SIGNIFICANT_CHANGE_TYPES)[number];
 
+/**
+ * Thrown when a re-evaluation of the same engagement is already running in this process (the
+ * recursion guard). The running evaluation may already have read the state the new event changed,
+ * so a caller that has committed a change must not drop its event: it defers it (see
+ * services/action-reevaluation-scheduling.ts) instead of failing its request.
+ */
+export class ReEvaluationInProgressError extends Error {
+  constructor(readonly engagementId: string) {
+    super(`Re-evaluation already in progress for engagement ${engagementId}`);
+    this.name = "ReEvaluationInProgressError";
+  }
+}
+
 export interface SignificantChangeEvent {
   changeType: SignificantChangeType;
   entityType: string;
@@ -512,7 +525,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       changeType: event.changeType,
       entityId: event.entityId,
     });
-    throw new Error(`Re-evaluation already in progress for engagement ${event.engagementId}`);
+    throw new ReEvaluationInProgressError(event.engagementId);
   }
   reEvaluationInProgress.add(event.engagementId);
 

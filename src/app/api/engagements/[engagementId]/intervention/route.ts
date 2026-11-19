@@ -67,10 +67,10 @@ export const PATCH = withCanonicalEnforcement(
     }
 
     if ("interventionPhase" in body) {
-      const validatedBody = updateInterventionPhaseSchema.parse(body);
+      const validatedBody = parseOrThrow(updateInterventionPhaseSchema, body);
       await updateInterventionPhase(engagementId, validatedBody, ctx, workspaceId);
     } else if ("interventionMode" in body) {
-      const validatedBody = updateInterventionModeSchema.parse(body);
+      const validatedBody = parseOrThrow(updateInterventionModeSchema, body);
       await updateInterventionMode(engagementId, validatedBody, ctx, workspaceId);
     } else {
       return canonicalJson(
