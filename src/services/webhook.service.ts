@@ -95,10 +95,13 @@ const StripeSubscriptionObjectSchema = z
   })
   .passthrough();
 
-/** customer.subscription.deleted only needs the customer to locate the subscription. */
+/**
+ * customer.subscription.deleted: the customer locates the row; the subscription id must match the
+ * one the row is bound to (an event for another subscription never cancels this one).
+ */
 const StripeSubscriptionDeletedObjectSchema = z
   .object({
-    id: z.string().nullish(),
+    id: z.string().min(1),
     customer: StripeIdRefSchema,
   })
   .passthrough();
@@ -913,8 +916,22 @@ function newerThanWatermark(position: StripeEventPosition): Prisma.SubscriptionW
 }
 
 /**
- * Apply `data` to the subscription only if this event is newer than the stored watermark, and
- * advance the watermark in the same statement. The compare-and-set is one guarded UPDATE on the
+ * Which Stripe subscription an event is about, and how it relates to the row's binding.
+ *  - "bind": customer.subscription.created / checkout.session.completed establish the
+ *    subscription id (a resubscription deliberately rebinds the row, still time-ordered).
+ *  - "match": customer.subscription.updated / .deleted apply only to the bound subscription (or a
+ *    row not yet bound); an event for a different subscription id is ignored and audited.
+ */
+type SubscriptionIdentity = { mode: "bind" | "match"; stripeSubscriptionId: string };
+
+function identityPredicate(identity: SubscriptionIdentity): Prisma.SubscriptionWhereInput {
+  if (identity.mode === "bind") return {};
+  return { OR: [{ stripeSubscriptionId: null }, { stripeSubscriptionId: identity.stripeSubscriptionId }] };
+}
+
+/**
+ * Apply `data` to the subscription only if this event is newer than the stored watermark and is
+ * about the subscription the row is bound to, and advance the watermark in the same statement. The compare-and-set is one guarded UPDATE on the
  * applying transaction: a concurrent transaction that moved the row first is re-checked by
  * Postgres against the predicate, so an older event can never overwrite newer state.
  *
@@ -926,10 +943,11 @@ async function applyIfNewer(
   tx: WebhookTx,
   position: StripeEventPosition,
   target: { subscriptionId: string; workspaceId: string },
+  identity: SubscriptionIdentity,
   data: Prisma.SubscriptionUpdateManyMutationInput
 ): Promise<Subscription | null> {
   const applied = await tx.subscription.updateMany({
-    where: { id: target.subscriptionId, ...newerThanWatermark(position) },
+    where: { AND: [{ id: target.subscriptionId }, newerThanWatermark(position), identityPredicate(identity)] },
     data: { ...data, lastEventTimestamp: position.created, lastEventId: position.stripeEventId },
   });
 
@@ -939,8 +957,43 @@ async function applyIfNewer(
 
   const stored = await tx.subscription.findUniqueOrThrow({
     where: { id: target.subscriptionId },
-    select: { status: true, lastEventTimestamp: true, lastEventId: true },
+    select: { status: true, lastEventTimestamp: true, lastEventId: true, stripeSubscriptionId: true },
   });
+
+  if (
+    identity.mode === "match" &&
+    stored.stripeSubscriptionId !== null &&
+    stored.stripeSubscriptionId !== identity.stripeSubscriptionId
+  ) {
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.BILLING_SUBSCRIPTION_EVENT_IGNORED,
+        // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): see syncEntitlementsForSubscription.
+        actorType: "system",
+        entityType: "Subscription",
+        entityId: target.subscriptionId,
+        correlationId: position.stripeEventId,
+        payload: {
+          provider: "stripe",
+          reason: "subscription_mismatch",
+          eventType: position.eventType,
+          workspaceId: target.workspaceId,
+          eventSubscriptionId: identity.stripeSubscriptionId,
+          storedSubscriptionId: stored.stripeSubscriptionId,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
+    logger.warn("Ignoring Stripe event for a subscription the billing row is not bound to", {
+      stripeEventId: position.stripeEventId,
+      eventType: position.eventType,
+      subscriptionId: target.subscriptionId,
+      eventSubscriptionId: identity.stripeSubscriptionId,
+      storedSubscriptionId: stored.stripeSubscriptionId,
+    });
+    return null;
+  }
 
   await emitAuditEvent(
     {
@@ -1002,6 +1055,7 @@ async function handleCheckoutSessionCompleted(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
+    { mode: "bind", stripeSubscriptionId: event.subscription },
     { stripeSubscriptionId: event.subscription, status: "active" }
   );
   if (!updatedSubscription) return;
@@ -1042,6 +1096,7 @@ async function handleCustomerSubscriptionCreated(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
+    { mode: "bind", stripeSubscriptionId: event.id },
     {
       stripeSubscriptionId: event.id,
       status: "active",
@@ -1080,6 +1135,7 @@ async function handleCustomerSubscriptionDeleted(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
+    { mode: "match", stripeSubscriptionId: event.id },
     { status: "canceled", canceledAt: new Date() }
   );
   if (!updatedSubscription) return;
@@ -1162,6 +1218,7 @@ export async function syncSubscriptionStatus(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
+    { mode: "match", stripeSubscriptionId: event.id },
     {
       status: event.status,
       currentPeriodStart: period.start,

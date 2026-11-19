@@ -241,6 +241,7 @@ export const AUDIT_EVENTS = {
   BILLING_CHECKOUT_CREATED: "billing.checkout_created",
   BILLING_SUBSCRIPTION_SYNCED: "billing.subscription_synced",
   BILLING_SUBSCRIPTION_STALE_EVENT_IGNORED: "billing.subscription_stale_event_ignored",
+  BILLING_SUBSCRIPTION_EVENT_IGNORED: "billing.subscription_event_ignored",
   BILLING_PAYMENT_SUCCEEDED: "billing.payment_succeeded",
   BILLING_PAYMENT_FAILED: "billing.payment_failed",
   BILLING_CANCELLATION_REQUESTED: "billing.cancellation_requested",
