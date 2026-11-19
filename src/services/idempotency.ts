@@ -231,6 +231,14 @@ export async function recordIdempotencyError(
   // IdempotencyRecord schema does not have workspaceId field
   // Clients must ensure idempotencyKey is globally unique
 
+  // A refusal that may clear on retry (telemetry.retryable: a 429, an unverifiable entitlement, a
+  // "please try again" conflict, a transient 503) is not this key's final answer: release the claim so a
+  // retry with the same key re-runs instead of replaying the refusal for the key's lifetime.
+  if (error instanceof AppError && error.telemetry.retryable) {
+    await db.idempotencyRecord.deleteMany({ where: { idempotencyKey, status: "pending" } });
+    return;
+  }
+
   const recorded = toRecordedError(error);
   await db.idempotencyRecord.updateMany({
     where: { idempotencyKey },

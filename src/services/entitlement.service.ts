@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { db, withStatementTimeout } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import { NotFoundError, ValidationError, ForbiddenError, PlanLimitError, ConflictError } from "@/infra/errors";
+import { AppError, NotFoundError, ValidationError, ForbiddenError, PlanLimitError, ConflictError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -43,6 +43,8 @@ export interface ResolvedEntitlements {
 export interface CapabilityCheck {
   allowed: boolean;
   reason?: string;
+  /** True when the denial is because the entitlement could not be read (retryable), not a verified denial. */
+  unverifiable?: boolean;
   usage?: number;
   limit?: number | null;
 }
@@ -312,8 +314,18 @@ export async function assertCapability(
     return {
       allowed: false,
       reason: `Entitlement check failed: ${governed.operatorMessage}`,
+      unverifiable: isInfrastructureFailure(error),
     };
   }
+}
+
+/**
+ * True when an entitlement read failed for an infrastructure reason (a database or driver error, a lock-wait
+ * or statement timeout) rather than a determinate state such as a missing subscription or plan (an AppError,
+ * e.g. NotFoundError). Only the former may clear on a plain retry, so only it is a retryable refusal.
+ */
+function isInfrastructureFailure(error: unknown): boolean {
+  return !(error instanceof AppError);
 }
 
 /**
@@ -453,7 +465,7 @@ async function recordCapabilityUsageWithinLimit(
       check = evaluateCapability(await resolveEntitlements(workspaceId, tx), key, amount);
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-      throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`);
+      throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`, undefined, { entitlementUnverifiable: isInfrastructureFailure(error) });
     }
     if (!check.allowed) {
       throw new PlanLimitError(key, check.reason || "Plan limit exceeded");
@@ -537,10 +549,10 @@ function createReservation(id: string, workspaceId: string, key: string, amount:
     amount,
     async settle(tx: Prisma.TransactionClient): Promise<void> {
       if (!(await lockReservation(tx, id, workspaceId))) {
-        throw new ConflictError("The plan usage reserved for this operation no longer exists. Nothing was saved; please try again.");
+        throw new ConflictError("The plan usage reserved for this operation no longer exists. Nothing was saved; please try again.", undefined, undefined, { retryable: true });
       }
       if (await isReservationFinalized(tx, id)) {
-        throw new ConflictError("The plan usage reserved for this operation has expired. Nothing was saved; please try again.");
+        throw new ConflictError("The plan usage reserved for this operation has expired. Nothing was saved; please try again.", undefined, undefined, { retryable: true });
       }
       if ((await countSettledUnits(tx, id)) >= amount) {
         throw new Error(`Capability reservation ${id} has no unsettled unit left (${amount} reserved)`);
@@ -640,7 +652,7 @@ export async function withCapabilityQuota<T>(
     if (!enforce || error instanceof PlanLimitError || error instanceof ValidationError) throw error;
     // Enforced: fail closed, as assertCapability does: an unverifiable entitlement is a denial.
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`);
+    throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`, undefined, { entitlementUnverifiable: isInfrastructureFailure(error) });
   }
 
   const reservation = createReservation(reservationId, workspaceId, key, amount);

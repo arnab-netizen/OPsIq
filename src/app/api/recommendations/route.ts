@@ -76,7 +76,9 @@ export const POST = withCanonicalEnforcement(
       // cached response even once decision usage reaches the limit; a denial is recorded for this key.
       const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
       if (!capabilityCheck.allowed) {
-        throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
+        throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded", undefined, {
+          entitlementUnverifiable: capabilityCheck.unverifiable === true,
+        });
       }
       const result = await createRecommendation(body, ctx, workspaceId);
       await recordIdempotencyResponse(idempotencyKey, 201, result);
