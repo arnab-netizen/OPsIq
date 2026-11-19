@@ -5,6 +5,8 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { readActionBlockerReason, withActionBlockerReason } from "@/domain/execution/action-metadata";
+import type { Action } from "@/generated/prisma/client";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // ─── Action Lifecycle States ──────────────────────────────────────────────────
 
@@ -13,15 +15,25 @@ export type ActionLifecycleState = "draft" | "created" | "in_progress" | "blocke
 export interface ActionStateTransition {
   from: ActionLifecycleState;
   to: ActionLifecycleState;
-  requiredContext?: Record<string, any>;
+  requiredContext?: Record<string, unknown>;
   requiresEvidence?: boolean;
   requiresReviewer?: boolean;
+}
+
+/** The fields the enforcement rules inspect; any Action row (plus derived fields) satisfies it. */
+export interface ActionRuleSubject {
+  status?: string | null;
+  blockerReason?: string | null;
+  evidence?: readonly unknown[] | string | null;
+  originalPriority?: string | null;
+  priority?: string | null;
+  [key: string]: unknown;
 }
 
 export interface EnforcementRule {
   ruleId: string;
   name: string;
-  check: (action: any) => boolean;
+  check: (action: ActionRuleSubject) => boolean;
   error: string;
 }
 
@@ -44,7 +56,7 @@ export const ENFORCEMENT_RULES: EnforcementRule[] = [
     ruleId: "action.evidence.required.completed",
     name: "Completion requires evidence",
     check: (action) => {
-      if (action.status === "completed" && action.status !== "in_progress") {
+      if (action.status === "completed") {
         return !!action.evidence && action.evidence.length > 0;
       }
       return true;
@@ -76,7 +88,7 @@ export const ENFORCEMENT_RULES: EnforcementRule[] = [
   {
     ruleId: "action.version.conflict",
     name: "Optimistic locking prevents concurrent modifications",
-    check: (action) => true,
+    check: () => true,
     error: "Action was modified by another process",
   },
 ];
@@ -101,7 +113,7 @@ export async function validateStateTransition(
   }
 }
 
-export async function enforceActionRules(action: any): Promise<string[]> {
+export async function enforceActionRules(action: ActionRuleSubject): Promise<string[]> {
   const violations: string[] = [];
 
   for (const rule of ENFORCEMENT_RULES) {
@@ -121,14 +133,14 @@ export async function transitionActionState(
   actionId: string,
   nextState: ActionLifecycleState,
   context: {
-    authContext?: any;
+    authContext?: Pick<CanonicalAuthContext, "session">;
     actorId?: string;
     reason?: string;
     evidence?: string;
     reviewerId?: string;
     workspaceId: string;
   }
-): Promise<any> {
+): Promise<Action> {
   const resolvedActorId = context.authContext?.session?.user?.id || context.actorId;
   if (!resolvedActorId) {
     throw new Error("Either authContext or actorId must be provided");
@@ -235,7 +247,7 @@ export async function getActionsByEngagementAndState(
   engagementId: string,
   state: ActionLifecycleState,
   workspaceId: string
-): Promise<any[]> {
+): Promise<Action[]> {
   return db.action.findMany({
     where: {
       engagementId,
@@ -246,7 +258,7 @@ export async function getActionsByEngagementAndState(
   });
 }
 
-export async function getActionsByState(state: ActionLifecycleState, workspaceId: string): Promise<any[]> {
+export async function getActionsByState(state: ActionLifecycleState, workspaceId: string): Promise<Action[]> {
   return db.action.findMany({
     where: {
       status: state,
