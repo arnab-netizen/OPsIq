@@ -103,6 +103,7 @@ const StripeSubscriptionDeletedObjectSchema = z
   .object({
     id: z.string().min(1),
     customer: StripeIdRefSchema,
+    canceled_at: z.number().int().nullish(),
   })
   .passthrough();
 
@@ -1178,7 +1179,8 @@ async function handleCustomerSubscriptionDeleted(
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
     { mode: "match", stripeSubscriptionId: event.id },
     "full",
-    { status: "canceled", canceledAt: new Date() }
+    // Provider time, never the receive clock: a delayed or retried delivery must not move it.
+    { status: "canceled", canceledAt: event.canceled_at ? new Date(event.canceled_at * 1000) : position.created }
   );
   if (!updatedSubscription) return;
 
