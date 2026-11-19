@@ -20,11 +20,11 @@
  * Documented contract (route.ts header):
  *   bad / missing signature, missing secret, timestamp outside tolerance -> 401, nothing recorded
  *   verified but structurally invalid event                              -> 400, nothing recorded
- *   new verified event                                                   -> 202, processed async
+ *   new verified event                                                   -> 200 once applied (response after settle)
  *   already processed                                                    -> 200 { duplicate: true }
  *   currently processing                                                 -> 409
  *   DB error recording the event                                         -> 500, nothing processed
- *   processing failure                                                   -> event marked failed (retryable)
+ *   processing failure                                                   -> 500, event marked failed (Stripe retries)
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { randomUUID } from "crypto";
@@ -159,7 +159,7 @@ async function resetSubscription() {
   await db.auditEvent.deleteMany({ where: { entityId: SUB_ID } });
 }
 
-/** Wait for the route's post-202 background processing to settle the event row. */
+/** The route answers after settle; this re-checks the row state (immediate, bounded wait). */
 async function settled(id: string, status: string) {
   await vi.waitFor(
     async () => {
@@ -286,14 +286,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
 
   // ── Accepted path, duplicates and replays ────────────────────────────────
 
-  it("valid signature -> 202, processed exactly once; redelivery and byte-identical replay -> 200 duplicate, no reprocessing", async () => {
+  it("valid signature -> 200 once applied, processed exactly once; redelivery and byte-identical replay -> 200 duplicate, no reprocessing", async () => {
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
     const header = sign(payload);
 
     const first = await post(payload, header);
-    expect(first.status).toBe(202);
-    expect(first.body).toEqual({ received: true, id, type: "checkout.session.completed", status: "processing" });
+    expect(first.status).toBe(200);
+    expect(first.body).toEqual({ received: true, id, type: "checkout.session.completed", status: "processed" });
     await settled(id, "processed");
 
     const sub = await subscription();
@@ -322,12 +322,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
     const results = await Promise.all(Array.from({ length: 8 }, () => post(payload, sign(payload))));
-    const statuses = results.map((r) => r.status);
-    // Exactly one delivery wins and is accepted. Every loser either sees the in-flight row (409,
-    // Stripe retries) or the finished row (200 duplicate) -- including a loser of the unique-insert
-    // race on stripe_event_id, which re-reads the winner's row instead of surfacing a 500.
-    expect(statuses.filter((s) => s === 202)).toHaveLength(1);
-    for (const s of statuses) expect([200, 202, 409]).toContain(s);
+    // Exactly one delivery wins and applies it (200 status "processed"). Every loser either sees
+    // the in-flight row (409, Stripe retries) or the finished row (200 duplicate) -- including a
+    // loser of the unique-insert race on stripe_event_id, which re-reads the winner's row instead
+    // of surfacing a 500.
+    expect(results.filter((r) => r.status === 200 && r.body.status === "processed")).toHaveLength(1);
+    for (const r of results) expect(r.status === 409 || (r.status === 200 && (r.body.duplicate === true || r.body.status === "processed"))).toBe(true);
     await settled(id, "processed");
     expect(spies.handleWebhookEvent).toHaveBeenCalledTimes(1);
     expect(await db.webhookEvent.count({ where: { stripeEventId: id } })).toBe(1);
@@ -388,9 +388,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     await db.webhookEvent.create({ data: { stripeEventId: id, type: "checkout.session.completed", status: "failed", attempts: 1 } });
     const payload = JSON.stringify(checkoutCompleted(id));
     const results = await Promise.all(Array.from({ length: 6 }, () => post(payload, sign(payload))));
-    const statuses = results.map((r) => r.status);
-    expect(statuses.filter((s) => s === 202)).toHaveLength(1);
-    for (const s of statuses) expect([200, 202, 409]).toContain(s);
+    expect(results.filter((r) => r.status === 200 && r.body.status === "processed")).toHaveLength(1);
+    for (const r of results) expect(r.status === 409 || (r.status === 200 && (r.body.duplicate === true || r.body.status === "processed"))).toBe(true);
     await settled(id, "processed");
     expect(spies.handleWebhookEvent).toHaveBeenCalledTimes(1);
     expect(await activationAudits()).toBe(1);
@@ -417,7 +416,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
       data: { stripeEventId: id, type: "checkout.session.completed", status: "processing", attempts: 0, createdAt: longAgo, updatedAt: longAgo },
     });
     const payload = JSON.stringify(checkoutCompleted(id));
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(200);
     await settled(id, "processed");
     expect(spies.handleWebhookEvent).toHaveBeenCalledTimes(1);
     expect(await activationAudits()).toBe(1);
@@ -446,12 +445,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     expect(await businessState()).toEqual(before);
   });
 
-  it("database failure inside processing (unknown Stripe customer) -> 202 then event marked failed, no subscription change; retry succeeds once fixed", async () => {
+  it("database failure inside processing (unknown Stripe customer) -> 500 with the event marked failed, no subscription change; retry succeeds once fixed", async () => {
     const id = nextEventId();
     const unknownCustomer = `cus_unknown_${RUN}`;
     const payload = JSON.stringify(checkoutCompleted(id, unknownCustomer));
     const res = await post(payload, sign(payload));
-    expect(res.status).toBe(202);
+    expect(res.status).toBe(500);
     await settled(id, "failed");
     expect(await eventRow(id)).toMatchObject({ status: "failed", attempts: 1 });
     expect((await subscription())?.status).toBe("trialing");
@@ -462,12 +461,12 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
     spies.handleWebhookEvent.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(500);
     await settled(id, "failed");
     expect((await subscription())?.status).toBe("trialing");
     expect(await activationAudits()).toBe(0);
 
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(200);
     await settled(id, "processed");
     expect((await subscription())?.status).toBe("active");
     expect(await activationAudits()).toBe(1);
@@ -488,7 +487,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
     const res = await post(payload, sign(payload, { timestamp: Math.floor(Date.now() / 1000) + 60 }));
-    expect(res.status).toBe(202);
+    expect(res.status).toBe(200);
     await settled(id, "processed");
   });
 
@@ -496,7 +495,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
     const signedAt = Math.floor(Date.now() / 1000) - 120;
-    expect((await post(payload, sign(payload, { timestamp: signedAt }))).status).toBe(202);
+    expect((await post(payload, sign(payload, { timestamp: signedAt }))).status).toBe(200);
     await settled(id, "processed");
     expect((await eventRow(id))?.stripeTimestamp).toBe(signedAt);
   });
@@ -520,13 +519,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     expect(() => checkSignatureTimestamp(Number.NaN)).toThrow();
   });
 
-  it("verification needs no STRIPE_SECRET_KEY (offline HMAC): valid -> 202, forged -> 401", async () => {
+  it("verification needs no STRIPE_SECRET_KEY (offline HMAC): valid -> 200, forged -> 401", async () => {
     delete process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_API_KEY;
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
     expect((await post(payload, sign(payload, { secret: "whsec_attacker" }))).status).toBe(401);
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(200);
     await settled(id, "processed");
   });
   // ── Atomicity: subscription mutation + audit event + event-state transition ──
@@ -535,7 +534,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
     spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(500);
     await settled(id, "failed");
     const sub = await subscription();
     expect(sub?.status).toBe("trialing");
@@ -543,7 +542,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     expect(await subscriptionAudits()).toBe(0);
     expect(await eventRow(id)).toMatchObject({ status: "failed", attempts: 1 });
 
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(200);
     await settled(id, "processed");
     expect((await subscription())?.status).toBe("active");
     expect(await activationAudits()).toBe(1);
@@ -554,7 +553,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const id = nextEventId();
     const payload = JSON.stringify(subscriptionEvent(id, "customer.subscription.created"));
     spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(500);
     await settled(id, "failed");
     expect(await subscription()).toMatchObject({ status: "trialing", stripeSubscriptionId: null });
     expect(await subscriptionAudits()).toBe(0);
@@ -564,14 +563,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const failing = nextEventId();
     const failingPayload = JSON.stringify(subscriptionEvent(failing, "customer.subscription.updated", { status: "past_due" }));
     spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
-    expect((await post(failingPayload, sign(failingPayload))).status).toBe(202);
+    expect((await post(failingPayload, sign(failingPayload))).status).toBe(500);
     await settled(failing, "failed");
     expect((await subscription())?.status).toBe("trialing");
     expect(await subscriptionAudits()).toBe(0);
 
     const id = nextEventId();
     const payload = JSON.stringify(subscriptionEvent(id, "customer.subscription.updated", { status: "past_due" }));
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(200);
     await settled(id, "processed");
     expect((await subscription())?.status).toBe("past_due");
     expect(await db.auditEvent.count({ where: { entityId: SUB_ID, eventName: "billing.subscription_synced", correlationId: id } })).toBe(1);
@@ -581,14 +580,14 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     const failing = nextEventId();
     const failingPayload = JSON.stringify(subscriptionEvent(failing, "customer.subscription.deleted", { status: "canceled" }));
     spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
-    expect((await post(failingPayload, sign(failingPayload))).status).toBe(202);
+    expect((await post(failingPayload, sign(failingPayload))).status).toBe(500);
     await settled(failing, "failed");
     expect(await subscription()).toMatchObject({ status: "trialing", canceledAt: null });
     expect(await subscriptionAudits()).toBe(0);
 
     const id = nextEventId();
     const payload = JSON.stringify(subscriptionEvent(id, "customer.subscription.deleted", { status: "canceled" }));
-    expect((await post(payload, sign(payload))).status).toBe(202);
+    expect((await post(payload, sign(payload))).status).toBe(200);
     await settled(id, "processed");
     expect((await subscription())?.status).toBe("canceled");
     expect(await db.auditEvent.count({ where: { entityId: SUB_ID, eventName: "billing.subscription_synced", correlationId: id } })).toBe(1);

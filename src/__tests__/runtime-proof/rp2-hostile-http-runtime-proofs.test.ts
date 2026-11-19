@@ -473,7 +473,7 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
   });
 
   describe("11. Invalid Stripe signature -> 401, nothing recorded", () => {
-    it("well-formed event signed with an attacker secret, and a garbage signature header -> 401, no webhook row; correctly signed -> 202", async () => {
+    it("well-formed event signed with an attacker secret, and a garbage signature header -> 401, no webhook row; correctly signed -> 200 once applied", async () => {
       const id = nextEventId();
       const payload = checkoutCompleted(id);
       for (const signature of [signStripe(payload, "whsec_attacker"), "invalid-signature-xyz"]) {
@@ -485,12 +485,10 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
       expect((await db.subscription.findUnique({ where: { id: SUB_ID } }))?.status).toBe("trialing");
 
       const genuine = await postStripe(payload, signStripe(payload));
-      expect(genuine.status).toBe(202);
-      expect(genuine.body).toEqual({ received: true, id, type: "checkout.session.completed", status: "processing" });
-      await vi.waitFor(async () => expect((await db.webhookEvent.findUnique({ where: { stripeEventId: id } }))?.status).toBe("processed"), {
-        timeout: 10_000,
-        interval: 50,
-      });
+      expect(genuine.status).toBe(200);
+      expect(genuine.body).toEqual({ received: true, id, type: "checkout.session.completed", status: "processed" });
+      // The response is sent after settlement: the row is already processed.
+      expect((await db.webhookEvent.findUnique({ where: { stripeEventId: id } }))?.status).toBe("processed");
     });
   });
 
@@ -501,11 +499,8 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
       const header = signStripe(payload);
 
       const first = await postStripe(payload, header);
-      expect(first.status).toBe(202);
-      await vi.waitFor(async () => expect((await db.webhookEvent.findUnique({ where: { stripeEventId: id } }))?.status).toBe("processed"), {
-        timeout: 10_000,
-        interval: 50,
-      });
+      expect(first.status).toBe(200);
+      expect((await db.webhookEvent.findUnique({ where: { stripeEventId: id } }))?.status).toBe("processed");
       const activations = () => db.auditEvent.count({ where: { eventName: "subscription.activated", entityId: SUB_ID, correlationId: id } });
       expect(await activations()).toBe(1);
       const subAfterFirst = await db.subscription.findUnique({ where: { id: SUB_ID } });

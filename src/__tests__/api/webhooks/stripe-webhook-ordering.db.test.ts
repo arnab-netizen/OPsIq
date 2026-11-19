@@ -105,7 +105,7 @@ async function settled(id: string, status = "processed") {
 /** Deliver one event through the route and wait until its background processing settles. */
 async function deliverAndSettle(event: { id: string }) {
   const res = await deliver(event);
-  expect(res.status).toBe(202);
+  expect(res.status).toBe(200);
   await settled(event.id);
 }
 
@@ -256,7 +256,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Stripe webhook ordering — event.cr
     const older = subscriptionEvent(nextEventId(), "customer.subscription.updated", BASE_S + 500, { status: "active" });
 
     const results = await Promise.all([deliver(newer), deliver(older)]);
-    expect(results.map((r) => r.status)).toEqual([202, 202]);
+    expect(results.map((r) => r.status)).toEqual([200, 200]);
     await settled(newer.id);
     await settled(older.id);
 

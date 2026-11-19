@@ -47,9 +47,9 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  *    - processing: return 409 (conflict, retry later)
  *    - failed: continue (retry if < maxAttempts; exclusive claim, concurrent redeliveries -> 409)
  *    - lost the insert race for a new event: re-read -> 409 / 200 as above (never 500)
- * 5. Process event with timeout
- * 6. On success: status=processed + processedAt, committed atomically with the mutation
- * 7. On failure: mark status=failed + lastError + increment attempts
+ * 5. Process event with timeout, synchronously: the response is sent only after it settles
+ * 6. On success: status=processed + processedAt, committed atomically with the mutation -> 200
+ * 7. On failure: mark status=failed + lastError + increment attempts -> 500 (Stripe retries)
  *
  * Event envelope (Step 4): the signature-verified payload is runtime-validated
  * with StripeEventEnvelopeSchema (non-empty string `id` and `type`, integer `created`; every other
@@ -69,6 +69,13 @@ const StripeEventEnvelopeSchema = z
     created: z.number().int().nonnegative(),
   })
   .passthrough();
+
+/**
+ * Request lifetime must exceed the processing bound (PROCESSING_TIMEOUT_MS, ~37s: the
+ * transaction's worst case plus margin), so the response always follows settlement or the
+ * bounded timeout instead of the platform killing the function mid-transaction.
+ */
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -179,51 +186,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 6: Process event asynchronously with timeout protection
-    // Return 202 immediately to acknowledge receipt.
+    // Step 6: Process the event and answer only once it has settled.
+    // Stripe treats any 2xx as delivered and never redelivers it, so a 2xx must mean "applied".
     // handleWebhookEvent marks the event processed IN THE SAME TRANSACTION as the billing
-    // mutation + audit event, so "processed" is never recorded without its side effects (or
-    // vice versa). On failure everything rolls back and the event is marked failed below.
-    handleWebhookEvent(event)
-      .then(() => {
-        logger.info("Webhook event processed successfully", {
-          stripeEventId: event.id,
-          type: event.type,
-        });
-      })
-      .catch(async (error) => {
-        // Failure: mark event as failed and log error
-        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-        logger.error("Webhook event processing failed", {
-          stripeEventId: event.id,
-          type: event.type,
-          error: governed.operatorMessage,
-        });
-
-        try {
-          await markWebhookEventFailed(
-            event.id,
-            error instanceof Error ? error : new Error(String(error))
-          );
-        } catch (dbError) {
-          const governedDb = classifyOperatorError(dbError instanceof Error ? dbError : new Error(String(dbError)), { context: "load" });
-          logger.error("Failed to record webhook event failure", {
-            stripeEventId: event.id,
-            error: governedDb.operatorMessage,
-          });
-          // Even if recording failure fails, the error is logged
-        }
+    // mutation + audit event; on failure everything rolls back, the claim is released as
+    // `failed` and the route answers 500 so Stripe redelivers (the next delivery re-claims the
+    // failed row exactly once through the failed -> processing CAS). Bounded by
+    // PROCESSING_TIMEOUT_MS, which is below the route maxDuration.
+    try {
+      await handleWebhookEvent(event);
+    } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      logger.error("Webhook event processing failed", {
+        stripeEventId: event.id,
+        type: event.type,
+        error: governed.operatorMessage,
       });
 
-    // Return 202 Accepted - event acknowledged and queued for processing
+      try {
+        await markWebhookEventFailed(
+          event.id,
+          error instanceof Error ? error : new Error(String(error))
+        );
+      } catch (dbError) {
+        const governedDb = classifyOperatorError(dbError instanceof Error ? dbError : new Error(String(dbError)), { context: "load" });
+        logger.error("Failed to record webhook event failure", {
+          stripeEventId: event.id,
+          error: governedDb.operatorMessage,
+        });
+        // The row stays `processing`; the stale-claim sweep releases it for Stripe's retry.
+      }
+
+      return Response.json({ error: "Internal error" }, { status: 500 });
+    }
+
+    logger.info("Webhook event processed successfully", {
+      stripeEventId: event.id,
+      type: event.type,
+    });
     return Response.json(
       {
         received: true,
         id: event.id,
         type: event.type,
-        status: "processing",
+        status: "processed",
       },
-      { status: 202 }
+      { status: 200 }
     );
   } catch (error) {
     // Signature / timestamp verification failures (Steps 2-3) are thrown as
