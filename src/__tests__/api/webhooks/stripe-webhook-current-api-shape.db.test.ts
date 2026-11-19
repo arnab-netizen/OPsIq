@@ -100,4 +100,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Stripe webhook — current Stripe AP
     }
     expect((await f.subscription()).status).toBe("active");
   });
+
+  it("cross-provider tie: a Stripe event at the same second as a stored Paddle watermark goes to the stored provider; a later one applies", async () => {
+    const t = f.BASE_S + 700;
+    await f.resetSubscription(null, "active", { lastEventTimestamp: new Date(t * 1000), lastEventId: "paddle:evt_paddle_stored" });
+    const tie = f.envelope(f.nextEventId(), "customer.subscription.updated", t, f.dahliaSubscription({ status: "past_due" }));
+    await f.deliverApplied(tie);
+    expect((await f.subscription()).status).toBe("active");
+    expect(await f.audits("billing.subscription_stale_event_ignored", tie.id)).toHaveLength(1);
+
+    await f.deliverApplied(f.envelope(f.nextEventId(), "customer.subscription.updated", t + 1, f.dahliaSubscription({ status: "past_due" })));
+    expect((await f.subscription()).status).toBe("past_due");
+  });
 });

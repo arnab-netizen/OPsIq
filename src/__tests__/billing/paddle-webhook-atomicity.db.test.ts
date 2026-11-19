@@ -243,6 +243,15 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Paddle webhook — atomic claim + ap
     expect(await sub()).toMatchObject({ status: "past_due", lastEventId: `paddle:${pastDue.event_id}`, lastEventTimestamp: new Date(T(6)) });
   });
 
+  it("cross-provider tie: a Paddle cancel at the same second as a stored Stripe watermark goes to the stored provider; a later one applies", async () => {
+    await bindSubscription();
+    await db.subscription.updateMany({ where: { billingAccountId: ACCT_ID }, data: { lastEventTimestamp: new Date(T(9)), lastEventId: "evt_stripe_stored" } });
+    expect((await deliver(evt("subscription.canceled", T(9), subData({ status: "canceled", canceled_at: T(9) })))).status).toBe(200);
+    expect((await sub())?.status).toBe("active");
+    expect((await deliver(evt("subscription.canceled", T(10), subData({ status: "canceled", canceled_at: T(10) })))).status).toBe(200);
+    expect((await sub())?.status).toBe("canceled");
+  });
+
   it("the claimed apply refuses an event this delivery does not hold the processing claim for", async () => {
     await bindSubscription();
     const pastDue = evt("subscription.past_due", T(8), subData({ status: "past_due" }));

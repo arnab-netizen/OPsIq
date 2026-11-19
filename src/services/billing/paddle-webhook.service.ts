@@ -158,11 +158,21 @@ async function applySubscriptionEvent(tx: Tx, envelope: PaddleEnvelope): Promise
   } else {
     // Guarded write: only moves forward in provider time — for the same lineage AND for a
     // re-subscribe over a canceled row, so a delayed event of an older lineage can never resurrect
-    // access. An equal timestamp is accepted only for a terminal "canceled" (cancel wins ties).
+    // access. An equal timestamp is accepted only for a terminal "canceled" (cancel wins ties),
+    // and only against a Paddle (or absent) watermark: a same-second tie with a watermark written
+    // by the other provider (Stripe) goes to the stored provider; a strictly later event wins.
     const guard = {
       OR: [
         { lastEventTimestamp: null },
-        { lastEventTimestamp: status === "canceled" ? { lte: occurredAt } : { lt: occurredAt } },
+        { lastEventTimestamp: { lt: occurredAt } },
+        ...(status === "canceled"
+          ? [
+              {
+                lastEventTimestamp: occurredAt,
+                OR: [{ lastEventId: null }, { lastEventId: { startsWith: PADDLE_EVENT_KEY_PREFIX } }],
+              },
+            ]
+          : []),
       ],
     };
     const result = await tx.subscription.updateMany({ where: { id: existing.id, ...guard }, data: values });

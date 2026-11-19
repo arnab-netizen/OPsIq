@@ -30,6 +30,12 @@ describe("decideStripeSubscriptionEvent", () => {
     expect(decideStripeSubscriptionEvent(stored({ lastEventId: "evt_b" }), event({ ...tie, eventId: "evt_a" }))).toEqual({ kind: "ignore", reason: "stale" });
   });
 
+  it("a same-second tie against the other provider's watermark goes to the stored provider; later wins", () => {
+    const paddleRow = stored({ stripeSubscriptionId: null, stripeSubscriptionCreatedAt: null, lastEventId: "paddle:evt_1" });
+    expect(decideStripeSubscriptionEvent(paddleRow, event({ eventCreatedAt: at(4_000), eventId: "evt_zzz", resultingStatus: "canceled" }))).toEqual({ kind: "ignore", reason: "stale" });
+    expect(decideStripeSubscriptionEvent(paddleRow, event({ eventCreatedAt: at(4_001) }))).toMatchObject({ kind: "apply", rebind: true });
+  });
+
   it("a newer subscription rebinds whatever the event type or the bound watermark; an older one never does", () => {
     const deadOld = stored({ status: "canceled", lastEventTimestamp: at(9_999) });
     const newer = { subscriptionId: "sub_NEW", subscriptionCreatedAt: at(NEW_CREATED), eventCreatedAt: at(5_000) };

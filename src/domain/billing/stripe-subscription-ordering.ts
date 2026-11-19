@@ -10,7 +10,9 @@
  *    (event.created, terminal, event.id) is greater than the stored watermark
  *    (lastEventTimestamp, terminal(row.status), lastEventId). A terminal result (canceled /
  *    incomplete_expired) wins a same-second tie against a non-terminal one; the id only breaks
- *    ties within the same class. No watermark (never set, or a pre-upgrade receive-time value with no
+ *    ties within the same class. A same-second tie against a watermark written by the other
+ *    billing provider (lastEventId "paddle:…") goes to the stored provider; a strictly later
+ *    event always wins. No watermark (never set, or a pre-upgrade receive-time value with no
  *    lastEventId) accepts the next event once.
  *
  * 2. A different subscription: decided by the BINDING KEY (Stripe's subscription created,
@@ -36,6 +38,9 @@ export const TERMINAL_STRIPE_SUBSCRIPTION_STATUSES: readonly string[] = ["cancel
 export function isTerminalSubscriptionStatus(status: string): boolean {
   return TERMINAL_STRIPE_SUBSCRIPTION_STATUSES.includes(status);
 }
+
+/** Watermark ids written by the Paddle path carry this prefix (its webhook_events key). */
+export const PADDLE_WATERMARK_PREFIX = "paddle:";
 
 /** The row fields the decision reads. */
 export interface StoredSubscriptionOrdering {
@@ -69,6 +74,7 @@ function isNewerThanWatermark(stored: StoredSubscriptionOrdering, event: StripeS
   const eventAt = event.eventCreatedAt.getTime();
   const storedAt = stored.lastEventTimestamp.getTime();
   if (eventAt !== storedAt) return eventAt > storedAt;
+  if (stored.lastEventId.startsWith(PADDLE_WATERMARK_PREFIX)) return false;
   const eventTerminal = isTerminalSubscriptionStatus(event.resultingStatus);
   const rowTerminal = isTerminalSubscriptionStatus(stored.status);
   if (eventTerminal !== rowTerminal) return eventTerminal;
