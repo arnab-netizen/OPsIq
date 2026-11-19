@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { logger } from "@/infra/logger";
+import { stableStringify } from "@/domain/owner-spine/owner-decision-record";
 
 export interface AuditOutput {
   decision_id: string; // Idempotent hash of inputs
@@ -124,7 +125,8 @@ export class AuditOutputGenerator {
    * Generate SHA256 hash of inputs snapshot
    */
   private hashInputs(inputs: Record<string, unknown>): string {
-    const serialized = JSON.stringify(inputs, Object.keys(inputs).sort());
+    // Recursively key-sorted so nested inputs are covered; byte-identical to the previous form for flat inputs.
+    const serialized = stableStringify(inputs);
     return createHash("sha256").update(serialized).digest("hex");
   }
 

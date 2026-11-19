@@ -6,19 +6,71 @@
  * - True under concurrent write pressure
  * - Event order preserved despite transaction interleaving
  *
+ * Concurrent writes (C, E) come from independent OS processes (support/event-store-emit-worker.ts), each with
+ * its own PostgreSQL connection, so replays here genuinely interleave with commits there. A replay taken under
+ * concurrent writes may observe any committed prefix 1..k, but it must be EXACTLY the fold of that prefix
+ * (checked against the persisted payloads), and replays of the same prefix must be identical.
+ *
  * Tests:
  * A. SAME AGGREGATE REPLAYED 10x - All show identical state
  * B. SAME AGGREGATE REPLAYED 100x - Deterministic under high load
- * C. REPLAY UNDER CONCURRENT WRITES - Writes happening while replaying
- * D. PARTIAL REPLAY DETERMINISM - Replay subset of events produces consistent state
- * E. CONCURRENT REPLAYS + WRITES - Multiple replays running simultaneously with writes
+ * C. REPLAY UNDER CONCURRENT WRITES - every replay is the exact fold of the prefix it observed
+ * D. PARTIAL REPLAY DETERMINISM - growing history, and replay upTo k for every k is exact and repeatable
+ * E. CONCURRENT REPLAYS + WRITES - 50 replays while 5 processes append 50 events; all exact, 1..51
+ * F. REPLAY COMPRESSION - different event counts reach their own final state
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
-import { EventReplayEngine } from "@/services/event-replay-engine";
+import { EventReplayEngine, type ReplayedAggregate } from "@/services/event-replay-engine";
+import { startEmitWorker, type EmitWorkerOutcome } from "./support/event-store-workers";
+
+const range = (from: number, to: number): number[] =>
+  Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+function expectAllOk(outcomes: EmitWorkerOutcome[][]): void {
+  const flat = outcomes.flat();
+  expect(flat.filter((o) => !o.ok)).toEqual([]);
+}
+
+/** eventNumber -> persisted payload, the ground truth every replay prefix must agree with. */
+async function persistedHistory(
+  aggregateId: string,
+  workspaceId: string
+): Promise<Map<number, Record<string, string>>> {
+  const rows = (await db.canonicalEvent.findMany({
+    where: { aggregateId, aggregateType: "recommendation", workspaceId },
+    orderBy: { eventNumber: "asc" },
+    select: { eventNumber: true, payload: true },
+  })) as Array<{ eventNumber: number; payload: Record<string, string> }>;
+  return new Map(rows.map((r) => [r.eventNumber, r.payload]));
+}
+
+/**
+ * A replay that observed the history up to eventNumber k must be EXACTLY the fold of events 1..k: k events,
+ * gap-free, the k-th event's title, and status "active" (set by recommendation.created) or the k-th status.
+ */
+function expectExactPrefix(replay: ReplayedAggregate, history: Map<number, Record<string, string>>): void {
+  const k = replay.lastEventNumber;
+  expect(history.has(k)).toBe(true);
+  expect(replay.eventCount).toBe(k);
+  expect((replay.state.events as Array<{ eventNumber: number }>).map((e) => e.eventNumber)).toEqual(range(1, k));
+  expect(replay.state.title).toBe(history.get(k)?.title);
+  expect(replay.state.status).toBe(k === 1 ? "active" : history.get(k)?.status);
+}
+
+/** All replays that observed the same prefix serialize to the identical state. */
+function expectIdenticalPerPrefix(replays: ReplayedAggregate[]): void {
+  const byPrefix = new Map<number, Set<string>>();
+  for (const r of replays) {
+    const set = byPrefix.get(r.lastEventNumber) ?? new Set<string>();
+    set.add(JSON.stringify(r.state));
+    byPrefix.set(r.lastEventNumber, set);
+  }
+  for (const states of byPrefix.values()) expect(states.size).toBe(1);
+}
 
 describe("Phase RP9: Replay Determinism Verification", () => {
   let workspaceId: string;
@@ -81,6 +133,8 @@ describe("Phase RP9: Replay Determinism Verification", () => {
   afterEach(async () => {
     // canonical_events is append-only (trigger prevents DELETE) — skip, workspace has no FK back to it
     try { await db.engagement.deleteMany({ where: { workspaceId } }); } catch { /* best-effort */ }
+    // Replay upserts snapshot_data (FK to workspace); without this the workspace delete below always failed.
+    try { await db.snapshotData.deleteMany({ where: { workspaceId } }); } catch { /* best-effort */ }
     try { await db.workspace.deleteMany({ where: { id: workspaceId } }); } catch { /* best-effort */ }
     try { await db.clientAccount.deleteMany({ where: { id: clientId } }); } catch { /* best-effort */ }
     try { await db.auditEvent.deleteMany({ where: { actorId: userId } }); } catch { /* best-effort */ }
@@ -122,7 +176,7 @@ describe("Phase RP9: Replay Determinism Verification", () => {
       });
 
       // Replay 10 times sequentially
-      const replays: any[] = [];
+      const replays: ReplayedAggregate[] = [];
       for (let i = 0; i < 10; i++) {
         const result = await EventReplayEngine.replayAggregate(
           aggId,
@@ -192,9 +246,13 @@ describe("Phase RP9: Replay Determinism Verification", () => {
       const uniqueStates = new Set(states);
       expect(uniqueStates.size).toBe(1);
 
-      // Verify event count consistency
+      // Verify event count consistency and the exact replayed state
       const eventCounts = replays.map((r) => r.eventCount);
-      expect(new Set(eventCounts).size).toBe(1);
+      expect(new Set(eventCounts)).toEqual(new Set([1]));
+      expect(replays[0].lastEventNumber).toBe(1);
+      expect(replays[0].state.title).toBe("High Volume Test");
+      expect(replays[0].state.priority).toBe("medium");
+      expect(replays[0].state.status).toBe("active");
 
       console.log(
         `✅ RP9B: 100 parallel replays produced identical state (${uniqueStates.size} unique, ${replays.length} replays)`
@@ -203,10 +261,9 @@ describe("Phase RP9: Replay Determinism Verification", () => {
   });
 
   describe("C. REPLAY UNDER CONCURRENT WRITES - Write Safety", () => {
-    it("should maintain determinism while concurrent writes happen", async () => {
+    it("every replay taken while another process appends is the exact fold of the prefix it observed", async () => {
       const aggId = uuidv4();
 
-      // Create initial event
       await EventEmitterService.emit({
         aggregateId: aggId,
         aggregateType: "recommendation",
@@ -224,60 +281,45 @@ describe("Phase RP9: Replay Determinism Verification", () => {
         sensitivityClassification: "standard",
       });
 
-      // Fire concurrent writes + replays simultaneously
-      const replayPromises = Array.from({ length: 10 }, () =>
-        EventReplayEngine.replayAggregate(
-          aggId,
-          "recommendation",
-          workspaceId
-        )
-      );
-
-      const writePromises = Array.from({ length: 10 }, (_, i) =>
-        EventEmitterService.emit({
+      // Writes come from an independent process on its own connection; replays run here, continuously,
+      // for the whole write window (and at least 10 times).
+      const writer = await startEmitWorker({
+        workspaceId,
+        actorId: userId,
+        emits: Array.from({ length: 10 }, (_, i) => ({
           aggregateId: aggId,
           aggregateType: "recommendation",
           eventType: "recommendation.updated",
-          eventVersion: 1,
           payload: { title: `Update ${i}`, status: "pending", priority: "high" },
-          actorId: userId,
-          workspaceId,
-          visibilityScope: "internal",
-          sensitivityClassification: "standard",
-        }).catch(() => null)
-      );
+        })),
+      });
+      let writerFinished = false;
+      const writes = writer.outcomes.finally(() => {
+        writerFinished = true;
+      });
+      writer.go();
 
-      const [replays, writes] = await Promise.all([
-        Promise.all(replayPromises),
-        Promise.all(writePromises),
-      ]);
-
-      // All replays should have same event count and state
-      const eventCounts = replays.map((r) => r.eventCount);
-      const states = replays.map((r) => JSON.stringify(r.state));
-
-      // Event counts may vary (some replays may see more writes), but each should be consistent
-      // States may vary based on which writes they observe
-      expect(replays.length).toBe(10);
-
-      // But within any given replay, the state should be self-consistent
-      for (const replay of replays) {
-        expect(replay.eventCount).toBeGreaterThanOrEqual(1);
-        expect(replay.state).toBeDefined();
-        expect(replay.state.title).toBeDefined();
+      const replays: ReplayedAggregate[] = [];
+      while (!writerFinished || replays.length < 10) {
+        replays.push(await EventReplayEngine.replayAggregate(aggId, "recommendation", workspaceId));
       }
+      expectAllOk([await writes]);
 
-      console.log(
-        `✅ RP9C: 10 replays under 10 concurrent writes remained self-consistent`
-      );
+      const history = await persistedHistory(aggId, workspaceId);
+      expect([...history.keys()]).toEqual(range(1, 11));
+      for (const replay of replays) expectExactPrefix(replay, history);
+      expectIdenticalPerPrefix(replays);
+
+      const seen = replays.map((r) => r.lastEventNumber);
+      expect(seen).toEqual([...seen].sort((a, b) => a - b));
+      expectExactPrefix(await EventReplayEngine.replayAggregate(aggId, "recommendation", workspaceId), history);
     });
   });
 
   describe("D. PARTIAL REPLAY DETERMINISM - Event Subset Consistency", () => {
-    it.skip("should deterministically replay with growing event history", async () => {
+    it("replays as history grows 1->5 events, and every partial replay (upTo k) is exact and repeatable", async () => {
       const aggId = uuidv4();
 
-      // Create 5 events incrementally
       await EventEmitterService.emit({
         aggregateId: aggId,
         aggregateType: "recommendation",
@@ -295,15 +337,12 @@ describe("Phase RP9: Replay Determinism Verification", () => {
         sensitivityClassification: "standard",
       });
 
-      // Track initial replay
-      const replayBefore = await EventReplayEngine.replayAggregate(
-        aggId,
-        "recommendation",
-        workspaceId
-      );
+      const replayBefore = await EventReplayEngine.replayAggregate(aggId, "recommendation", workspaceId);
       expect(replayBefore.eventCount).toBe(1);
+      expect(replayBefore.lastEventNumber).toBe(1);
+      expect(replayBefore.state.title).toBe("Event 1");
+      expect(replayBefore.state.status).toBe("active");
 
-      // Add more events
       for (let i = 2; i <= 5; i++) {
         await EventEmitterService.emit({
           aggregateId: aggId,
@@ -322,36 +361,35 @@ describe("Phase RP9: Replay Determinism Verification", () => {
         });
       }
 
-      // Replay multiple times after growth
       const replays = await Promise.all(
-        Array.from({ length: 5 }, () =>
-          EventReplayEngine.replayAggregate(
-            aggId,
-            "recommendation",
-            workspaceId
-          )
-        )
+        Array.from({ length: 5 }, () => EventReplayEngine.replayAggregate(aggId, "recommendation", workspaceId))
       );
+      expect(new Set(replays.map((r) => r.eventCount))).toEqual(new Set([5]));
+      expect(new Set(replays.map((r) => JSON.stringify(r.state))).size).toBe(1);
+      expect(replays[0].lastEventNumber).toBe(5);
+      expect(replays[0].state.title).toBe("Event 5");
+      expect(replays[0].state.status).toBe("draft");
 
-      // All should show 5 events and identical final state
-      expect(new Set(replays.map((r) => r.eventCount)).size).toBe(1);
-      expect(replays[0].eventCount).toBe(5);
-
-      const states = replays.map((r) => JSON.stringify(r.state));
-      const uniqueStates = new Set(states);
-      expect(uniqueStates.size).toBe(1);
-
-      console.log(
-        `✅ RP9D: Event history growth (1→5 events) with deterministic final state`
-      );
+      // Partial replays: replaying up to k is the exact fold of events 1..k, identical across 3 runs.
+      const history = await persistedHistory(aggId, workspaceId);
+      for (let k = 1; k <= 5; k++) {
+        const partial: ReplayedAggregate[] = [];
+        for (let run = 0; run < 3; run++) {
+          partial.push(await EventReplayEngine.replayAggregate(aggId, "recommendation", workspaceId, k));
+        }
+        for (const r of partial) {
+          expect(r.lastEventNumber).toBe(k);
+          expectExactPrefix(r, history);
+        }
+        expect(new Set(partial.map((r) => JSON.stringify(r.state))).size).toBe(1);
+      }
     });
   });
 
   describe("E. MANY CONCURRENT REPLAYS + WRITES - Contention Determinism", () => {
-    it("should maintain determinism with 50 concurrent replays and 50 concurrent writes", async () => {
+    it("50 replays and 50 appends from 5 processes: all succeed, every replay is an exact prefix, 1..51", async () => {
       const aggId = uuidv4();
 
-      // Create initial state
       await EventEmitterService.emit({
         aggregateId: aggId,
         aggregateType: "recommendation",
@@ -369,64 +407,45 @@ describe("Phase RP9: Replay Determinism Verification", () => {
         sensitivityClassification: "standard",
       });
 
-      // Fire 50 replays + 50 writes concurrently
-      const replayPromises = Array.from({ length: 50 }, () =>
-        EventReplayEngine.replayAggregate(
-          aggId,
-          "recommendation",
-          workspaceId
-        ).catch(() => null)
+      const writers = await Promise.all(
+        Array.from({ length: 5 }, (_, w) =>
+          startEmitWorker({
+            workspaceId,
+            actorId: userId,
+            emits: Array.from({ length: 10 }, (_, j) => {
+              const i = w * 10 + j;
+              return {
+                aggregateId: aggId,
+                aggregateType: "recommendation",
+                eventType: "recommendation.updated",
+                payload: {
+                  title: `Contention Update ${i}`,
+                  status: i % 3 === 0 ? "approved" : "pending",
+                  priority: "high",
+                },
+              };
+            }),
+          })
+        )
       );
+      for (const w of writers) w.go();
 
-      const writePromises = Array.from({ length: 50 }, (_, i) =>
-        EventEmitterService.emit({
-          aggregateId: aggId,
-          aggregateType: "recommendation",
-          eventType: "recommendation.updated",
-          eventVersion: 1,
-          payload: {
-            title: `Contention Update ${i}`,
-            status: i % 3 === 0 ? "approved" : "pending",
-            priority: "high",
-          },
-          actorId: userId,
-          workspaceId,
-          visibilityScope: "internal",
-          sensitivityClassification: "standard",
-        }).catch(() => null)
-      );
-
+      // 50 replays issued concurrently in this process while the 5 writer processes append.
       const [replays, writes] = await Promise.all([
-        Promise.all(replayPromises),
-        Promise.all(writePromises),
+        Promise.all(
+          Array.from({ length: 50 }, () => EventReplayEngine.replayAggregate(aggId, "recommendation", workspaceId))
+        ),
+        Promise.all(writers.map((w) => w.outcomes)),
       ]);
 
-      const successfulReplays = replays.filter((r) => r !== null);
-      const successfulWrites = writes.filter((w) => w !== null);
+      expect(replays).toHaveLength(50);
+      expectAllOk(writes);
+      expect(writes.flat()).toHaveLength(50);
 
-      expect(successfulReplays.length).toBeGreaterThan(40);
-      expect(successfulWrites.length).toBeGreaterThan(40);
-
-      // All successful replays should be internally consistent
-      for (const replay of successfulReplays) {
-        expect(replay!.eventCount).toBeGreaterThanOrEqual(1);
-        expect(replay!.state).toBeDefined();
-      }
-
-      // Event numbers should be monotonic
-      const allEvents = await db.canonicalEvent.findMany({
-        where: { aggregateId: aggId },
-        orderBy: { eventNumber: "asc" },
-      });
-
-      const eventNumbers = allEvents.map((e) => e.eventNumber);
-      for (let i = 0; i < eventNumbers.length; i++) {
-        expect(eventNumbers[i]).toBe(i + 1);
-      }
-
-      console.log(
-        `✅ RP9E: 50 concurrent replays + 50 writes maintained determinism (${eventNumbers.length} total events, ${successfulReplays.length} successful replays)`
-      );
+      const history = await persistedHistory(aggId, workspaceId);
+      expect([...history.keys()]).toEqual(range(1, 51));
+      for (const replay of replays) expectExactPrefix(replay, history);
+      expectIdenticalPerPrefix(replays);
     });
   });
 

@@ -14,12 +14,9 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
 
-    let body: any = {};
-    try {
-      body = await ctx.request?.json();
-    } catch {
-      throw new Error("Invalid JSON");
-    }
+    // A malformed body raises the canonical ValidationError (400) from the wrapper-provided request; it must not be
+    // caught and re-thrown as a plain Error (an unknown 500).
+    const body: unknown = ctx.request ? await ctx.request.json() : {};
 
     const validationResult = WebhookRegistrationSchema.safeParse(body);
     if (!validationResult.success) {
