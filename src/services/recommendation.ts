@@ -17,6 +17,8 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
+import { validateRecommendationTransition } from "@/policies/state-transition";
+import type { RecommendationStatus } from "@/domain/constants/statuses";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
@@ -1299,7 +1301,16 @@ export async function updateRecommendation(
 
   const updates: Record<string, unknown> = { version: { increment: 1 } };
 
-  if (input.status) {
+  // Status changes on a governed Recommendation go through the centralized lifecycle
+  // (policies/state-transition RECOMMENDATION_TRANSITIONS). A stored status outside that
+  // lifecycle (e.g. the column default "pending") has no allowed transitions, so it fails
+  // closed with InvalidStateTransitionError rather than being silently rewritten.
+  const statusChanged = input.status !== undefined && input.status !== rec.status;
+  if (statusChanged) {
+    validateRecommendationTransition(
+      rec.status as RecommendationStatus,
+      input.status as RecommendationStatus
+    );
     updates.status = input.status;
   }
 
@@ -1328,10 +1339,32 @@ export async function updateRecommendation(
     updates.constraintsConsidered = mergedConstraints;
   }
 
-  const updated = await db.recommendation.update({
-    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
+  // Compare-and-set on version + the status the transition was validated against, so a
+  // concurrent writer cannot slip a second (unvalidated) transition past the check above.
+  const updateResult = await db.recommendation.updateMany({
+    where: {
+      id: recommendationId,
+      workspaceId: validatedWorkspaceId,
+      version: input.version,
+      status: rec.status,
+    },
     data: updates,
   });
+
+  if (updateResult.count === 0) {
+    throw new ConflictError(
+      "Recommendation has been modified by another process",
+      { code: "OPTIMISTIC_LOCK_FAILED" }
+    );
+  }
+
+  const updated = await db.recommendation.findUnique({
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
+  });
+
+  if (!updated) {
+    throw new NotFoundError("Recommendation", recommendationId);
+  }
 
   await emitAuditEvent({
     eventName: "recommendation.updated",
@@ -1345,8 +1378,9 @@ export async function updateRecommendation(
 
   // Emit canonical event to maintain event sourcing trail
   const eventPayload: Record<string, unknown> = {};
-  if (input.status) {
+  if (statusChanged) {
     eventPayload.status = input.status;
+    eventPayload.previousStatus = rec.status;
   }
   if (input.priority) {
     eventPayload.priority = input.priority;
