@@ -2,7 +2,15 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { queryAuditEvents } from "@/infra/audit";
-import type { Prisma } from "@/generated/prisma/client";
+import { stableStringify } from "@/domain/owner-spine/owner-decision-record";
+
+/** The AuditEvent columns the export reads (queryAuditEvents returns full rows). */
+interface AuditEventRow {
+  eventName: string;
+  actorId: string | null;
+  occurredAt: Date;
+  payload: unknown;
+}
 
 interface DecisionExport {
   decision: {
@@ -93,7 +101,7 @@ export const GET = withCanonicalEnforcement(
       actualOutcome: item!.actualOutcome,
       delta: item!.outcomeDelta ? Number(item!.outcomeDelta) : null,
       accuracy: item!.decisionAccuracy ? Number(item!.decisionAccuracy) : null,
-      auditTrail: auditEvents.map((event: Prisma.AuditEventGetPayload<{}>) => ({
+      auditTrail: auditEvents.map((event: AuditEventRow) => ({
         eventName: event.eventName,
         actorId: event.actorId,
         occurredAt: event.occurredAt ? event.occurredAt.toISOString() : null,
@@ -101,9 +109,9 @@ export const GET = withCanonicalEnforcement(
       })),
     };
 
-    // Serialize with deterministic JSON (sorted keys)
-    const jsonString = JSON.stringify(exportData, Object.keys(exportData).sort(), 2);
-    const deterministicData = JSON.parse(jsonString);
+    // Canonical form: keys sorted recursively at every depth (stableStringify). A top-level key array must never be
+    // used as a JSON.stringify replacer here: it is an allowlist applied at every depth and empties nested objects.
+    const deterministicData = JSON.parse(stableStringify(exportData));
 
     return deterministicData;
   },
