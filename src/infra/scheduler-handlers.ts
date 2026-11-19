@@ -20,6 +20,7 @@ import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/busines
 import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler } from "@/services/quickbooks/qbo-sync-scheduling";
 import { TASK_NAME_FIRST_DIAGNOSIS, firstDiagnosisTaskHandler } from "@/services/owner-first-run/first-diagnosis-scheduling";
 import { reconcileExpiredCapabilityReservations } from "@/services/entitlement.service";
+import { TASK_NAME_ACTION_BLOCKER_REEVALUATION, actionBlockerReEvaluationHandler } from "@/services/action-reevaluation-scheduling";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
@@ -194,5 +195,7 @@ export function getProductionTaskHandlers(): Map<string, TaskHandler> {
     [TASK_NAME_QBO_SYNC, createQboSyncTaskHandler(() => ({ env: process.env }))],
     // Unattended first read once canonical evidence is sufficient (see src/services/owner-first-run/first-diagnosis-scheduling.ts).
     [TASK_NAME_FIRST_DIAGNOSIS, firstDiagnosisTaskHandler],
+    // Deferred governed re-evaluation of a newly blocked action (see src/services/action-reevaluation-scheduling.ts).
+    [TASK_NAME_ACTION_BLOCKER_REEVALUATION, actionBlockerReEvaluationHandler],
   ]);
 }

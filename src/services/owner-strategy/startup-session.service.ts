@@ -95,19 +95,36 @@ async function assertHypothesisInSession(workspaceId: string, sessionId: string,
 
 /**
  * Every linked*Id an owner decision stores (and hashes into its approval package) must be an
- * artifact of the SAME session in the SAME workspace. Any foreign or unknown id is NotFound.
+ * artifact of the SAME session in the SAME workspace. Artifacts whose schema carries an ideaId
+ * (economic model, readiness, business model, market sizing, validation plan) must also belong to
+ * the decision's own idea when input.ideaId is set (a session-level decision with no ideaId keeps
+ * the session-scope check). On an idea-level decision a system recommendation must be session-level
+ * (ideaId null) or this idea's, and the idea version (a StartupIdeaRecord) must be the idea itself.
+ * The profile version has no idea link and is checked at session scope.
+ * Any foreign, unknown or mismatched id is NotFound.
  */
 async function assertDecisionLinksInSession(workspaceId: string, sessionId: string, input: OwnerDecisionInput): Promise<void> {
   const scope = { workspaceId, sessionId };
+  // When the decision names an idea, idea-scoped artifacts must be that idea's; a session-level
+  // decision (no ideaId) keeps the session-scope check.
+  const ideaScope = input.ideaId ? { ...scope, ideaId: input.ideaId } : scope;
   const checks: Array<[string, string | null | undefined, (id: string) => Promise<unknown>]> = [
-    ["StartupSystemRecommendation", input.linkedSystemRecId, (id) => db.startupSystemRecommendation.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    // A system recommendation may be session-level (ideaId null); one tied to an idea must be this idea's.
+    ["StartupSystemRecommendation", input.linkedSystemRecId, (id) => db.startupSystemRecommendation.findFirst({
+      where: { id, ...scope, ...(input.ideaId ? { OR: [{ ideaId: null }, { ideaId: input.ideaId }] } : {}) },
+      select: { id: true },
+    })],
     ["StartupContextProfileVersion", input.linkedProfileVersionId, (id) => db.startupContextProfileVersion.findFirst({ where: { id, ...scope }, select: { id: true } })],
-    ["StartupEconomicModel", input.linkedEconomicModelId, (id) => db.startupEconomicModel.findFirst({ where: { id, ...scope }, select: { id: true } })],
-    ["StartupReadinessAssessment", input.linkedReadinessId, (id) => db.startupReadinessAssessment.findFirst({ where: { id, ...scope }, select: { id: true } })],
-    ["StartupIdeaRecord", input.linkedIdeaVersionId, (id) => db.startupIdeaRecord.findFirst({ where: { id, ...scope }, select: { id: true } })],
-    ["StartupBusinessModelVersion", input.linkedBusinessModelId, (id) => db.startupBusinessModelVersion.findFirst({ where: { id, ...scope }, select: { id: true } })],
-    ["StartupMarketSizing", input.linkedMarketSizingId, (id) => db.startupMarketSizing.findFirst({ where: { id, ...scope }, select: { id: true } })],
-    ["StartupValidationPlan", input.linkedValidationPlanId, (id) => db.startupValidationPlan.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    // The idea version IS a StartupIdeaRecord: on an idea-level decision it must be that idea's own record.
+    ["StartupIdeaRecord", input.linkedIdeaVersionId, (id) =>
+      input.ideaId && id !== input.ideaId
+        ? Promise.resolve(null)
+        : db.startupIdeaRecord.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupEconomicModel", input.linkedEconomicModelId, (id) => db.startupEconomicModel.findFirst({ where: { id, ...ideaScope }, select: { id: true } })],
+    ["StartupReadinessAssessment", input.linkedReadinessId, (id) => db.startupReadinessAssessment.findFirst({ where: { id, ...ideaScope }, select: { id: true } })],
+    ["StartupBusinessModelVersion", input.linkedBusinessModelId, (id) => db.startupBusinessModelVersion.findFirst({ where: { id, ...ideaScope }, select: { id: true } })],
+    ["StartupMarketSizing", input.linkedMarketSizingId, (id) => db.startupMarketSizing.findFirst({ where: { id, ...ideaScope }, select: { id: true } })],
+    ["StartupValidationPlan", input.linkedValidationPlanId, (id) => db.startupValidationPlan.findFirst({ where: { id, ...ideaScope }, select: { id: true } })],
   ];
   for (const [entity, id, load] of checks) {
     if (!id) continue;
