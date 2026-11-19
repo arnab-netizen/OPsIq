@@ -115,48 +115,20 @@ export async function checkIdempotencyKey(
   // Atomically create or fetch existing record
   // IdempotencyRecord uses idempotencyKey as UNIQUE constraint
   // No workspace scoping in schema - idempotencyKey itself provides global uniqueness
-  const existing = await db.idempotencyRecord.findFirst({
+  let existing = await db.idempotencyRecord.findFirst({
     where: { idempotencyKey },
   });
+
+  // An expired record is recycled first, whoever wrote it: it is no longer anyone's answer, so the key is
+  // claimed afresh below (the create path handles a concurrent claim of the same key).
+  if (existing && existing.expiresAt < new Date()) {
+    await db.idempotencyRecord.deleteMany({ where: { id: existing.id } });
+    existing = null;
+  }
 
   if (existing) {
     // Verify caller, operation name and payload match (reject any other use of the same key)
     assertRecordMatches(existing, operationName, scopeHash, payloadHash);
-
-    // If request has expired, treat as new
-    if (existing.expiresAt < new Date()) {
-      // Delete expired record and proceed to create new one
-      await db.idempotencyRecord.delete({ where: { id: existing.id } });
-
-      // Create new record for this request
-      try {
-        await db.idempotencyRecord.create({
-          data: {
-            id: randomUUID(),
-            idempotencyKey,
-            operationName,
-            payload: storedHash,
-            status: "pending",
-            expiresAt,
-          },
-        });
-      } catch (err: unknown) {
-        if ((err as { code?: unknown } | null)?.code === "P2002") {
-          // Unique constraint violation due to concurrent request
-          // Fetch the newly created record from concurrent request
-          const concurrent = await db.idempotencyRecord.findFirst({
-            where: { idempotencyKey },
-          });
-          if (concurrent && concurrent.status === "pending") {
-            throw new ValidationError(
-              "Duplicate request in flight with same idempotency key. Please wait for the original request to complete."
-            );
-          }
-        }
-        throw err;
-      }
-      return { isNew: true };
-    }
 
     // Return cached response if available
     if (existing.status === "completed" && existing.responseCode && existing.responseBody) {
