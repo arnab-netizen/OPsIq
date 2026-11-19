@@ -1,13 +1,30 @@
 import type Stripe from "stripe";
 import { z } from "zod";
 import type { Prisma, Subscription, WebhookEvent } from "@/generated/prisma/client";
-import { db } from "@/lib/db";
+import {
+  ACQUISITION_QUEUE_WAIT_MS,
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS,
+  TRANSACTION_ACQUIRE_MAX_WAIT_MS,
+  db,
+  withStatementTimeout,
+} from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
-const PROCESSING_TIMEOUT_MS = 30000; // 30 seconds
+/** Per-statement bound (SET LOCAL statement_timeout) inside the processing transaction. */
+const WEBHOOK_STATEMENT_TIMEOUT_MS = 10_000;
+/**
+ * Outer JS-side processing backstop. Derived from withStatementTimeout()'s documented worst case
+ * (queue wait + acquire maxWait + its transaction timeout) plus the repo's client-side margin, so
+ * it can never fire while the transaction could still legitimately commit (src/lib/db.ts).
+ */
+const PROCESSING_TIMEOUT_MS =
+  ACQUISITION_QUEUE_WAIT_MS +
+  TRANSACTION_ACQUIRE_MAX_WAIT_MS +
+  Math.max(WEBHOOK_STATEMENT_TIMEOUT_MS + 2_000, 5_000) +
+  CLIENT_SIDE_BACKSTOP_MARGIN_MS;
 const STALE_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const RETRY_ALERT_THRESHOLD = 3; // Alert when attempts >= 3
 const MAX_ATTEMPTS = 5; // Move to dead-letter after 5 attempts
@@ -454,13 +471,21 @@ export async function getOrCreateWebhookEvent(
 }
 
 /**
+ * Transaction client every billing mutation below runs on. All reads/writes inside one webhook's
+ * application go through the SAME tx (never `db`): the pool has a single connection, so a `db`
+ * call inside the callback would wait on the connection the transaction itself holds.
+ */
+type WebhookTx = Prisma.TransactionClient;
+
+/**
  * Validate and get billing account by stripeCustomerId
  * Fails closed: throws if customer not unique or not found
  */
 async function getBillingAccountByStripeCustomer(
+  tx: WebhookTx,
   stripeCustomerId: string
 ): Promise<BillingAccountWithSubscription> {
-  const billingAccount: BillingAccountWithSubscription | null = await db.billingAccount.findUnique({
+  const billingAccount = await tx.billingAccount.findUnique({
     where: { stripeCustomerId },
     include: { subscription: true },
   });
@@ -476,8 +501,8 @@ async function getBillingAccountByStripeCustomer(
  * Validate plan and get stripePriceId
  * Fails closed: throws if plan not found or missing stripePriceId
  */
-async function validatePlanAndGetPriceId(planId: string): Promise<string> {
-  const plan: { stripePriceId: string | null } | null = await db.plan.findUnique({
+async function validatePlanAndGetPriceId(tx: WebhookTx, planId: string): Promise<string> {
+  const plan = await tx.plan.findUnique({
     where: { id: planId },
   });
 
@@ -493,68 +518,98 @@ async function validatePlanAndGetPriceId(planId: string): Promise<string> {
 }
 
 /**
- * Sync entitlements for subscription using Prisma transaction
- * Atomically updates subscription + emits audit event
+ * Sync entitlements for subscription inside the caller's transaction
+ * Emits the activation audit event on the same tx, so the subscription update, the audit row and
+ * the webhook event's processed state commit or roll back together.
  */
 async function syncEntitlementsForSubscription(
+  tx: WebhookTx,
+  stripeEventId: string,
   workspaceId: string,
   subscription: Subscription
 ): Promise<void> {
-  try {
-    if (subscription.status !== "active") {
-      logger.debug("Subscription not active, skipping entitlement sync", {
-        workspaceId,
-        status: subscription.status,
-      });
-      return;
-    }
-
-    logger.info("Syncing entitlements for activated subscription", {
+  if (subscription.status !== "active") {
+    logger.debug("Subscription not active, skipping entitlement sync", {
       workspaceId,
-      subscriptionId: subscription.id,
+      status: subscription.status,
     });
+    return;
+  }
 
-    // Emit audit event for entitlement activation
-    await emitAuditEvent({
+  logger.info("Syncing entitlements for activated subscription", {
+    workspaceId,
+    subscriptionId: subscription.id,
+  });
+
+  // Emit audit event for entitlement activation (same transaction as the mutation)
+  await emitAuditEvent(
+    {
       eventName: AUDIT_EVENTS.SUBSCRIPTION_ACTIVATED,
       // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): actorId
       // omitted (NULL, FK-exempt) — the former literal "webhook-system"
       // string always violated AuditEvent.actorId's real FK to users.id,
       // making this emitAuditEvent call throw on every invocation and
-      // propagate out of syncEntitlementsForSubscription (line ~378) as a
-      // false failure of the whole entitlement sync, not just a lost audit
-      // record — an active correctness bug, not merely an audit-trail gap.
+      // propagate out of syncEntitlementsForSubscription as a false failure
+      // of the whole entitlement sync, not just a lost audit record.
       actorType: "system",
       entityType: "Subscription",
       entityId: subscription.id,
+      correlationId: stripeEventId,
       payload: {
         workspaceId,
         planId: subscription.planId,
         stripeSubscriptionId: subscription.stripeSubscriptionId,
       },
       visibility: "internal",
-    });
-  } catch (error) {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.error("Failed to sync entitlements", {
-      workspaceId,
-      error: governed.operatorMessage,
-    });
-    throw error;
+    },
+    tx
+  );
+}
+
+/** Audit a webhook-driven subscription state change on the caller's transaction. */
+async function auditSubscriptionSynced(
+  tx: WebhookTx,
+  input: {
+    stripeEventId: string;
+    eventType: string;
+    workspaceId: string;
+    subscriptionId: string;
+    status: string;
   }
+): Promise<void> {
+  await emitAuditEvent(
+    {
+      eventName: AUDIT_EVENTS.BILLING_SUBSCRIPTION_SYNCED,
+      // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): see syncEntitlementsForSubscription.
+      actorType: "system",
+      entityType: "Subscription",
+      entityId: input.subscriptionId,
+      correlationId: input.stripeEventId,
+      payload: {
+        provider: "stripe",
+        eventType: input.eventType,
+        workspaceId: input.workspaceId,
+        status: input.status,
+      },
+      visibility: "internal",
+    },
+    tx
+  );
 }
 
 /**
- * Check event ordering: prevent processing if previous event for same customer not processed
+ * Check event ordering: warn if a previous subscription lifecycle event has not been processed.
+ * Log-only and best-effort; runs on `db` BEFORE the processing transaction opens. Only rows that
+ * could trigger a warning (not yet processed / dead-lettered) plus the current event are read.
  */
 async function checkEventOrdering(stripeEventId: string): Promise<void> {
   try {
-    // Get all subscription lifecycle events ordered by createdAt
     const customerEvents: WebhookEvent[] = await db.webhookEvent.findMany({
       where: {
         type: {
           in: ["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"],
         },
+        OR: [{ status: { notIn: ["processed", "dead_letter"] } }, { stripeEventId }],
       },
       orderBy: { createdAt: "asc" },
     });
@@ -725,258 +780,309 @@ export async function markWebhookEventFailed(
 }
 
 /**
- * Handle checkout.session.completed with transactional integrity
- * Validates price ID, creates or updates subscription, activates, syncs entitlements
+ * Handle checkout.session.completed inside the processing transaction
+ * Validates price ID, activates the subscription, emits the activation audit event
  */
-async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent): Promise<void> {
-  try {
-    if (!event.customer || !event.subscription) {
-      throw new Error("checkout.session.completed missing customer or subscription");
-    }
+async function handleCheckoutSessionCompleted(
+  tx: WebhookTx,
+  stripeEventId: string,
+  event: StripeCheckoutSessionEvent
+): Promise<void> {
+  if (!event.customer || !event.subscription) {
+    throw new Error("checkout.session.completed missing customer or subscription");
+  }
 
-    // Get account and validate
-    const billingAccount = await getBillingAccountByStripeCustomer(event.customer);
+  // Get account and validate
+  const billingAccount = await getBillingAccountByStripeCustomer(tx, event.customer);
 
-    if (!billingAccount.subscription) {
-      throw new Error("Subscription not found for billing account");
-    }
+  if (!billingAccount.subscription) {
+    throw new Error("Subscription not found for billing account");
+  }
 
-    // Validate plan and price ID
-    await validatePlanAndGetPriceId(billingAccount.subscription.planId);
+  // Validate plan and price ID
+  await validatePlanAndGetPriceId(tx, billingAccount.subscription.planId);
 
-    // Update subscription within transaction
-    const updatedSubscription: Subscription = await db.subscription.update({
-      where: { id: billingAccount.subscription.id },
-      data: {
-        stripeSubscriptionId: event.subscription,
-        status: "active",
-        lastEventTimestamp: new Date(),
-      },
-    });
-
-    // Sync entitlements after successful update
-    await syncEntitlementsForSubscription(billingAccount.workspaceId, updatedSubscription);
-
-    logger.info("Subscription activated from checkout session", {
-      subscriptionId: billingAccount.subscription.id,
+  const updatedSubscription = await tx.subscription.update({
+    where: { id: billingAccount.subscription.id },
+    data: {
       stripeSubscriptionId: event.subscription,
-      workspaceId: billingAccount.workspaceId,
-    });
-  } catch (error) {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.error("Failed to handle checkout.session.completed", {
-      error: governed.operatorMessage,
-    });
-    throw error;
-  }
+      status: "active",
+      lastEventTimestamp: new Date(),
+    },
+  });
+
+  // Same transaction: the audit row commits only together with the update
+  await syncEntitlementsForSubscription(tx, stripeEventId, billingAccount.workspaceId, updatedSubscription);
+
+  logger.info("Subscription activated from checkout session", {
+    subscriptionId: billingAccount.subscription.id,
+    stripeSubscriptionId: event.subscription,
+    workspaceId: billingAccount.workspaceId,
+  });
 }
 
 /**
- * Handle customer.subscription.created with transactional integrity
- * Sets Stripe subscription ID, activates, syncs entitlements
+ * Handle customer.subscription.created inside the processing transaction
+ * Sets Stripe subscription ID, activates, emits the activation audit event
  */
-async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent): Promise<void> {
-  try {
-    if (!event.id || !event.customer) {
-      throw new Error("customer.subscription.created missing id or customer");
-    }
+async function handleCustomerSubscriptionCreated(
+  tx: WebhookTx,
+  stripeEventId: string,
+  event: StripeSubscriptionEvent
+): Promise<void> {
+  // Get account and validate
+  const billingAccount = await getBillingAccountByStripeCustomer(tx, event.customer);
 
-    // Check event ordering
-    await checkEventOrdering(event.id);
-
-    // Get account and validate
-    const billingAccount = await getBillingAccountByStripeCustomer(event.customer);
-
-    if (!billingAccount.subscription) {
-      throw new Error("Subscription not found for billing account");
-    }
-
-    // Validate plan and price ID
-    await validatePlanAndGetPriceId(billingAccount.subscription.planId);
-
-    // Convert Unix timestamps
-    const currentPeriodStart = new Date(event.current_period_start * 1000);
-    const currentPeriodEnd = new Date(event.current_period_end * 1000);
-    const trialEndsAt = event.trial_end ? new Date(event.trial_end * 1000) : null;
-
-    // Update subscription within transaction
-    const updatedSubscription: Subscription = await db.subscription.update({
-      where: { id: billingAccount.subscription.id },
-      data: {
-        stripeSubscriptionId: event.id,
-        status: "active",
-        currentPeriodStart,
-        currentPeriodEnd,
-        trialEndsAt,
-        lastEventTimestamp: new Date(),
-      },
-    });
-
-    // Sync entitlements after successful update
-    await syncEntitlementsForSubscription(billingAccount.workspaceId, updatedSubscription);
-
-    logger.info("Subscription created and activated via webhook", {
-      subscriptionId: billingAccount.subscription.id,
-      stripeSubscriptionId: event.id,
-      workspaceId: billingAccount.workspaceId,
-    });
-  } catch (error) {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.error("Failed to handle customer.subscription.created", {
-      error: governed.operatorMessage,
-    });
-    throw error;
+  if (!billingAccount.subscription) {
+    throw new Error("Subscription not found for billing account");
   }
+
+  // Validate plan and price ID
+  await validatePlanAndGetPriceId(tx, billingAccount.subscription.planId);
+
+  // Convert Unix timestamps
+  const currentPeriodStart = new Date(event.current_period_start * 1000);
+  const currentPeriodEnd = new Date(event.current_period_end * 1000);
+  const trialEndsAt = event.trial_end ? new Date(event.trial_end * 1000) : null;
+
+  const updatedSubscription = await tx.subscription.update({
+    where: { id: billingAccount.subscription.id },
+    data: {
+      stripeSubscriptionId: event.id,
+      status: "active",
+      currentPeriodStart,
+      currentPeriodEnd,
+      trialEndsAt,
+      lastEventTimestamp: new Date(),
+    },
+  });
+
+  await syncEntitlementsForSubscription(tx, stripeEventId, billingAccount.workspaceId, updatedSubscription);
+
+  logger.info("Subscription created and activated via webhook", {
+    subscriptionId: billingAccount.subscription.id,
+    stripeSubscriptionId: event.id,
+    workspaceId: billingAccount.workspaceId,
+  });
 }
 
 /**
- * Handle customer.subscription.deleted with transactional integrity
- * Cancels subscription
+ * Handle customer.subscription.deleted inside the processing transaction
+ * Cancels subscription and audits the change atomically
  */
 async function handleCustomerSubscriptionDeleted(
+  tx: WebhookTx,
+  stripeEventId: string,
   event: z.infer<typeof StripeSubscriptionDeletedObjectSchema>
 ): Promise<void> {
-  try {
-    if (!event.customer) {
-      throw new Error("customer.subscription.deleted missing customer");
-    }
+  const billingAccount = await getBillingAccountByStripeCustomer(tx, event.customer);
 
-    const billingAccount = await getBillingAccountByStripeCustomer(event.customer);
-
-    if (!billingAccount.subscription) {
-      throw new Error("Subscription not found for billing account");
-    }
-
-    await db.subscription.update({
-      where: { id: billingAccount.subscription.id },
-      data: {
-        status: "canceled",
-        canceledAt: new Date(),
-        lastEventTimestamp: new Date(),
-      },
-    });
-
-    logger.info("Subscription marked as canceled via webhook", {
-      subscriptionId: billingAccount.subscription.id,
-      workspaceId: billingAccount.workspaceId,
-    });
-  } catch (error) {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.error("Failed to handle customer.subscription.deleted", {
-      error: governed.operatorMessage,
-    });
-    throw error;
+  if (!billingAccount.subscription) {
+    throw new Error("Subscription not found for billing account");
   }
+
+  const now = new Date();
+  await tx.subscription.update({
+    where: { id: billingAccount.subscription.id },
+    data: {
+      status: "canceled",
+      canceledAt: now,
+      lastEventTimestamp: now,
+    },
+  });
+
+  await auditSubscriptionSynced(tx, {
+    stripeEventId,
+    eventType: "customer.subscription.deleted",
+    workspaceId: billingAccount.workspaceId,
+    subscriptionId: billingAccount.subscription.id,
+    status: "canceled",
+  });
+
+  logger.info("Subscription marked as canceled via webhook", {
+    subscriptionId: billingAccount.subscription.id,
+    workspaceId: billingAccount.workspaceId,
+  });
 }
 
 /**
- * Sync subscription status from Stripe webhook event
- * Fails open: logs errors but doesn't throw
+ * Sync subscription status from a customer.subscription.updated event, inside the processing
+ * transaction (update + audit commit together).
+ *
+ * Unknown customer / missing subscription are permanent conditions: logged and acknowledged
+ * (unchanged behaviour). Any DB error now PROPAGATES: it used to be swallowed ("fail open"),
+ * which marked the event processed although nothing was written, and inside a transaction a
+ * swallowed statement error would leave the transaction aborted anyway. Fail closed -> retried.
  */
 export async function syncSubscriptionStatus(
+  tx: WebhookTx,
+  stripeEventId: string,
   event: StripeSubscriptionEvent,
   providerCustomerId: string
 ): Promise<void> {
-  try {
-    if (!event.id || !providerCustomerId) {
-      logger.warn("syncSubscriptionStatus: missing event data", {
-        eventId: event.id,
-        providerCustomerId,
-      });
-      return;
-    }
-
-    // Find billing account by provider customer ID (backward compat)
-    const billingAccount: {
-      id: string;
-      workspaceId: string;
-      subscription: { id: string; lastEventTimestamp: Date | null } | null;
-    } | null = await db.billingAccount.findFirst({
-      where: {
-        providerCustomerId,
-      },
-      select: {
-        id: true,
-        workspaceId: true,
-        subscription: {
-          select: {
-            id: true,
-            lastEventTimestamp: true,
-          },
-        },
-      },
-    });
-
-    if (!billingAccount) {
-      logger.warn("syncSubscriptionStatus: billing account not found", {
-        providerCustomerId,
-      });
-      return;
-    }
-
-    if (!billingAccount.subscription) {
-      logger.warn("syncSubscriptionStatus: subscription not found", {
-        billingAccountId: billingAccount.id,
-      });
-      return;
-    }
-
-    // Reject out-of-order updates
-    if (billingAccount.subscription.lastEventTimestamp) {
-      const lastTimestamp = billingAccount.subscription.lastEventTimestamp.getTime() / 1000;
-      const currentTimestamp = Math.floor(Date.now() / 1000);
-      if (currentTimestamp < lastTimestamp) {
-        logger.warn("Rejecting out-of-order subscription update", {
-          subscriptionId: billingAccount.subscription.id,
-          lastEventTimestamp: lastTimestamp,
-          currentTimestamp,
-        });
-        return;
-      }
-    }
-
-    // Convert Unix timestamps to Date
-    const currentPeriodStart = new Date(event.current_period_start * 1000);
-    const currentPeriodEnd = new Date(event.current_period_end * 1000);
-    const trialEndAt = event.trial_end
-      ? new Date(event.trial_end * 1000)
-      : null;
-    const canceledAt = event.canceled_at
-      ? new Date(event.canceled_at * 1000)
-      : null;
-
-    // Update subscription
-    await db.subscription.update({
-      where: { id: billingAccount.subscription.id },
-      data: {
-        status: event.status,
-        currentPeriodStart,
-        currentPeriodEnd,
-        trialEndsAt: trialEndAt,
-        canceledAt,
-        cancelReason: event.cancel_reason || null,
-        lastEventTimestamp: new Date(),
-      },
-    });
-
-    logger.info("Subscription status synced", {
-      billingAccountId: billingAccount.id,
-      workspaceId: billingAccount.workspaceId,
-      status: event.status,
-    });
-  } catch (error) {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.error("Failed to sync subscription status", {
-      error: governed.operatorMessage,
+  if (!event.id || !providerCustomerId) {
+    logger.warn("syncSubscriptionStatus: missing event data", {
       eventId: event.id,
       providerCustomerId,
     });
+    return;
+  }
+
+  // Find billing account by provider customer ID (backward compat)
+  const billingAccount = await tx.billingAccount.findFirst({
+    where: {
+      providerCustomerId,
+    },
+    select: {
+      id: true,
+      workspaceId: true,
+      subscription: {
+        select: {
+          id: true,
+          lastEventTimestamp: true,
+        },
+      },
+    },
+  });
+
+  if (!billingAccount) {
+    logger.warn("syncSubscriptionStatus: billing account not found", {
+      providerCustomerId,
+    });
+    return;
+  }
+
+  if (!billingAccount.subscription) {
+    logger.warn("syncSubscriptionStatus: subscription not found", {
+      billingAccountId: billingAccount.id,
+    });
+    return;
+  }
+
+  // Reject out-of-order updates
+  if (billingAccount.subscription.lastEventTimestamp) {
+    const lastTimestamp = billingAccount.subscription.lastEventTimestamp.getTime() / 1000;
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    if (currentTimestamp < lastTimestamp) {
+      logger.warn("Rejecting out-of-order subscription update", {
+        subscriptionId: billingAccount.subscription.id,
+        lastEventTimestamp: lastTimestamp,
+        currentTimestamp,
+      });
+      return;
+    }
+  }
+
+  // Convert Unix timestamps to Date
+  const currentPeriodStart = new Date(event.current_period_start * 1000);
+  const currentPeriodEnd = new Date(event.current_period_end * 1000);
+  const trialEndAt = event.trial_end
+    ? new Date(event.trial_end * 1000)
+    : null;
+  const canceledAt = event.canceled_at
+    ? new Date(event.canceled_at * 1000)
+    : null;
+
+  await tx.subscription.update({
+    where: { id: billingAccount.subscription.id },
+    data: {
+      status: event.status,
+      currentPeriodStart,
+      currentPeriodEnd,
+      trialEndsAt: trialEndAt,
+      canceledAt,
+      cancelReason: event.cancel_reason || null,
+      lastEventTimestamp: new Date(),
+    },
+  });
+
+  await auditSubscriptionSynced(tx, {
+    stripeEventId,
+    eventType: "customer.subscription.updated",
+    workspaceId: billingAccount.workspaceId,
+    subscriptionId: billingAccount.subscription.id,
+    status: event.status,
+  });
+
+  logger.info("Subscription status synced", {
+    billingAccountId: billingAccount.id,
+    workspaceId: billingAccount.workspaceId,
+    status: event.status,
+  });
+}
+
+/**
+ * First statement of every processing transaction: the conditional processing -> processed
+ * transition. It row-locks the event for the rest of the transaction and proves this delivery
+ * still holds the claim (a claim swept as stale / failed by a timeout report is refused). Because
+ * it commits or rolls back with the handler's writes, a committed mutation can never be left with
+ * a retryable event state (which would re-apply it), and a failed one leaves the row in
+ * `processing` for the caller to mark failed.
+ */
+async function transitionClaimToProcessed(tx: WebhookTx, stripeEventId: string): Promise<void> {
+  const now = new Date();
+  const marked = await tx.webhookEvent.updateMany({
+    where: { stripeEventId, status: "processing" },
+    data: { status: "processed", processedAt: now, updatedAt: now },
+  });
+  if (marked.count !== 1) {
+    throw new Error(
+      `Webhook event ${stripeEventId} is not claimed for processing; refusing to apply it`
+    );
+  }
+}
+
+/** Apply one validated event's billing mutation(s) + audit on the processing transaction. */
+async function applyWebhookEvent(tx: WebhookTx, event: StripeWebhookEventInput): Promise<void> {
+  // `data.object` absent: nothing to apply (acknowledged as before). Present: validated per type.
+  const data = StripeEventDataSchema.safeParse(event.data);
+  const object = data.success ? data.data.object : undefined;
+  const hasObject = object !== undefined && object !== null;
+
+  switch (event.type) {
+    case "checkout.session.completed":
+      if (hasObject) {
+        await handleCheckoutSessionCompleted(tx, event.id, StripeCheckoutSessionObjectSchema.parse(object));
+      }
+      break;
+
+    case "customer.subscription.created":
+      if (hasObject) {
+        await handleCustomerSubscriptionCreated(tx, event.id, StripeSubscriptionObjectSchema.parse(object));
+      }
+      break;
+
+    case "customer.subscription.updated":
+      if (hasObject) {
+        const subscriptionObject = StripeSubscriptionObjectSchema.parse(object);
+        await syncSubscriptionStatus(tx, event.id, subscriptionObject, subscriptionObject.customer);
+      }
+      break;
+
+    case "customer.subscription.deleted":
+      if (hasObject) {
+        await handleCustomerSubscriptionDeleted(tx, event.id, StripeSubscriptionDeletedObjectSchema.parse(object));
+      }
+      break;
+
+    case "charge.succeeded":
+    case "invoice.paid":
+      logger.info("Payment received via webhook", { eventType: event.type });
+      break;
+
+    default:
+      logger.debug("Unhandled webhook event type", { eventType: event.type });
   }
 }
 
 /**
  * Handle webhook event from Stripe with timeout protection
  * Throws on processing errors (caller marks event as failed)
+ *
+ * Atomic: the event's processing -> processed transition, every subscription/billing mutation
+ * and its audit event run in ONE transaction (repo pattern: withStatementTimeout + emitAuditEvent
+ * on the tx client). Either all commit, or none do and the event stays `processing` for the
+ * caller to mark failed; a retry then re-applies from a clean state exactly once.
  */
 export async function handleWebhookEvent(event: StripeWebhookEventInput): Promise<void> {
   const timeoutPromise = new Promise<never>((_, reject) =>
@@ -988,48 +1094,22 @@ export async function handleWebhookEvent(event: StripeWebhookEventInput): Promis
 
   const processingPromise = (async () => {
     try {
-      const eventType = event.type;
-      logger.info("Processing webhook event", { eventType, stripeEventId: event.id });
+      logger.info("Processing webhook event", { eventType: event.type, stripeEventId: event.id });
 
-      // `data.object` absent: nothing to apply (acknowledged as before). Present: validated per type.
-      const data = StripeEventDataSchema.safeParse(event.data);
-      const object = data.success ? data.data.object : undefined;
-      const hasObject = object !== undefined && object !== null;
-
-      switch (eventType) {
-        case "checkout.session.completed":
-          if (hasObject) {
-            await handleCheckoutSessionCompleted(StripeCheckoutSessionObjectSchema.parse(object));
-          }
-          break;
-
-        case "customer.subscription.created":
-          if (hasObject) {
-            await handleCustomerSubscriptionCreated(StripeSubscriptionObjectSchema.parse(object));
-          }
-          break;
-
-        case "customer.subscription.updated":
-          if (hasObject) {
-            const subscriptionObject = StripeSubscriptionObjectSchema.parse(object);
-            await syncSubscriptionStatus(subscriptionObject, subscriptionObject.customer);
-          }
-          break;
-
-        case "customer.subscription.deleted":
-          if (hasObject) {
-            await handleCustomerSubscriptionDeleted(StripeSubscriptionDeletedObjectSchema.parse(object));
-          }
-          break;
-
-        case "charge.succeeded":
-        case "invoice.paid":
-          logger.info("Payment received via webhook", { eventType });
-          break;
-
-        default:
-          logger.debug("Unhandled webhook event type", { eventType });
+      if (event.type === "customer.subscription.created") {
+        // Log-only ordering diagnostics, on `db`, before the transaction holds the connection.
+        await checkEventOrdering(event.id);
       }
+
+      await withStatementTimeout(
+        db,
+        WEBHOOK_STATEMENT_TIMEOUT_MS,
+        async (tx) => {
+          await transitionClaimToProcessed(tx, event.id);
+          await applyWebhookEvent(tx, event);
+        },
+        "stripe-webhook.apply"
+      );
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("Error handling webhook event", {

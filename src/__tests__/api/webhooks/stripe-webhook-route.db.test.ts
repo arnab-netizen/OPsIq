@@ -57,7 +57,7 @@ vi.mock("@/infra/audit", async (importOriginal) => {
 });
 
 import { POST } from "@/app/api/webhooks/stripe/route";
-import { checkSignatureTimestamp, verifyWebhookSignature } from "@/services/webhook.service";
+import { checkSignatureTimestamp, handleWebhookEvent, verifyWebhookSignature } from "@/services/webhook.service";
 
 const RUN = randomUUID().slice(0, 8);
 const SECRET = `whsec_test_${RUN}`;
@@ -87,6 +87,27 @@ function checkoutCompleted(id: string, customer = CUSTOMER) {
   };
 }
 
+function subscriptionEvent(id: string, type: string, overrides: Record<string, unknown> = {}) {
+  const nowS = Math.floor(Date.now() / 1000);
+  return {
+    id,
+    object: "event",
+    type,
+    created: nowS,
+    data: {
+      object: {
+        id: STRIPE_SUB,
+        object: "subscription",
+        customer: CUSTOMER,
+        status: "active",
+        current_period_start: nowS - 86_400,
+        current_period_end: nowS + 30 * 86_400,
+        ...overrides,
+      },
+    },
+  };
+}
+
 function sign(payload: string, opts: { secret?: string; timestamp?: number } = {}) {
   return sdk.webhooks.generateTestHeaderString({
     payload,
@@ -110,6 +131,7 @@ const eventRow = (id: string) => db.webhookEvent.findUnique({ where: { stripeEve
 const runEventCount = () => db.webhookEvent.count({ where: { stripeEventId: { startsWith: `evt_${RUN}_` } } });
 const subscription = () => db.subscription.findUnique({ where: { id: SUB_ID } });
 const activationAudits = () => db.auditEvent.count({ where: { entityId: SUB_ID, eventName: "subscription.activated" } });
+const subscriptionAudits = () => db.auditEvent.count({ where: { entityId: SUB_ID } });
 
 /** Snapshot of every row this suite's events could touch. */
 async function businessState() {
@@ -127,7 +149,7 @@ async function businessState() {
 async function resetSubscription() {
   await db.subscription.update({
     where: { id: SUB_ID },
-    data: { status: "trialing", stripeSubscriptionId: null, lastEventTimestamp: null },
+    data: { status: "trialing", stripeSubscriptionId: null, lastEventTimestamp: null, canceledAt: null, cancelReason: null },
   });
   await db.auditEvent.deleteMany({ where: { entityId: SUB_ID } });
 }
@@ -501,5 +523,89 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     expect((await post(payload, sign(payload, { secret: "whsec_attacker" }))).status).toBe(401);
     expect((await post(payload, sign(payload))).status).toBe(202);
     await settled(id, "processed");
+  });
+  // ── Atomicity: subscription mutation + audit event + event-state transition ──
+
+  it("audit write fails after the subscription update -> NOTHING applied, event failed; retry applies it exactly once", async () => {
+    const id = nextEventId();
+    const payload = JSON.stringify(checkoutCompleted(id));
+    spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
+    expect((await post(payload, sign(payload))).status).toBe(202);
+    await settled(id, "failed");
+    const sub = await subscription();
+    expect(sub?.status).toBe("trialing");
+    expect(sub?.stripeSubscriptionId).toBeNull();
+    expect(await subscriptionAudits()).toBe(0);
+    expect(await eventRow(id)).toMatchObject({ status: "failed", attempts: 1 });
+
+    expect((await post(payload, sign(payload))).status).toBe(202);
+    await settled(id, "processed");
+    expect((await subscription())?.status).toBe("active");
+    expect(await activationAudits()).toBe(1);
+    expect(await subscriptionAudits()).toBe(1);
+  });
+
+  it("customer.subscription.created: audit failure rolls back the activation", async () => {
+    const id = nextEventId();
+    const payload = JSON.stringify(subscriptionEvent(id, "customer.subscription.created"));
+    spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
+    expect((await post(payload, sign(payload))).status).toBe(202);
+    await settled(id, "failed");
+    expect(await subscription()).toMatchObject({ status: "trialing", stripeSubscriptionId: null });
+    expect(await subscriptionAudits()).toBe(0);
+  });
+
+  it("customer.subscription.updated -> status synced with exactly one audit row; audit failure rolls it back", async () => {
+    const failing = nextEventId();
+    const failingPayload = JSON.stringify(subscriptionEvent(failing, "customer.subscription.updated", { status: "past_due" }));
+    spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
+    expect((await post(failingPayload, sign(failingPayload))).status).toBe(202);
+    await settled(failing, "failed");
+    expect((await subscription())?.status).toBe("trialing");
+    expect(await subscriptionAudits()).toBe(0);
+
+    const id = nextEventId();
+    const payload = JSON.stringify(subscriptionEvent(id, "customer.subscription.updated", { status: "past_due" }));
+    expect((await post(payload, sign(payload))).status).toBe(202);
+    await settled(id, "processed");
+    expect((await subscription())?.status).toBe("past_due");
+    expect(await db.auditEvent.count({ where: { entityId: SUB_ID, eventName: "billing.subscription_synced", correlationId: id } })).toBe(1);
+  });
+
+  it("customer.subscription.deleted -> canceled with exactly one audit row; audit failure rolls it back", async () => {
+    const failing = nextEventId();
+    const failingPayload = JSON.stringify(subscriptionEvent(failing, "customer.subscription.deleted", { status: "canceled" }));
+    spies.emitAuditEvent.mockRejectedValueOnce(new Error("audit write failed"));
+    expect((await post(failingPayload, sign(failingPayload))).status).toBe(202);
+    await settled(failing, "failed");
+    expect(await subscription()).toMatchObject({ status: "trialing", canceledAt: null });
+    expect(await subscriptionAudits()).toBe(0);
+
+    const id = nextEventId();
+    const payload = JSON.stringify(subscriptionEvent(id, "customer.subscription.deleted", { status: "canceled" }));
+    expect((await post(payload, sign(payload))).status).toBe(202);
+    await settled(id, "processed");
+    expect((await subscription())?.status).toBe("canceled");
+    expect(await db.auditEvent.count({ where: { entityId: SUB_ID, eventName: "billing.subscription_synced", correlationId: id } })).toBe(1);
+  });
+
+  it("handler refuses to apply an event it does not hold the processing claim for (no side effect)", async () => {
+    const id = nextEventId();
+    await db.webhookEvent.create({ data: { stripeEventId: id, type: "checkout.session.completed", status: "failed", attempts: 1 } });
+    await expect(handleWebhookEvent(checkoutCompleted(id))).rejects.toThrow(/not claimed/);
+    expect(await subscription()).toMatchObject({ status: "trialing", stripeSubscriptionId: null });
+    expect(await subscriptionAudits()).toBe(0);
+    expect(await eventRow(id)).toMatchObject({ status: "failed", attempts: 1 });
+  });
+
+  it("successful processing commits the event state together with the mutation (processed + processedAt)", async () => {
+    const id = nextEventId();
+    await db.webhookEvent.create({ data: { stripeEventId: id, type: "checkout.session.completed", status: "processing", attempts: 0, processedAt: null } });
+    await handleWebhookEvent(checkoutCompleted(id));
+    const row = await eventRow(id);
+    expect(row?.status).toBe("processed");
+    expect(row?.processedAt).toBeInstanceOf(Date);
+    expect((await subscription())?.status).toBe("active");
+    expect(await activationAudits()).toBe(1);
   });
 });

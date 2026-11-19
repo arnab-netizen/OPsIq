@@ -7,7 +7,6 @@ import {
   verifyWebhookSignature,
   checkSignatureTimestamp,
   getOrCreateWebhookEvent,
-  markWebhookEventProcessed,
   markWebhookEventFailed,
   handleWebhookEvent,
   type WebhookEventDisposition,
@@ -24,14 +23,15 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  * 2. Replay protection (signature timestamp tolerance)
  * 3. Stale processing recovery (inline pre-check)
  * 4. State machine prevents event loss
- * 5. Transactional DB updates (atomic with entitlements)
+ * 5. Transactional DB updates: event processed-state + billing mutation + audit event commit
+ *    or roll back together (one transaction)
  * 6. stripeCustomerId uniqueness + fail-closed mapping
  * 7. Price ID validation on all handlers
  * 8. Entitlement sync in transaction after success
  * 9. Event ordering protection
  * 10. Retry alerting threshold
  * 11. Max attempts with dead-letter state (5 retries)
- * 12. Timeout protection (30s)
+ * 12. Timeout protection (backstop derived from the transaction's worst-case bound)
  * 13. lastEventTimestamp enforcement (prevent out-of-order)
  * 14. Handler idempotency via DB constraints
  *
@@ -46,7 +46,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  *    - failed: continue (retry if < maxAttempts; exclusive claim, concurrent redeliveries -> 409)
  *    - lost the insert race for a new event: re-read -> 409 / 200 as above (never 500)
  * 5. Process event with timeout
- * 6. On success: mark status=processed + processedAt
+ * 6. On success: status=processed + processedAt, committed atomically with the mutation
  * 7. On failure: mark status=failed + lastError + increment attempts
  *
  * Event envelope (Step 4): the signature-verified payload is runtime-validated
@@ -176,26 +176,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 6: Process event asynchronously with timeout protection
-    // Return 202 immediately to acknowledge receipt
-    // Mark processed only after successful DB updates
+    // Return 202 immediately to acknowledge receipt.
+    // handleWebhookEvent marks the event processed IN THE SAME TRANSACTION as the billing
+    // mutation + audit event, so "processed" is never recorded without its side effects (or
+    // vice versa). On failure everything rolls back and the event is marked failed below.
     handleWebhookEvent(event)
-      .then(async () => {
-        // Success: mark event as processed (only path to mark processed)
-        try {
-          await markWebhookEventProcessed(event.id);
-          logger.info("Webhook event processed successfully", {
-            stripeEventId: event.id,
-            type: event.type,
-          });
-        } catch (error) {
-          const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-          logger.error("Failed to mark webhook event as processed after successful handling", {
-            stripeEventId: event.id,
-            error: governed.operatorMessage,
-          });
-          // Don't fail - event was processed, just couldn't mark it
-          // Stripe will retry, idempotency will prevent reprocessing
-        }
+      .then(() => {
+        logger.info("Webhook event processed successfully", {
+          stripeEventId: event.id,
+          type: event.type,
+        });
       })
       .catch(async (error) => {
         // Failure: mark event as failed and log error
