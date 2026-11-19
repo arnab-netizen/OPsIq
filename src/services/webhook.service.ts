@@ -1146,10 +1146,10 @@ async function handleCustomerSubscriptionCreated(
       stripeSubscriptionCreatedAt: new Date(event.created * 1000),
       coverage: "full",
       bindCapable: true,
-      // A full snapshot: period, trial and cancellation fields; nothing of a previous
-      // subscription carries over.
+      // A full snapshot: the event's own status (incomplete stays incomplete), period, trial and
+      // cancellation fields; nothing of a previous subscription carries over.
       data: {
-        status: "active",
+        status: stripeSubscriptionStatusOf(event),
         currentPeriodStart: period.start,
         currentPeriodEnd: period.end,
         trialEndsAt: event.trial_end ? new Date(event.trial_end * 1000) : null,
@@ -1160,7 +1160,17 @@ async function handleCustomerSubscriptionCreated(
   );
   if (!updatedSubscription) return;
 
-  await syncEntitlementsForSubscription(tx, position.stripeEventId, billingAccount.workspaceId, updatedSubscription);
+  if (updatedSubscription.status === "active") {
+    await syncEntitlementsForSubscription(tx, position.stripeEventId, billingAccount.workspaceId, updatedSubscription);
+  } else {
+    await auditSubscriptionSynced(tx, {
+      stripeEventId: position.stripeEventId,
+      eventType: "customer.subscription.created",
+      workspaceId: billingAccount.workspaceId,
+      subscriptionId: billingAccount.subscription.id,
+      status: updatedSubscription.status,
+    });
+  }
 
   logger.info("Subscription created via webhook", {
     subscriptionId: billingAccount.subscription.id,

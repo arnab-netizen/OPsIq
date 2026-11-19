@@ -74,4 +74,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Stripe webhook — current Stripe AP
     expect(await f.eventRow(id)).toMatchObject({ status: "failed", attempts: 1 });
     expect((await f.subscription()).status).toBe("active");
   });
+
+  it("M2: subscription.created takes its status from the event (incomplete stays incomplete; no activation audit)", async () => {
+    const event = f.envelope(f.nextEventId(), "customer.subscription.created", f.BASE_S + 600, f.dahliaSubscription({ status: "incomplete" }));
+    await f.deliverApplied(event);
+    expect(await f.subscription()).toMatchObject({ status: "incomplete", stripeSubscriptionId: f.STRIPE_SUB });
+    expect(await f.audits("subscription.activated", event.id)).toHaveLength(0);
+    expect(await f.audits("billing.subscription_synced", event.id)).toHaveLength(1);
+
+    const active = f.envelope(f.nextEventId(), "customer.subscription.created", f.BASE_S + 601, f.dahliaSubscription({ status: "trialing" }));
+    await f.deliverApplied(active);
+    expect((await f.subscription()).status).toBe("trialing");
+  });
 });
