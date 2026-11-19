@@ -29,6 +29,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { randomUUID } from "crypto";
 import Stripe from "stripe";
+import pg from "pg";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
@@ -290,19 +291,108 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     expect(await eventRow(id)).toMatchObject({ status: "processed", attempts: 0 });
   });
 
-  it("concurrent duplicate deliveries of one new event -> processed exactly once, one row", async () => {
+  it("concurrent duplicate deliveries of one new event -> processed exactly once, one row, never 5xx", async () => {
     const id = nextEventId();
     const payload = JSON.stringify(checkoutCompleted(id));
-    const results = await Promise.all([post(payload, sign(payload)), post(payload, sign(payload)), post(payload, sign(payload))]);
+    const results = await Promise.all(Array.from({ length: 8 }, () => post(payload, sign(payload))));
     const statuses = results.map((r) => r.status);
-    // Exactly one delivery wins and is accepted. The losers either see the in-flight row (409)
-    // or lose the unique-insert race on stripe_event_id and get the documented record-failure
-    // 500 -- both tell Stripe to retry; neither processes.
+    // Exactly one delivery wins and is accepted. Every loser either sees the in-flight row (409,
+    // Stripe retries) or the finished row (200 duplicate) -- including a loser of the unique-insert
+    // race on stripe_event_id, which re-reads the winner's row instead of surfacing a 500.
     expect(statuses.filter((s) => s === 202)).toHaveLength(1);
-    for (const s of statuses) expect([202, 409, 500]).toContain(s);
+    for (const s of statuses) expect([200, 202, 409]).toContain(s);
     await settled(id, "processed");
     expect(spies.handleWebhookEvent).toHaveBeenCalledTimes(1);
     expect(await db.webhookEvent.count({ where: { stripeEventId: id } })).toBe(1);
+    expect(await activationAudits()).toBe(1);
+  });
+
+  /**
+   * Deterministic unique-insert race: a second connection inserts the same stripe_event_id inside an
+   * open transaction, so the route's findUnique sees nothing and its INSERT blocks on the unique
+   * index; once the other transaction commits, the route's INSERT fails with a unique violation.
+   */
+  async function raceInsertAgainstRoute(id: string, committedStatus: "processing" | "processed") {
+    const other = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await other.connect();
+    try {
+      await other.query("BEGIN");
+      await other.query(
+        "INSERT INTO webhook_events (stripe_event_id, type, status, attempts) VALUES ($1, 'checkout.session.completed', $2, 0)",
+        [id, committedStatus],
+      );
+      const payload = JSON.stringify(checkoutCompleted(id));
+      const pending = post(payload, sign(payload));
+      await vi.waitFor(
+        async () => {
+          const { rows } = await other.query(
+            "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND pid <> pg_backend_pid()",
+          );
+          expect(rows[0].n).toBeGreaterThan(0);
+        },
+        { timeout: 10_000, interval: 25 },
+      );
+      await other.query("COMMIT");
+      return await pending;
+    } finally {
+      await other.end();
+    }
+  }
+
+  it("lost unique-insert race while the winner is in flight -> 409 (not 500), not processed", async () => {
+    const id = nextEventId();
+    const res = await raceInsertAgainstRoute(id, "processing");
+    expect(res.status).toBe(409);
+    expect(spies.handleWebhookEvent).not.toHaveBeenCalled();
+    expect(await db.webhookEvent.count({ where: { stripeEventId: id } })).toBe(1);
+    expect((await subscription())?.status).toBe("trialing");
+  });
+
+  it("lost unique-insert race after the winner finished -> 200 duplicate (not 500), not processed", async () => {
+    const id = nextEventId();
+    const res = await raceInsertAgainstRoute(id, "processed");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ received: true, duplicate: true });
+    expect(spies.handleWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it("concurrent redeliveries of a previously FAILED event -> exactly one retry claims it, one activation", async () => {
+    const id = nextEventId();
+    await db.webhookEvent.create({ data: { stripeEventId: id, type: "checkout.session.completed", status: "failed", attempts: 1 } });
+    const payload = JSON.stringify(checkoutCompleted(id));
+    const results = await Promise.all(Array.from({ length: 6 }, () => post(payload, sign(payload))));
+    const statuses = results.map((r) => r.status);
+    expect(statuses.filter((s) => s === 202)).toHaveLength(1);
+    for (const s of statuses) expect([200, 202, 409]).toContain(s);
+    await settled(id, "processed");
+    expect(spies.handleWebhookEvent).toHaveBeenCalledTimes(1);
+    expect(await activationAudits()).toBe(1);
+    expect(await eventRow(id)).toMatchObject({ status: "processed", attempts: 1 });
+  });
+
+  it("a just-claimed retry of an OLD event is not swept as stale by a concurrent delivery", async () => {
+    const id = nextEventId();
+    // Created long ago, but (re)claimed for processing just now: in flight, not stuck.
+    await db.webhookEvent.create({
+      data: { stripeEventId: id, type: "checkout.session.completed", status: "processing", attempts: 1, createdAt: new Date(Date.now() - 60 * 60 * 1000), updatedAt: new Date() },
+    });
+    const payload = JSON.stringify(checkoutCompleted(id));
+    const res = await post(payload, sign(payload));
+    expect(res.status).toBe(409);
+    expect(spies.handleWebhookEvent).not.toHaveBeenCalled();
+    expect(await eventRow(id)).toMatchObject({ status: "processing", attempts: 1 });
+  });
+
+  it("an event genuinely stuck in processing (> 5 min since claim) is recovered and retried once", async () => {
+    const id = nextEventId();
+    const longAgo = new Date(Date.now() - 60 * 60 * 1000);
+    await db.webhookEvent.create({
+      data: { stripeEventId: id, type: "checkout.session.completed", status: "processing", attempts: 0, createdAt: longAgo, updatedAt: longAgo },
+    });
+    const payload = JSON.stringify(checkoutCompleted(id));
+    expect((await post(payload, sign(payload))).status).toBe(202);
+    await settled(id, "processed");
+    expect(spies.handleWebhookEvent).toHaveBeenCalledTimes(1);
     expect(await activationAudits()).toBe(1);
   });
 

@@ -184,19 +184,57 @@ export function checkSignatureTimestamp(eventTimestamp: number): void {
   }
 }
 
+/** Narrowing guard for untyped error/driver payloads (no assertion). */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * Unique-constraint violation on insert: Prisma P2002, or the raw Postgres 23505 surfaced through
+ * the pg driver adapter (both shapes occur depending on the Prisma/adapter path).
+ */
+function isUniqueViolation(error: unknown): boolean {
+  if (!isRecord(error)) return false;
+  if (error.code === "P2002") return true;
+  const cause = error.cause;
+  if (isRecord(cause) && (cause.code === "23505" || cause.originalCode === "23505")) return true;
+  const meta = error.meta;
+  const adapterError = isRecord(meta) ? meta.driverAdapterError : undefined;
+  const adapterCause = isRecord(adapterError) ? adapterError.cause : undefined;
+  return (
+    isRecord(adapterCause) &&
+    (adapterCause.originalCode === "23505" || adapterCause.kind === "UniqueConstraintViolation")
+  );
+}
+
+/**
+ * A `processing` row is stale when it was last claimed (updatedAt) more than the threshold ago.
+ * updatedAt is (re)stamped on every claim, so a retry of an event CREATED long ago is not swept
+ * while it is actually in flight. Legacy rows with no updatedAt fall back to createdAt.
+ */
+function staleProcessingWhere(staleThreshold: Date) {
+  return {
+    status: "processing",
+    OR: [
+      { updatedAt: { lt: staleThreshold } },
+      { updatedAt: null, createdAt: { lt: staleThreshold } },
+    ],
+  };
+}
+
 /**
  * Recover from stale processing events
- * Marks events stuck in processing state for > STALE_PROCESSING_THRESHOLD_MS as failed
+ * Marks events stuck in processing state for > STALE_PROCESSING_THRESHOLD_MS (since their last
+ * claim) as failed. Each transition is conditional on the row STILL being processing and stale,
+ * so a delivery that finishes (or is re-claimed) between the scan and the update is never
+ * overwritten.
  */
 export async function recoverStaleProcessingEvents(): Promise<void> {
   try {
     const staleThreshold = new Date(Date.now() - STALE_PROCESSING_THRESHOLD_MS);
 
-    const staleEvents = await db.webhookEvent.findMany({
-      where: {
-        status: "processing",
-        createdAt: { lt: staleThreshold },
-      },
+    const staleEvents: WebhookEvent[] = await db.webhookEvent.findMany({
+      where: staleProcessingWhere(staleThreshold),
     });
 
     if (staleEvents.length === 0) {
@@ -207,21 +245,24 @@ export async function recoverStaleProcessingEvents(): Promise<void> {
 
     for (const event of staleEvents) {
       try {
-        await db.webhookEvent.update({
-          where: { id: event.id },
+        const recovered: { count: number } = await db.webhookEvent.updateMany({
+          where: { id: event.id, ...staleProcessingWhere(staleThreshold) },
           data: {
             status: "failed",
             lastError: "Processing timeout (stuck > 5 minutes)",
             attempts: {
               increment: 1,
             },
+            updatedAt: new Date(),
           },
         });
 
-        logger.warn("Marked stale event as failed", {
-          stripeEventId: event.stripeEventId,
-          createdAt: event.createdAt,
-        });
+        if (recovered.count === 1) {
+          logger.warn("Marked stale event as failed", {
+            stripeEventId: event.stripeEventId,
+            createdAt: event.createdAt,
+          });
+        }
       } catch (error) {
         const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.error("Failed to recover stale event", {
@@ -239,32 +280,96 @@ export async function recoverStaleProcessingEvents(): Promise<void> {
 }
 
 /**
+ * What the caller must do with a delivery:
+ *   process     -> this caller exclusively claimed the event (new, or a failed retry): process it
+ *   duplicate   -> already processed: acknowledge 200 { duplicate: true }
+ *   in_progress -> another delivery holds the claim: 409, the provider retries later
+ *   dead_letter -> max attempts exceeded: 400, no more retries
+ */
+export type WebhookEventDisposition = "process" | "duplicate" | "in_progress" | "dead_letter";
+
+export interface WebhookEventClaim {
+  event: WebhookEvent;
+  disposition: WebhookEventDisposition;
+  isNew: boolean;
+  shouldProcess: boolean;
+  shouldRetry: boolean;
+  isDeadLetter: boolean;
+}
+
+/** Bound on re-read rounds when a claim loses a race; contention past it answers "in_progress". */
+const CLAIM_MAX_ROUNDS = 3;
+
+function claimOf(
+  event: WebhookEvent,
+  disposition: WebhookEventDisposition,
+  flags: { isNew?: boolean; shouldRetry?: boolean } = {}
+): WebhookEventClaim {
+  return {
+    event,
+    disposition,
+    isNew: flags.isNew ?? false,
+    shouldProcess: disposition === "process",
+    shouldRetry: flags.shouldRetry ?? false,
+    isDeadLetter: disposition === "dead_letter",
+  };
+}
+
+/**
  * Get or create webhook event record with state machine
  * Also recovers stale processing events on inline pre-check
- * Returns: { event, isNew, shouldProcess, shouldRetry, isDeadLetter }
+ *
+ * Concurrency: at most one delivery of an event ever gets disposition "process" per claim.
+ *  - New event: the unique stripe_event_id insert is the claim. A delivery that loses the insert
+ *    race (unique violation) re-reads the winner's row and answers from its state (in_progress /
+ *    duplicate) instead of surfacing a 500.
+ *  - Failed event: the retry claim is a compare-and-set failed -> processing on (id, status,
+ *    attempts); concurrent redeliveries that lose it re-read and answer in_progress / duplicate.
+ *  - Dead-letter move is the same compare-and-set, so it happens once.
  */
 export async function getOrCreateWebhookEvent(
   stripeEventId: string,
   type: string,
   timestamp: number
-): Promise<{
-  event: WebhookEvent;
-  isNew: boolean;
-  shouldProcess: boolean;
-  shouldRetry: boolean;
-  isDeadLetter: boolean;
-}> {
+): Promise<WebhookEventClaim> {
   try {
     // Inline pre-check: recover stale events first
     await recoverStaleProcessingEvents();
 
-    // Try to find existing event
-    const existingEvent: WebhookEvent | null = await db.webhookEvent.findUnique({
-      where: { stripeEventId },
-    });
+    let lastSeen: WebhookEvent | null = null;
 
-    if (existingEvent) {
-      // Event already exists - determine action
+    for (let round = 0; round < CLAIM_MAX_ROUNDS; round++) {
+      const existingEvent: WebhookEvent | null = await db.webhookEvent.findUnique({
+        where: { stripeEventId },
+      });
+
+      if (!existingEvent) {
+        // No existing event - the unique insert (status=processing) is the claim.
+        try {
+          const now = new Date();
+          const newEvent: WebhookEvent = await db.webhookEvent.create({
+            data: {
+              stripeEventId,
+              type,
+              status: "processing",
+              attempts: 0,
+              stripeTimestamp: timestamp,
+              updatedAt: now,
+            },
+          });
+          return claimOf(newEvent, "process", { isNew: true });
+        } catch (error) {
+          if (!isUniqueViolation(error)) throw error;
+          // A concurrent delivery inserted it first: re-read its row and answer from its state.
+          logger.info("Webhook event insert lost a concurrent-delivery race; re-reading", {
+            stripeEventId,
+          });
+          continue;
+        }
+      }
+
+      lastSeen = existingEvent;
+
       if (existingEvent.status === "dead_letter") {
         // Event moved to dead-letter (max retries exceeded)
         logger.warn("Webhook event in dead-letter state (max retries exceeded)", {
@@ -272,95 +377,72 @@ export async function getOrCreateWebhookEvent(
           attempts: existingEvent.attempts,
           maxAttempts: MAX_ATTEMPTS,
         });
-        return {
-          event: existingEvent,
-          isNew: false,
-          shouldProcess: false,
-          shouldRetry: false,
-          isDeadLetter: true,
-        };
+        return claimOf(existingEvent, "dead_letter");
       }
 
       if (existingEvent.status === "processed") {
         // Already successfully processed - ignore duplicate
-        return {
-          event: existingEvent,
-          isNew: false,
-          shouldProcess: false,
-          shouldRetry: false,
-          isDeadLetter: false,
-        };
+        return claimOf(existingEvent, "duplicate");
       }
 
       if (existingEvent.status === "processing") {
         // Currently processing - retry later (409 conflict)
-        return {
-          event: existingEvent,
-          isNew: false,
-          shouldProcess: false,
-          shouldRetry: false,
-          isDeadLetter: false,
-        };
+        return claimOf(existingEvent, "in_progress");
       }
 
-      if (existingEvent.status === "failed") {
-        // Previously failed - check if max retries exceeded
-        const nextAttempt = existingEvent.attempts + 1;
-        if (nextAttempt > MAX_ATTEMPTS) {
-          // Move to dead-letter on next failure
-          await db.webhookEvent.update({
-            where: { id: existingEvent.id },
-            data: {
-              status: "dead_letter",
-              lastError: `Exceeded max attempts (${MAX_ATTEMPTS})`,
-              attempts: nextAttempt,
-            },
-          });
+      if (existingEvent.status !== "failed") {
+        // Unknown state: never process it (fail closed; surfaces as a record error).
+        throw new Error(`Webhook event ${stripeEventId} is in unknown state "${existingEvent.status}"`);
+      }
 
-          logger.error("Webhook event moved to dead-letter", {
-            stripeEventId,
+      // Previously failed - check if max retries exceeded
+      const nextAttempt = existingEvent.attempts + 1;
+      const casWhere = { id: existingEvent.id, status: "failed", attempts: existingEvent.attempts };
+      const now = new Date();
+
+      if (nextAttempt > MAX_ATTEMPTS) {
+        // Move to dead-letter (exactly once: compare-and-set on the observed state)
+        const moved: { count: number } = await db.webhookEvent.updateMany({
+          where: casWhere,
+          data: {
+            status: "dead_letter",
+            lastError: `Exceeded max attempts (${MAX_ATTEMPTS})`,
             attempts: nextAttempt,
-            maxAttempts: MAX_ATTEMPTS,
-          });
+            updatedAt: now,
+          },
+        });
+        if (moved.count !== 1) continue;
 
-          return {
-            event: existingEvent,
-            isNew: false,
-            shouldProcess: false,
-            shouldRetry: false,
-            isDeadLetter: true,
-          };
-        }
+        logger.error("Webhook event moved to dead-letter", {
+          stripeEventId,
+          attempts: nextAttempt,
+          maxAttempts: MAX_ATTEMPTS,
+        });
 
-        // Can retry
-        return {
-          event: existingEvent,
-          isNew: false,
-          shouldProcess: true,
-          shouldRetry: true,
-          isDeadLetter: false,
-        };
+        return claimOf(
+          { ...existingEvent, status: "dead_letter", attempts: nextAttempt, updatedAt: now },
+          "dead_letter"
+        );
       }
+
+      // Can retry: claim it exclusively (failed -> processing)
+      const claimed: { count: number } = await db.webhookEvent.updateMany({
+        where: casWhere,
+        data: { status: "processing", updatedAt: now },
+      });
+      if (claimed.count !== 1) continue;
+
+      return claimOf({ ...existingEvent, status: "processing", updatedAt: now }, "process", {
+        shouldRetry: true,
+      });
     }
 
-    // No existing event - create new one with status=processing
-    const newEvent: WebhookEvent = await db.webhookEvent.create({
-      data: {
-        stripeEventId,
-        type,
-        status: "processing",
-        attempts: 0,
-        stripeTimestamp: timestamp,
-      },
-    });
-
-    return {
-      event: newEvent,
-      isNew: true,
-      shouldProcess: true,
-      shouldRetry: false,
-      isDeadLetter: false,
-    };
+    // Persistent contention: another delivery keeps changing the row. Never process here.
+    if (!lastSeen) {
+      throw new Error(`Webhook event ${stripeEventId} could not be read or created`);
+    }
+    logger.warn("Webhook event claim contended; asking the provider to retry", { stripeEventId });
+    return claimOf(lastSeen, "in_progress");
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to get or create webhook event", {
@@ -546,16 +628,33 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
 /**
  * Mark webhook event as successfully processed
  * Only called after successful event handling
+ *
+ * Conditional transition processing -> processed. Idempotent when the row is already processed;
+ * throws for any other state (e.g. the claim was swept as stale and re-claimed elsewhere), so a
+ * caller can never silently overwrite a state it no longer owns.
  */
 export async function markWebhookEventProcessed(stripeEventId: string): Promise<void> {
   try {
-    await db.webhookEvent.update({
-      where: { stripeEventId },
+    const now = new Date();
+    const marked: { count: number } = await db.webhookEvent.updateMany({
+      where: { stripeEventId, status: "processing" },
       data: {
         status: "processed",
-        processedAt: new Date(),
+        processedAt: now,
+        updatedAt: now,
       },
     });
+
+    if (marked.count !== 1) {
+      const current: WebhookEvent | null = await db.webhookEvent.findUnique({ where: { stripeEventId } });
+      if (current?.status === "processed") {
+        logger.info("Webhook event already marked as processed", { stripeEventId });
+        return;
+      }
+      throw new Error(
+        `Cannot mark webhook event ${stripeEventId} processed from state "${current?.status ?? "missing"}"`
+      );
+    }
 
     logger.info("Webhook event marked as processed", { stripeEventId });
   } catch (error) {
@@ -578,16 +677,32 @@ export async function markWebhookEventFailed(
 ): Promise<void> {
   const governedError = classifyOperatorError(error, { context: "load" });
   try {
-    const result = await db.webhookEvent.update({
-      where: { stripeEventId },
+    // Conditional transition processing -> failed: a failure report for a claim that has already
+    // settled (processed, or swept/re-claimed) must not overwrite that state.
+    const marked: { count: number } = await db.webhookEvent.updateMany({
+      where: { stripeEventId, status: "processing" },
       data: {
         status: "failed",
         lastError: governedError.operatorMessage,
         attempts: {
           increment: 1,
         },
+        updatedAt: new Date(),
       },
     });
+
+    const result: WebhookEvent | null = await db.webhookEvent.findUnique({ where: { stripeEventId } });
+    if (!result) {
+      throw new Error(`Webhook event ${stripeEventId} not found while recording failure`);
+    }
+    if (marked.count !== 1) {
+      logger.warn("Webhook event failure not recorded: event no longer in processing", {
+        stripeEventId,
+        status: result.status,
+        error: governedError.operatorMessage,
+      });
+      return;
+    }
 
     // Check threshold after update
     await checkRetryThreshold(stripeEventId, result.attempts, result.type);

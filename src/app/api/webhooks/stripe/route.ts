@@ -10,6 +10,7 @@ import {
   markWebhookEventProcessed,
   markWebhookEventFailed,
   handleWebhookEvent,
+  type WebhookEventDisposition,
 } from "@/services/webhook.service";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -42,7 +43,8 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
  *    - dead_letter: return 400 (max retries exceeded)
  *    - processed: return 200 (duplicate, ignore)
  *    - processing: return 409 (conflict, retry later)
- *    - failed: continue (retry if < maxAttempts)
+ *    - failed: continue (retry if < maxAttempts; exclusive claim, concurrent redeliveries -> 409)
+ *    - lost the insert race for a new event: re-read -> 409 / 200 as above (never 500)
  * 5. Process event with timeout
  * 6. On success: mark status=processed + processedAt
  * 7. On failure: mark status=failed + lastError + increment attempts
@@ -115,16 +117,14 @@ export async function POST(request: NextRequest) {
 
     // Step 5: Get or create webhook event record with stale recovery
     let webhookEvent: WebhookEvent;
-    let shouldProcess = false;
-    let isDeadLetter = false;
+    let disposition: WebhookEventDisposition;
 
     try {
       const result = await getOrCreateWebhookEvent(event.id, event.type, timestamp);
       webhookEvent = result.event;
-      shouldProcess = result.shouldProcess;
-      isDeadLetter = result.isDeadLetter;
+      disposition = result.disposition;
 
-      if (isDeadLetter) {
+      if (disposition === "dead_letter") {
         // Event exceeded max retries - move to dead-letter
         logger.error("Webhook event in dead-letter state (max retries exceeded)", {
           stripeEventId: event.id,
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (!shouldProcess && webhookEvent.status === "processed") {
+      if (disposition === "duplicate") {
         // Duplicate processed event - safely ignore
         logger.info("Webhook event already processed (duplicate)", {
           stripeEventId: event.id,
@@ -150,8 +150,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (!shouldProcess && webhookEvent.status === "processing") {
-        // Currently processing - tell Stripe to retry later
+      if (disposition !== "process") {
+        // Currently processing (or claim contended) - tell Stripe to retry later.
+        // Fail closed: only an exclusive "process" claim ever reaches the handler.
         logger.info("Webhook event currently processing (conflict)", {
           stripeEventId: event.id,
           type: event.type,
