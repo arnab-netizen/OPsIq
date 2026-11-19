@@ -18,7 +18,7 @@ import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { Prisma } from "@/generated/prisma/client";
-import { validateRecommendationTransition } from "@/policies/state-transition";
+import { validateRecommendationTransition, type RecommendationStoredStatus } from "@/policies/state-transition";
 import type { RecommendationStatus } from "@/domain/constants/statuses";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
@@ -1303,13 +1303,13 @@ export async function updateRecommendation(
   const updates: Record<string, unknown> = { version: { increment: 1 } };
 
   // Status changes on a governed Recommendation go through the centralized lifecycle
-  // (policies/state-transition RECOMMENDATION_TRANSITIONS). A stored status outside that
-  // lifecycle (e.g. the column default "pending") has no allowed transitions, so it fails
-  // closed with InvalidStateTransitionError rather than being silently rewritten.
+  // (policies/state-transition RECOMMENDATION_TRANSITIONS; the stored initial "pending" mirrors
+  // "proposed"). Any other stored status outside the lifecycle has no allowed transitions, so it
+  // fails closed with InvalidStateTransitionError rather than being silently rewritten.
   const statusChanged = input.status !== undefined && input.status !== rec.status;
   if (statusChanged) {
     validateRecommendationTransition(
-      rec.status as RecommendationStatus,
+      rec.status as RecommendationStoredStatus,
       input.status as RecommendationStatus
     );
     updates.status = input.status;

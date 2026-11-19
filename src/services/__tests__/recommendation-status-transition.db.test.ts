@@ -18,8 +18,8 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
  * not conditional on the version it had checked, so the check could be raced.
  *
  * After the fix every status change is validated by validateRecommendationTransition and
- * written with compare-and-set on (version, previous status). A stored status outside the
- * lifecycle (the column default "pending") fails closed (422) instead of being rewritten.
+ * written with compare-and-set on (version, previous status). The column default "pending"
+ * (what createRecommendation writes) is the initial state and mirrors "proposed" exactly.
  */
 describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateRecommendation — status changes follow the governed lifecycle", () => {
   const stamp = uuidv4();
@@ -89,10 +89,36 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateRecommendation — status changes f
     expect(await row(id)).toEqual({ status: "proposed", version: 1 });
   });
 
-  it("[db] a status outside the domain lifecycle (column default 'pending') fails closed", async () => {
+  // "pending" is the column default that createRecommendation writes: it is the real initial
+  // state and must behave exactly like "proposed" (same outgoing transitions, nothing more).
+  it("[db] pending → rejected succeeds (initial state, same as proposed)", async () => {
     const id = await makeRec("pending");
-    await expect(updateRecommendation(id, { version: 1, status: "rejected" }, ctx(ws), ws)).rejects.toBeInstanceOf(InvalidStateTransitionError);
-    expect(await row(id)).toEqual({ status: "pending", version: 1 });
+    const updated = await updateRecommendation(id, { version: 1, status: "rejected" }, ctx(ws), ws);
+    expect(updated.status).toBe("rejected");
+    expect(updated.version).toBe(2);
+  });
+
+  it("[db] pending → endorsed and pending → withdrawn succeed (mirror proposed)", async () => {
+    const a = await makeRec("pending");
+    expect((await updateRecommendation(a, { version: 1, status: "endorsed" }, ctx(ws), ws)).status).toBe("endorsed");
+    const b = await makeRec("pending");
+    expect((await updateRecommendation(b, { version: 1, status: "withdrawn" }, ctx(ws), ws)).status).toBe("withdrawn");
+  });
+
+  it("[db] pending → converted is refused exactly as proposed → converted is (skipped endorsement)", async () => {
+    const proposed = await makeRec("proposed");
+    const pending = await makeRec("pending");
+    await expect(updateRecommendation(proposed, { version: 1, status: "converted" }, ctx(ws), ws)).rejects.toBeInstanceOf(InvalidStateTransitionError);
+    await expect(updateRecommendation(pending, { version: 1, status: "converted" }, ctx(ws), ws)).rejects.toBeInstanceOf(InvalidStateTransitionError);
+    expect(await row(pending)).toEqual({ status: "pending", version: 1 });
+  });
+
+  it("[db] terminal states stay terminal (withdrawn/converted → any refused)", async () => {
+    for (const terminal of ["withdrawn", "converted"]) {
+      const id = await makeRec(terminal);
+      await expect(updateRecommendation(id, { version: 1, status: "endorsed" }, ctx(ws), ws)).rejects.toBeInstanceOf(InvalidStateTransitionError);
+      expect(await row(id)).toEqual({ status: terminal, version: 1 });
+    }
   });
 
   it("[db] allows the governed path proposed → endorsed → converted and bumps the version each time", async () => {
