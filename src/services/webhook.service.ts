@@ -12,6 +12,10 @@ import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import {
+  decideStripeSubscriptionEvent,
+  isTerminalSubscriptionStatus,
+} from "@/domain/billing/stripe-subscription-ordering";
 
 /** Per-statement bound (SET LOCAL statement_timeout) inside the processing transaction. */
 const WEBHOOK_STATEMENT_TIMEOUT_MS = 10_000;
@@ -55,6 +59,8 @@ const StripeIdRefSchema = z.union([
 const StripeCheckoutSessionObjectSchema = z
   .object({
     id: z.string().min(1),
+    // Session creation time: a lower bound of the subscription it creates (binding key).
+    created: z.number().int().nonnegative(),
     customer: StripeIdRefSchema.nullish(),
     subscription: StripeIdRefSchema.nullish(),
   })
@@ -71,6 +77,8 @@ const StripeCheckoutSessionObjectSchema = z
 const StripeSubscriptionObjectSchema = z
   .object({
     id: z.string().min(1),
+    // Stripe's created of the SUBSCRIPTION (not of the event): the binding key.
+    created: z.number().int().nonnegative(),
     customer: StripeIdRefSchema,
     status: z.string().min(1),
     items: z
@@ -102,6 +110,7 @@ const StripeSubscriptionObjectSchema = z
 const StripeSubscriptionDeletedObjectSchema = z
   .object({
     id: z.string().min(1),
+    created: z.number().int().nonnegative(),
     customer: StripeIdRefSchema,
     canceled_at: z.number().int().nullish(),
   })
@@ -124,19 +133,19 @@ export function subscriptionPeriodOf(subscription: StripeSubscriptionEvent): { s
       ? [{ start: item.current_period_start, end: item.current_period_end }]
       : []
   );
-  if (itemPeriods.length > 0) {
-    return {
-      start: new Date(Math.min(...itemPeriods.map((p) => p.start)) * 1000),
-      end: new Date(Math.max(...itemPeriods.map((p) => p.end)) * 1000),
-    };
+  const periods =
+    itemPeriods.length > 0
+      ? itemPeriods
+      : typeof subscription.current_period_start === "number" && typeof subscription.current_period_end === "number"
+        ? [{ start: subscription.current_period_start, end: subscription.current_period_end }]
+        : [];
+  if (periods.length === 0) {
+    throw new Error(`Stripe subscription ${subscription.id} carries no current billing period`);
   }
-  if (typeof subscription.current_period_start === "number" && typeof subscription.current_period_end === "number") {
-    return {
-      start: new Date(subscription.current_period_start * 1000),
-      end: new Date(subscription.current_period_end * 1000),
-    };
-  }
-  throw new Error(`Stripe subscription ${subscription.id} carries no current billing period`);
+  return {
+    start: new Date(Math.min(...periods.map((p) => p.start)) * 1000),
+    end: new Date(Math.max(...periods.map((p) => p.end)) * 1000),
+  };
 }
 
 /** Cancellation reason in either API shape (cancellation_details.reason, else cancel_reason). */
@@ -166,12 +175,7 @@ export interface StripeEventPosition {
   created: Date;
 }
 
-/** Stripe subscription statuses after which the subscription grants nothing and cannot resume. */
-const TERMINAL_SUBSCRIPTION_STATUSES = ["canceled", "incomplete_expired"];
-
-export function isTerminalSubscriptionStatus(status: string): boolean {
-  return TERMINAL_SUBSCRIPTION_STATUSES.includes(status);
-}
+export { isTerminalSubscriptionStatus };
 
 function positionOf(event: StripeWebhookEventInput): StripeEventPosition {
   if (!Number.isSafeInteger(event.created) || event.created < 0) {
@@ -905,109 +909,75 @@ export async function markWebhookEventFailed(
 }
 
 /**
- * Strictly-newer-than-watermark predicate on the ordering key (created, terminal, eventId):
- *   (event.created, isTerminal(event), event.id) > (lastEventTimestamp, isTerminal(row.status), lastEventId)
- *
- * Stripe's created is whole seconds and its event ids are NOT time-ordered, so within one second
- * the id is only a deterministic tiebreak. A terminal result (deleted / canceled /
- * incomplete_expired) outranks a non-terminal one at the same second: a same-second update can
- * never undo a cancellation, in either delivery order, whatever the ids. A strictly newer event
- * still applies (a later reactivation / resubscription is time-ordered). The stored side's
- * terminality is the row's current status, which is exactly the state a tie would overwrite.
- *
- * A row with no lastEventId has no provider-event watermark: either it was never moved by a
- * provider event, or its lastEventTimestamp was written by the pre-ordering code as a RECEIVE time
- * (not comparable with event.created). Such a row accepts the next event, which then records both
- * halves of the watermark.
+ * The Stripe row vocabulary is Stripe's own subscription status (trialing, active, incomplete,
+ * past_due, canceled, …): the entitlement layer reads it as-is. Every handler that writes a status
+ * from a subscription snapshot goes through here.
  */
-function newerThanWatermark(position: StripeEventPosition, eventIsTerminal: boolean): Prisma.SubscriptionWhereInput {
-  const rowIsNonTerminal: Prisma.SubscriptionWhereInput = { status: { notIn: TERMINAL_SUBSCRIPTION_STATUSES } };
-  const laterIdAtSameSecond: Prisma.SubscriptionWhereInput = { lastEventId: { lt: position.stripeEventId } };
-  return {
-    OR: [
-      { lastEventId: null },
-      { lastEventTimestamp: null },
-      { lastEventTimestamp: { lt: position.created } },
-      eventIsTerminal
-        ? // terminal event: beats a non-terminal row outright; vs a terminal row, by id
-          { lastEventTimestamp: position.created, OR: [rowIsNonTerminal, laterIdAtSameSecond] }
-        : // non-terminal event: never beats a terminal row at the same second; vs non-terminal, by id
-          { lastEventTimestamp: position.created, AND: [rowIsNonTerminal, laterIdAtSameSecond] },
-    ],
-  };
+function stripeSubscriptionStatusOf(subscription: { status: string }): string {
+  return subscription.status;
 }
 
 /**
- * Which Stripe subscription an event is about, and how it relates to the row's binding.
- *  - "bind": customer.subscription.created / checkout.session.completed establish the
- *    subscription id (a resubscription deliberately rebinds the row, still time-ordered).
- *  - "match": customer.subscription.updated / .deleted apply only to the bound subscription (or a
- *    row not yet bound); an event for a different subscription id is ignored and audited.
+ * One Stripe event's effect on the bound subscription row, applied by applyOrderedSubscriptionEvent.
+ *  - coverage "full": a customer.subscription.* snapshot; advances the watermark and records the
+ *    subscription's exact created (binding key).
+ *  - coverage "partial": checkout.session.completed (no status snapshot, period or trial); still
+ *    ordered, but never advances the watermark.
  */
-type SubscriptionIdentity = { mode: "bind" | "match"; stripeSubscriptionId: string };
-
-/**
- * Whether the event is a full subscription snapshot ("full": customer.subscription.*) or carries
- * only part of the state ("partial": checkout.session.completed has the subscription id but no
- * status snapshot, period or trial). A partial event is still ordered (an older one never
- * overwrites newer state) but does NOT advance the watermark: it cannot speak for the fields it
- * does not carry, so a full snapshot created before it (but delivered after it) must still apply.
- */
-type EventCoverage = "full" | "partial";
-
-function identityPredicate(identity: SubscriptionIdentity): Prisma.SubscriptionWhereInput {
-  if (identity.mode === "bind") return {};
-  return { OR: [{ stripeSubscriptionId: null }, { stripeSubscriptionId: identity.stripeSubscriptionId }] };
+interface OrderedSubscriptionEvent {
+  stripeSubscriptionId: string;
+  stripeSubscriptionCreatedAt: Date;
+  coverage: "full" | "partial";
+  bindCapable: boolean;
+  data: Prisma.SubscriptionUpdateInput & { status: string };
 }
 
 /**
- * Apply `data` to the subscription only if this event is newer than the stored watermark and is
- * about the subscription the row is bound to, and advance the watermark in the same statement. The compare-and-set is one guarded UPDATE on the
- * applying transaction: a concurrent transaction that moved the row first is re-checked by
- * Postgres against the predicate, so an older event can never overwrite newer state.
+ * Decide (domain/billing/stripe-subscription-ordering.ts) and apply one Stripe event to the
+ * billing row, under a row lock (SELECT … FOR UPDATE) inside the processing transaction, so the
+ * read-decide-write is atomic against concurrent deliveries.
  *
- * Returns the updated subscription, or null when the event is stale. A stale event is audited
- * (BILLING_SUBSCRIPTION_STALE_EVENT_IGNORED, same tx) and otherwise has no effect; the caller's
- * transaction still settles the event row as processed (it is acknowledged, never retried).
+ * Returns the updated subscription, or null when the event is ignored. An ignored event is audited
+ * in the same transaction (BILLING_SUBSCRIPTION_STALE_EVENT_IGNORED for an older event of the
+ * bound subscription; BILLING_SUBSCRIPTION_EVENT_IGNORED, reason subscription_mismatch, for an
+ * event of an older / superseded subscription) and has no other effect; the caller's transaction
+ * still settles the event row as processed (acknowledged, never retried). A rebind to another
+ * subscription is audited as BILLING_SUBSCRIPTION_REBOUND.
  */
-async function applyIfNewer(
+async function applyOrderedSubscriptionEvent(
   tx: WebhookTx,
   position: StripeEventPosition,
   target: { subscriptionId: string; workspaceId: string },
-  identity: SubscriptionIdentity,
-  coverage: EventCoverage,
-  data: Prisma.SubscriptionUpdateManyMutationInput
+  event: OrderedSubscriptionEvent
 ): Promise<Subscription | null> {
-  const watermark =
-    coverage === "full" ? { lastEventTimestamp: position.created, lastEventId: position.stripeEventId } : {};
-  const applied = await tx.subscription.updateMany({
-    where: {
-      AND: [
-        { id: target.subscriptionId },
-        newerThanWatermark(position, typeof data.status === "string" && isTerminalSubscriptionStatus(data.status)),
-        identityPredicate(identity),
-      ],
-    },
-    data: { ...data, ...watermark },
-  });
-
-  if (applied.count === 1) {
-    return tx.subscription.findUniqueOrThrow({ where: { id: target.subscriptionId } });
-  }
-
+  await tx.$queryRaw`SELECT id FROM subscriptions WHERE id = ${target.subscriptionId}::uuid FOR UPDATE`;
   const stored = await tx.subscription.findUniqueOrThrow({
     where: { id: target.subscriptionId },
-    select: { status: true, lastEventTimestamp: true, lastEventId: true, stripeSubscriptionId: true },
+    select: {
+      status: true,
+      stripeSubscriptionId: true,
+      stripeSubscriptionCreatedAt: true,
+      lastEventTimestamp: true,
+      lastEventId: true,
+    },
   });
 
-  if (
-    identity.mode === "match" &&
-    stored.stripeSubscriptionId !== null &&
-    stored.stripeSubscriptionId !== identity.stripeSubscriptionId
-  ) {
+  const decision = decideStripeSubscriptionEvent(stored, {
+    eventId: position.stripeEventId,
+    eventCreatedAt: position.created,
+    subscriptionId: event.stripeSubscriptionId,
+    subscriptionCreatedAt: event.stripeSubscriptionCreatedAt,
+    resultingStatus: event.data.status,
+    bindCapable: event.bindCapable,
+  });
+
+  if (decision.kind === "ignore") {
+    const mismatch = decision.reason === "subscription_mismatch";
     await emitAuditEvent(
       {
-        eventName: AUDIT_EVENTS.BILLING_SUBSCRIPTION_EVENT_IGNORED,
+        eventName: mismatch
+          ? AUDIT_EVENTS.BILLING_SUBSCRIPTION_EVENT_IGNORED
+          : AUDIT_EVENTS.BILLING_SUBSCRIPTION_STALE_EVENT_IGNORED,
         // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): see syncEntitlementsForSubscription.
         actorType: "system",
         entityType: "Subscription",
@@ -1015,57 +985,87 @@ async function applyIfNewer(
         correlationId: position.stripeEventId,
         payload: {
           provider: "stripe",
-          reason: "subscription_mismatch",
+          ...(mismatch ? { reason: "subscription_mismatch" } : {}),
           eventType: position.eventType,
           workspaceId: target.workspaceId,
-          eventSubscriptionId: identity.stripeSubscriptionId,
+          eventCreatedAt: position.created.toISOString(),
+          eventSubscriptionId: event.stripeSubscriptionId,
+          eventSubscriptionCreatedAt: event.stripeSubscriptionCreatedAt.toISOString(),
           storedSubscriptionId: stored.stripeSubscriptionId,
+          storedSubscriptionCreatedAt: stored.stripeSubscriptionCreatedAt?.toISOString() ?? null,
+          storedStatus: stored.status,
+          storedEventCreatedAt: stored.lastEventTimestamp?.toISOString() ?? null,
+          storedEventId: stored.lastEventId,
         },
         visibility: "internal",
       },
       tx
     );
-    logger.warn("Ignoring Stripe event for a subscription the billing row is not bound to", {
-      stripeEventId: position.stripeEventId,
-      eventType: position.eventType,
-      subscriptionId: target.subscriptionId,
-      eventSubscriptionId: identity.stripeSubscriptionId,
-      storedSubscriptionId: stored.stripeSubscriptionId,
-    });
+    logger.warn(
+      mismatch
+        ? "Ignoring Stripe event of an older / superseded subscription than the one the billing row is bound to"
+        : "Ignoring out-of-order Stripe event older than the subscription's last applied event",
+      {
+        stripeEventId: position.stripeEventId,
+        eventType: position.eventType,
+        subscriptionId: target.subscriptionId,
+        eventSubscriptionId: event.stripeSubscriptionId,
+        storedSubscriptionId: stored.stripeSubscriptionId,
+      }
+    );
     return null;
   }
 
-  await emitAuditEvent(
-    {
-      eventName: AUDIT_EVENTS.BILLING_SUBSCRIPTION_STALE_EVENT_IGNORED,
-      // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): see syncEntitlementsForSubscription.
-      actorType: "system",
-      entityType: "Subscription",
-      entityId: target.subscriptionId,
-      correlationId: position.stripeEventId,
-      payload: {
-        provider: "stripe",
-        eventType: position.eventType,
-        workspaceId: target.workspaceId,
-        eventCreatedAt: position.created.toISOString(),
-        storedStatus: stored.status,
-        storedEventCreatedAt: stored.lastEventTimestamp?.toISOString() ?? null,
-        storedEventId: stored.lastEventId,
-      },
-      visibility: "internal",
-    },
-    tx
-  );
+  const watermark =
+    event.coverage === "full"
+      ? { lastEventTimestamp: position.created, lastEventId: position.stripeEventId }
+      : decision.rebind
+        ? { lastEventTimestamp: null, lastEventId: null } // new subscription: no snapshot seen yet
+        : {};
+  const binding = decision.rebind
+    ? { stripeSubscriptionId: event.stripeSubscriptionId, stripeSubscriptionCreatedAt: event.stripeSubscriptionCreatedAt }
+    : event.coverage === "full"
+      ? { stripeSubscriptionCreatedAt: event.stripeSubscriptionCreatedAt } // exact key replaces a checkout lower bound
+      : {};
+  // A partial rebind starts a new subscription: nothing of the previous one's cancellation carries over.
+  const freshLineage =
+    decision.rebind && event.coverage === "partial" ? { canceledAt: null, cancelReason: null } : {};
 
-  logger.warn("Ignoring out-of-order Stripe event older than the subscription's last applied event", {
-    stripeEventId: position.stripeEventId,
-    eventType: position.eventType,
-    subscriptionId: target.subscriptionId,
-    eventCreatedAt: position.created.toISOString(),
-    storedEventCreatedAt: stored.lastEventTimestamp?.toISOString() ?? null,
-    storedEventId: stored.lastEventId,
+  const updated = await tx.subscription.update({
+    where: { id: target.subscriptionId },
+    data: { ...event.data, ...freshLineage, ...binding, ...watermark },
   });
-  return null;
+
+  if (decision.rebind && decision.previousSubscriptionId !== null) {
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.BILLING_SUBSCRIPTION_REBOUND,
+        // Canonical system-actor contract (F-AUDIT-CRON-ACTOR): see syncEntitlementsForSubscription.
+        actorType: "system",
+        entityType: "Subscription",
+        entityId: target.subscriptionId,
+        correlationId: position.stripeEventId,
+        payload: {
+          provider: "stripe",
+          eventType: position.eventType,
+          workspaceId: target.workspaceId,
+          previousSubscriptionId: decision.previousSubscriptionId,
+          subscriptionId: event.stripeSubscriptionId,
+          subscriptionCreatedAt: event.stripeSubscriptionCreatedAt.toISOString(),
+          status: updated.status,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
+    logger.info("Billing row rebound to a newer Stripe subscription", {
+      stripeEventId: position.stripeEventId,
+      subscriptionId: target.subscriptionId,
+      previousSubscriptionId: decision.previousSubscriptionId,
+      stripeSubscriptionId: event.stripeSubscriptionId,
+    });
+  }
+  return updated;
 }
 
 /**
@@ -1091,13 +1091,17 @@ async function handleCheckoutSessionCompleted(
   // Validate plan and price ID
   await validatePlanAndGetPriceId(tx, billingAccount.subscription.planId);
 
-  const updatedSubscription = await applyIfNewer(
+  const updatedSubscription = await applyOrderedSubscriptionEvent(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
-    { mode: "bind", stripeSubscriptionId: event.subscription },
-    "partial",
-    { stripeSubscriptionId: event.subscription, status: "active" }
+    {
+      stripeSubscriptionId: event.subscription,
+      stripeSubscriptionCreatedAt: new Date(event.created * 1000),
+      coverage: "partial",
+      bindCapable: true,
+      data: { status: "active" },
+    }
   );
   if (!updatedSubscription) return;
 
@@ -1133,25 +1137,32 @@ async function handleCustomerSubscriptionCreated(
   // Validate plan and price ID
   await validatePlanAndGetPriceId(tx, billingAccount.subscription.planId);
 
-  const updatedSubscription = await applyIfNewer(
+  const updatedSubscription = await applyOrderedSubscriptionEvent(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
-    { mode: "bind", stripeSubscriptionId: event.id },
-    "full",
     {
       stripeSubscriptionId: event.id,
-      status: "active",
-      currentPeriodStart: period.start,
-      currentPeriodEnd: period.end,
-      trialEndsAt: event.trial_end ? new Date(event.trial_end * 1000) : null,
+      stripeSubscriptionCreatedAt: new Date(event.created * 1000),
+      coverage: "full",
+      bindCapable: true,
+      // A full snapshot: period, trial and cancellation fields; nothing of a previous
+      // subscription carries over.
+      data: {
+        status: "active",
+        currentPeriodStart: period.start,
+        currentPeriodEnd: period.end,
+        trialEndsAt: event.trial_end ? new Date(event.trial_end * 1000) : null,
+        canceledAt: event.canceled_at ? new Date(event.canceled_at * 1000) : null,
+        cancelReason: cancellationReasonOf(event),
+      },
     }
   );
   if (!updatedSubscription) return;
 
   await syncEntitlementsForSubscription(tx, position.stripeEventId, billingAccount.workspaceId, updatedSubscription);
 
-  logger.info("Subscription created and activated via webhook", {
+  logger.info("Subscription created via webhook", {
     subscriptionId: billingAccount.subscription.id,
     stripeSubscriptionId: event.id,
     workspaceId: billingAccount.workspaceId,
@@ -1173,14 +1184,18 @@ async function handleCustomerSubscriptionDeleted(
     throw new Error("Subscription not found for billing account");
   }
 
-  const updatedSubscription = await applyIfNewer(
+  const updatedSubscription = await applyOrderedSubscriptionEvent(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
-    { mode: "match", stripeSubscriptionId: event.id },
-    "full",
-    // Provider time, never the receive clock: a delayed or retried delivery must not move it.
-    { status: "canceled", canceledAt: event.canceled_at ? new Date(event.canceled_at * 1000) : position.created }
+    {
+      stripeSubscriptionId: event.id,
+      stripeSubscriptionCreatedAt: new Date(event.created * 1000),
+      coverage: "full",
+      bindCapable: false,
+      // Provider time, never the receive clock: a delayed or retried delivery must not move it.
+      data: { status: "canceled", canceledAt: event.canceled_at ? new Date(event.canceled_at * 1000) : position.created },
+    }
   );
   if (!updatedSubscription) return;
 
@@ -1207,7 +1222,7 @@ async function handleCustomerSubscriptionDeleted(
  * which marked the event processed although nothing was written, and inside a transaction a
  * swallowed statement error would leave the transaction aborted anyway. Fail closed -> retried.
  *
- * Out-of-order protection is applyIfNewer's event-time watermark. (The former guard compared the
+ * Out-of-order protection is applyOrderedSubscriptionEvent (per-subscription ordering). (The former guard compared the
  * receive clock with the stored receive time, so it never rejected an older event, and dropped a
  * genuinely newer one processed within the same wall-clock second.)
  */
@@ -1258,19 +1273,23 @@ export async function syncSubscriptionStatus(
     return;
   }
 
-  const updatedSubscription = await applyIfNewer(
+  const updatedSubscription = await applyOrderedSubscriptionEvent(
     tx,
     position,
     { subscriptionId: billingAccount.subscription.id, workspaceId: billingAccount.workspaceId },
-    { mode: "match", stripeSubscriptionId: event.id },
-    "full",
     {
-      status: event.status,
-      currentPeriodStart: period.start,
-      currentPeriodEnd: period.end,
-      trialEndsAt: event.trial_end ? new Date(event.trial_end * 1000) : null,
-      canceledAt: event.canceled_at ? new Date(event.canceled_at * 1000) : null,
-      cancelReason: cancellationReasonOf(event),
+      stripeSubscriptionId: event.id,
+      stripeSubscriptionCreatedAt: new Date(event.created * 1000),
+      coverage: "full",
+      bindCapable: false,
+      data: {
+        status: stripeSubscriptionStatusOf(event),
+        currentPeriodStart: period.start,
+        currentPeriodEnd: period.end,
+        trialEndsAt: event.trial_end ? new Date(event.trial_end * 1000) : null,
+        canceledAt: event.canceled_at ? new Date(event.canceled_at * 1000) : null,
+        cancelReason: cancellationReasonOf(event),
+      },
     }
   );
   if (!updatedSubscription) return;

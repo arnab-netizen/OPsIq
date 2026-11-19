@@ -179,7 +179,7 @@ const checkoutCompleted = (id: string) =>
     object: "event",
     type: "checkout.session.completed",
     created: Math.floor(Date.now() / 1000),
-    data: { object: { id: `cs_rp2_${RUN}_${evtSeq}`, customer: CUSTOMER, subscription: STRIPE_SUB, status: "complete", mode: "subscription" } },
+    data: { object: { id: `cs_rp2_${RUN}_${evtSeq}`, created: Math.floor(Date.now() / 1000) - 60, customer: CUSTOMER, subscription: STRIPE_SUB, status: "complete", mode: "subscription" } },
   });
 const signStripe = (payload: string, secret = STRIPE_SECRET) =>
   sdk.webhooks.generateTestHeaderString({ payload, secret, timestamp: Math.floor(Date.now() / 1000) });

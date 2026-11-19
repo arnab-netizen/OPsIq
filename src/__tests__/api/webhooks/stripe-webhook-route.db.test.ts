@@ -87,7 +87,7 @@ function checkoutCompleted(id: string, customer = CUSTOMER) {
     type: "checkout.session.completed",
     created: Math.floor(Date.now() / 1000),
     data: {
-      object: { id: `cs_test_${RUN}_${seq}`, customer, subscription: STRIPE_SUB, status: "complete", mode: "subscription" },
+      object: { id: `cs_test_${RUN}_${seq}`, created: Math.floor(Date.now() / 1000) - 60, customer, subscription: STRIPE_SUB, status: "complete", mode: "subscription" },
     },
   };
 }
@@ -103,6 +103,7 @@ function subscriptionEvent(id: string, type: string, overrides: Record<string, u
       object: {
         id: STRIPE_SUB,
         object: "subscription",
+        created: nowS - 86_400,
         customer: CUSTOMER,
         status: "active",
         current_period_start: nowS - 86_400,

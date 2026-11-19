@@ -1244,25 +1244,27 @@ model Stage {
 }
 
 model Subscription {
-  id                   String         @id @db.Uuid
-  billingAccountId     String         @unique @map("billing_account_id") @db.Uuid
-  planId               String         @map("plan_id") @db.Uuid
-  status               String         @default("trialing")
-  currentPeriodStart   DateTime       @map("current_period_start")
-  currentPeriodEnd     DateTime       @map("current_period_end")
-  trialEndsAt          DateTime?      @map("trial_ends_at")
-  canceledAt           DateTime?      @map("canceled_at")
-  cancelReason         String?        @map("cancel_reason")
-  createdAt            DateTime       @default(now()) @map("created_at")
-  updatedAt            DateTime       @updatedAt @map("updated_at")
-  stripeSubscriptionId String?        @map("stripe_subscription_id")
-  paddleSubscriptionId String?        @unique @map("paddle_subscription_id")
-  cancelAtPeriodEnd    Boolean        @default(false) @map("cancel_at_period_end")
-  lastEventTimestamp   DateTime?      @map("last_event_timestamp") @db.Timestamp(6)
+  id                          String         @id @db.Uuid
+  billingAccountId            String         @unique @map("billing_account_id") @db.Uuid
+  planId                      String         @map("plan_id") @db.Uuid
+  status                      String         @default("trialing")
+  currentPeriodStart          DateTime       @map("current_period_start")
+  currentPeriodEnd            DateTime       @map("current_period_end")
+  trialEndsAt                 DateTime?      @map("trial_ends_at")
+  canceledAt                  DateTime?      @map("canceled_at")
+  cancelReason                String?        @map("cancel_reason")
+  createdAt                   DateTime       @default(now()) @map("created_at")
+  updatedAt                   DateTime       @updatedAt @map("updated_at")
+  stripeSubscriptionId        String?        @map("stripe_subscription_id")
+  paddleSubscriptionId        String?        @unique @map("paddle_subscription_id")
+  cancelAtPeriodEnd           Boolean        @default(false) @map("cancel_at_period_end")
+  lastEventTimestamp          DateTime?      @map("last_event_timestamp") @db.Timestamp(6)
   /// Provider event id of the event that set lastEventTimestamp (same-timestamp ordering tiebreak).
-  lastEventId          String?        @map("last_event_id")
-  billingAccount       BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
-  plan                 Plan           @relation(fields: [planId], references: [id])
+  lastEventId                 String?        @map("last_event_id")
+  /// Stripe's created time of the bound subscription (stripeSubscriptionId): the binding key.
+  stripeSubscriptionCreatedAt DateTime?      @map("stripe_subscription_created_at") @db.Timestamp(6)
+  billingAccount              BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
+  plan                        Plan           @relation(fields: [planId], references: [id])
 
   @@index([lastEventTimestamp], map: "idx_subscriptions_last_event_timestamp")
   @@index([stripeSubscriptionId], map: "idx_subscriptions_stripe_subscription_id")

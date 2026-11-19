@@ -53,6 +53,8 @@ function subscriptionEvent(id: string, type: string, created: number, overrides:
       object: {
         id: STRIPE_SUB,
         object: "subscription",
+        // One subscription throughout: its own created is fixed (the binding key).
+        created: BASE_S - 30 * 86_400,
         customer: CUSTOMER,
         status: "active",
         current_period_start: created - 86_400,
@@ -69,7 +71,7 @@ function checkoutCompleted(id: string, created: number) {
     object: "event",
     type: "checkout.session.completed",
     created,
-    data: { object: { id: `cs_ord_${RUN}_${seq}`, customer: CUSTOMER, subscription: STRIPE_SUB, status: "complete" } },
+    data: { object: { id: `cs_ord_${RUN}_${seq}`, created: created - 60, customer: CUSTOMER, subscription: STRIPE_SUB, status: "complete" } },
   };
 }
 

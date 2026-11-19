@@ -58,15 +58,23 @@ export function createStripeSubscriptionFixture(tag: string) {
 
   /** The pre-dahlia shape: top-level current_period_* and cancel_reason. */
   function legacySubscription(over: Record<string, unknown> = {}) {
-    return { id: STRIPE_SUB, object: "subscription", customer: CUSTOMER, status: "active", current_period_start: BASE_S - 86_400, current_period_end: BASE_S + 30 * 86_400, ...over };
+    return { id: STRIPE_SUB, object: "subscription", customer: CUSTOMER, status: "active", created: BASE_S - 86_400, current_period_start: BASE_S - 86_400, current_period_end: BASE_S + 30 * 86_400, ...over };
   }
 
   function envelope(id: string, type: string, created: number, object: object) {
     return { id, object: "event", type, created, data: { object } };
   }
 
-  function checkoutCompleted(id: string, created: number, subscription = STRIPE_SUB, customer = CUSTOMER) {
-    return envelope(id, "checkout.session.completed", created, { id: `cs_${tag}_${RUN}_${seq}`, object: "checkout.session", customer, subscription, status: "complete" });
+  /** sessionCreated: Stripe's created of the checkout session (defaults to 60s before the event). */
+  function checkoutCompleted(id: string, created: number, subscription = STRIPE_SUB, customer = CUSTOMER, sessionCreated = created - 60) {
+    return envelope(id, "checkout.session.completed", created, {
+      id: `cs_${tag}_${RUN}_${seq}`,
+      object: "checkout.session",
+      created: sessionCreated,
+      customer,
+      subscription,
+      status: "complete",
+    });
   }
 
   async function deliver(event: object) {
@@ -94,14 +102,19 @@ export function createStripeSubscriptionFixture(tag: string) {
     expect((await eventRow(event.id))?.status).toBe("processed");
   }
 
-  async function resetSubscription(stripeSubscriptionId: string | null = null, status = "trialing") {
+  async function resetSubscription(
+    stripeSubscriptionId: string | null = null,
+    status = "trialing",
+    bound: { stripeSubscriptionCreatedAt?: Date | null; lastEventTimestamp?: Date | null; lastEventId?: string | null } = {},
+  ) {
     await db.subscription.update({
       where: { id: SUB_ID },
       data: {
         status,
         stripeSubscriptionId,
-        lastEventTimestamp: null,
-        lastEventId: null,
+        stripeSubscriptionCreatedAt: bound.stripeSubscriptionCreatedAt ?? null,
+        lastEventTimestamp: bound.lastEventTimestamp ?? null,
+        lastEventId: bound.lastEventId ?? null,
         canceledAt: null,
         cancelReason: null,
         trialEndsAt: null,

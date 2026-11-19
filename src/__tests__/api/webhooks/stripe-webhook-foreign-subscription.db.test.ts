@@ -28,8 +28,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Stripe webhook — events for a diff
 
   it("P4: a newer deleted / updated for a different Stripe subscription id never touches the row; audited as ignored", async () => {
     await f.resetSubscription(`sub_NEW_${f.RUN}`, "active");
-    const deletedOld = f.envelope(f.nextEventId(), "customer.subscription.deleted", f.BASE_S + 600, f.dahliaSubscription({ id: `sub_OLD_${f.RUN}`, status: "canceled", canceled_at: f.BASE_S + 600 }));
-    const updatedOld = f.envelope(f.nextEventId(), "customer.subscription.updated", f.BASE_S + 601, f.dahliaSubscription({ id: `sub_OLD_${f.RUN}`, status: "past_due" }));
+    const deletedOld = f.envelope(f.nextEventId(), "customer.subscription.deleted", f.BASE_S + 600, f.dahliaSubscription({ id: `sub_OLD_${f.RUN}`, created: f.BASE_S - 90 * 86_400, status: "canceled", canceled_at: f.BASE_S + 600 }));
+    const updatedOld = f.envelope(f.nextEventId(), "customer.subscription.updated", f.BASE_S + 601, f.dahliaSubscription({ id: `sub_OLD_${f.RUN}`, created: f.BASE_S - 90 * 86_400, status: "past_due" }));
     await f.deliverApplied(deletedOld);
     await f.deliverApplied(updatedOld);
 
@@ -45,7 +45,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Stripe webhook — events for a diff
     await f.resetSubscription(`sub_OLD2_${f.RUN}`, "canceled");
     await f.deliverApplied(f.envelope(f.nextEventId(), "customer.subscription.created", f.BASE_S + 700, f.dahliaSubscription({ id: `sub_NEW2_${f.RUN}` })));
     expect(await f.subscription()).toMatchObject({ status: "active", stripeSubscriptionId: `sub_NEW2_${f.RUN}` });
-    await f.deliverApplied(f.envelope(f.nextEventId(), "customer.subscription.deleted", f.BASE_S + 701, f.dahliaSubscription({ id: `sub_OLD2_${f.RUN}`, status: "canceled" })));
+    await f.deliverApplied(f.envelope(f.nextEventId(), "customer.subscription.deleted", f.BASE_S + 701, f.dahliaSubscription({ id: `sub_OLD2_${f.RUN}`, created: f.BASE_S - 90 * 86_400, status: "canceled" })));
     expect(await f.subscription()).toMatchObject({ status: "active", stripeSubscriptionId: `sub_NEW2_${f.RUN}` });
   });
 
