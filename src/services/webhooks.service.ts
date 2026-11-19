@@ -18,6 +18,7 @@
  */
 
 import { logger } from "@/infra/logger";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -109,7 +110,7 @@ export async function registerWebhook(
 
   const validationErrors = validateWebhook(webhook);
   if (validationErrors.length > 0) {
-    throw new Error(`Invalid webhook configuration: ${validationErrors.join(", ")}`);
+    throw new ValidationError(`Invalid webhook configuration: ${validationErrors.join(", ")}`);
   }
 
   webhookStore.saveWebhook(webhook);
@@ -139,12 +140,9 @@ export async function testWebhookDelivery(
 ): Promise<{ success: boolean; statusCode?: number; message: string }> {
   const webhook = webhookStore.getWebhook(webhookId);
 
-  if (!webhook) {
-    throw new Error(`Webhook ${webhookId} not found`);
-  }
-
-  if (webhook.workspaceId !== workspaceId) {
-    throw new Error("Webhook does not belong to this workspace");
+  // Another workspace's webhook is the same 404 as an unknown id (tenant non-disclosure).
+  if (!webhook || webhook.workspaceId !== workspaceId) {
+    throw new NotFoundError("Webhook", webhookId);
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
@@ -369,7 +367,7 @@ export async function deleteWebhook(
   const webhook = webhookStore.getWebhook(webhookId);
 
   if (!webhook || webhook.workspaceId !== workspaceId) {
-    throw new Error("Webhook not found or does not belong to workspace");
+    throw new NotFoundError("Webhook", webhookId);
   }
 
   webhookStore.deleteWebhook(webhookId);

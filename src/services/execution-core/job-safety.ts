@@ -287,7 +287,10 @@ export class ExecutionJobSafety {
     job_inputs: Record<string, unknown>
   ): string {
     // Recursively key-sorted (a top-level key array as a JSON.stringify replacer would empty nested objects and
-    // make jobs that differ only in nested inputs collide). Byte-identical to the previous form for flat inputs.
+    // make jobs that differ only in nested inputs collide). For the flat, plain-JSON inputs hashed today the bytes equal
+    // the previous form; they differ for integer-like keys (now emitted in ascending numeric order ahead of
+    // other keys, not string-sorted) and for values with a toJSON other than Date (e.g. Decimal, URL, Buffer: now
+    // serialized from their own enumerable properties, not their toJSON output).
     const sorted_inputs = stableStringify(job_inputs);
     const combined = `${action_id}:${sorted_inputs}`;
     return createHash("sha256").update(combined).digest("hex").substring(0, 16);

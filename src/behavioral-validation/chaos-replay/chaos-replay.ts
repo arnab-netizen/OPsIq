@@ -167,8 +167,10 @@ export interface LockedExpectation {
 
 /** A stable, order-independent hash of the expectation content (FNV-1a; no Date/random). */
 export function hashExpectation(scenario: ChaosScenario): string {
-  // Recursively key-sorted so a tamper below the top level is detected; byte-identical to the previous form for the
-  // flat scenario schema.
+  // Recursively key-sorted so a tamper below the top level is detected. For the flat, plain-JSON scenario schema the
+  // bytes equal the previous form; they would differ for integer-like keys (now emitted in ascending numeric order
+  // ahead of other keys, not string-sorted) and for values with a toJSON other than Date (e.g. Decimal, URL, Buffer:
+  // now serialized from their own enumerable properties, not their toJSON output).
   const json = stableStringify(scenario);
   let h = 0x811c9dc5;
   for (let i = 0; i < json.length; i++) {

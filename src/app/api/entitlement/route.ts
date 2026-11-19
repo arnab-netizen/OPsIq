@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   getSubscriptionTier,
@@ -15,6 +16,7 @@ import {
   Capability,
 } from "@/services/entitlement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { PlanLimitError } from "@/infra/errors";
 
 const CheckCapabilitySchema = z.object({
   capability: z.nativeEnum(Capability),
@@ -48,11 +50,11 @@ export const POST = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
 
     const body = await ctx.request!.json();
-    const parsed = CheckCapabilitySchema.parse(body);
+    const parsed = parseOrThrow(CheckCapabilitySchema, body);
     const allowed = hasCapability(workspaceId, parsed.capability);
 
     if (!allowed) {
-      throw new Error(`Capability ${parsed.capability} not available on current tier`);
+      throw new PlanLimitError(parsed.capability, `Capability ${parsed.capability} not available on current tier`);
     }
 
     return {
