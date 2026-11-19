@@ -9,7 +9,8 @@ import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { assertCapability, resolveWorkspaceTier } from "@/services/entitlement.service";
-import { PlanLimitError } from "@/infra/errors";
+import { PlanLimitError, ValidationError } from "@/infra/errors";
+import { RateLimitError } from "@/infra/rate-limit";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
 
 const createActionSchema = z.object({
@@ -46,7 +47,7 @@ export const POST = withCanonicalEnforcement(
     // Require Idempotency-Key (fail-closed)
     const idempotencyKey = ctx.request?.headers.get("Idempotency-Key");
     if (!idempotencyKey) {
-      throw new Error("Idempotency-Key header required");
+      throw new ValidationError("Idempotency-Key header required");
     }
 
     // Check rate limiting: workspace requests/hour limit.
@@ -56,7 +57,8 @@ export const POST = withCanonicalEnforcement(
     const config = getTierConfig(tier);
     const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
     if (!rateLimit.allowed) {
-      throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour`);
+      // 429 + Retry-After (canonical wrapper), never a plain Error (which is an unknown 500).
+      throw new RateLimitError(rateLimit.retryAfter ?? 3600);
     }
 
     // Distributed PG-backed check (shared across serverless instances — prevents split-brain).
@@ -65,7 +67,7 @@ export const POST = withCanonicalEnforcement(
       refillPerSecond: config.limits.requestsPerHour / 3600,
     });
     if (!pgRateLimit.allowed) {
-      throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour (distributed)`);
+      throw new RateLimitError(pgRateLimit.retryAfterSeconds ?? 3600);
     }
 
     // Check capability: action_create
@@ -79,9 +81,10 @@ export const POST = withCanonicalEnforcement(
     const { isNew: _isNew, result } = await withIdempotency(
       idempotencyKey,
       "action.create",
-      async () => createAction(body, ctx, workspaceId),
+      // Enforced: this route was plan-gated on action_create before usage was recorded (see the check above).
+      async () => createAction(body, ctx, workspaceId, undefined, { enforce: true }),
       body,
-      ctx.verifiedActorId
+      { actorId: ctx.verifiedActorId, workspaceId: ctx.verifiedWorkspaceId }
     );
 
     return result;

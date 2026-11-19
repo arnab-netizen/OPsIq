@@ -1,5 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { runScenario } from "@/services/scenario/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -29,7 +29,7 @@ export const POST = withCanonicalEnforcement(
     typeof deltaRevenue !== "number" ||
     typeof deltaCost !== "number"
   ) {
-    throw new Error("Invalid input: baseRevenue, baseCost, deltaRevenue, deltaCost must be numbers");
+    throw new ValidationError("Invalid input: baseRevenue, baseCost, deltaRevenue, deltaCost must be numbers");
   }
 
   const result = runScenario({

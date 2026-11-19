@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { UnitEconomicsEngine } from "@/services/growth/unit-economics-engine";
@@ -67,7 +68,7 @@ export const POST = withCanonicalEnforcement(
     const body = await ctx.request!.json();
 
     if (body.totalAcquisitionSpend !== undefined) {
-      const v = calculateCACSchema.parse(body);
+      const v = parseOrThrow(calculateCACSchema, body);
       return canonicalJson(
         UnitEconomicsEngine.calculateCAC(workspaceId, v.totalAcquisitionSpend, v.newCustomersAcquired),
         { status: 200 }
@@ -75,7 +76,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     if (body.avgMonthlyRevenue !== undefined) {
-      const v = calculateLTVSchema.parse(body);
+      const v = parseOrThrow(calculateLTVSchema, body);
       return canonicalJson(
         UnitEconomicsEngine.calculateLTV(workspaceId, v.avgMonthlyRevenue, v.avgMonthlyChurn, v.grossMargin),
         { status: 200 }
@@ -83,7 +84,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     if (body.revenuePerUnit !== undefined) {
-      const v = calculateContributionSchema.parse(body);
+      const v = parseOrThrow(calculateContributionSchema, body);
       return canonicalJson(
         UnitEconomicsEngine.calculateContributionMetrics(
           workspaceId, v.revenuePerUnit, v.variableCostPerUnit, v.fixedCostsPerMonth, v.unitsSoldPerMonth
@@ -93,7 +94,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     if (body.monthlyChurnRate !== undefined) {
-      const v = calculateRetentionValueSchema.parse(body);
+      const v = parseOrThrow(calculateRetentionValueSchema, body);
       return canonicalJson(
         UnitEconomicsEngine.calculateRetentionValue(
           workspaceId, v.cac, v.monthlyProfit, v.monthlyChurnRate, v.retentionImprovementPercent
@@ -103,7 +104,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     if (body.ltv !== undefined && body.cac !== undefined && body.paybackMonths === undefined) {
-      const v = calculateLTVCACSchema.parse(body);
+      const v = parseOrThrow(calculateLTVCACSchema, body);
       return canonicalJson(
         UnitEconomicsEngine.calculateLTVCACRatio(workspaceId, v.ltv, v.cac),
         { status: 200 }
@@ -111,14 +112,14 @@ export const POST = withCanonicalEnforcement(
     }
 
     if (body.cac !== undefined && body.monthlyProfit !== undefined && body.ltv === undefined) {
-      const v = calculateCACPaybackSchema.parse(body);
+      const v = parseOrThrow(calculateCACPaybackSchema, body);
       return canonicalJson(
         UnitEconomicsEngine.calculateCACPayback(workspaceId, v.cac, v.monthlyProfit),
         { status: 200 }
       );
     }
 
-    const v = assessHealthSchema.parse(body);
+    const v = parseOrThrow(assessHealthSchema, body);
     return canonicalJson(
       UnitEconomicsEngine.assessUnitEconomicsHealth(workspaceId, v.ltv, v.cac, v.paybackMonths, v.monthlyProfit),
       { status: 200 }

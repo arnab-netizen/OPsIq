@@ -66,6 +66,9 @@ vi.mock("@/infra/errors", () => ({
   ForbiddenError: class extends Error {
     constructor(msg: string) { super(msg); this.name = "ForbiddenError"; }
   },
+  ConflictError: class extends Error {
+    constructor(msg: string) { super(msg); this.name = "ConflictError"; }
+  },
 }));
 
 // ─── Import route after mocks ─────────────────────────────────────────────────

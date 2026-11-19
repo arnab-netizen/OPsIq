@@ -17,6 +17,7 @@ import { db } from '@/lib/db';
 import { createDecision } from '@/services/decisions/decision-creation-service';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { SHOULD_RUN_DB_TESTS } from '@/__tests__/test-helpers/db-test-gate';
+import { seedPlanEntitlement, cleanupPlanEntitlement, type PlanEntitlementFixture } from '@/__tests__/test-helpers/plan-entitlement';
 
 describe.skipIf(!SHOULD_RUN_DB_TESTS)(
   '[db] Phase 6F — createDecision audit emission (OPERATOR_ITEM_CREATED)',
@@ -25,8 +26,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     const workspaceId = randomUUID();
     const userId = randomUUID();
     const createdItemIds: string[] = [];
+    let plan: PlanEntitlementFixture | undefined;
 
     beforeAll(async () => {
+      // createDecision consumes the plan's decision:create quota; give the workspace a real active plan.
+      plan = await seedPlanEntitlement([workspaceId], ['decision:create']);
       await db.workspace.create({ data: { id: workspaceId, name: '6F-CD WS', slug: `p6f-cd-${stamp}` } });
       await db.user.create({ data: { id: userId, email: `p6f-cd-${stamp}@test.local`, isActive: true, updatedAt: new Date() } });
     });
@@ -35,6 +39,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
       try {
         await db.auditEvent.deleteMany({ where: { workspaceId } });
         await db.operatorItem.deleteMany({ where: { id: { in: createdItemIds } } });
+        await db.usageEvent.deleteMany({ where: { workspaceId } });
+        await cleanupPlanEntitlement(plan);
         await db.user.deleteMany({ where: { id: userId } });
         await db.workspace.deleteMany({ where: { id: workspaceId } });
       } catch {

@@ -1302,18 +1302,30 @@ model ThresholdConfig {
   @@map("threshold_configs")
 }
 
+/// Append-only plan-usage ledger: a workspace's usage of a capability is the SUM of `value` over the
+/// current billing period. Rows written by a quota reservation (withCapabilityQuota) carry
+/// `reservationId` + `reservationEntry`: one "reserve" row (+units, id = reservationId), zero or more
+/// "settle" rows (value 0, one per unit kept, written in the SAME transaction as the business write)
+/// and exactly one "release" row (-unused units) that finalizes the reservation. A reservation with no
+/// release row older than the reservation TTL is returned by reconcileExpiredCapabilityReservations.
+/// Rows with a NULL reservationId are plain usage (always final).
 model UsageEvent {
-  id          String   @id @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  key         String
-  value       Int
-  timestamp   DateTime @default(now())
-  createdAt   DateTime @default(now()) @map("created_at")
+  id               String   @id @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  key              String
+  value            Int
+  timestamp        DateTime @default(now())
+  createdAt        DateTime @default(now()) @map("created_at")
+  reservationId    String?  @map("reservation_id") @db.Uuid
+  reservationEntry String?  @map("reservation_entry")
 
+  @@unique([reservationId], where: raw("(reservation_entry = 'release'::text)"), map: "usage_events_one_release_per_reservation")
   @@index([timestamp])
   @@index([workspaceId])
   @@index([workspaceId, key])
   @@index([workspaceId, timestamp])
+  @@index([reservationId, reservationEntry])
+  @@index([reservationEntry, timestamp])
   @@map("usage_events")
 }
 
