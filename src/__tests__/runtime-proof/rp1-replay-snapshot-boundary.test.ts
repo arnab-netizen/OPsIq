@@ -292,4 +292,29 @@ describe("RP1 regression: replay snapshot boundary + upToEventNumber bounds", ()
     const row = await db.recommendation.findUniqueOrThrow({ where: { id: recId } });
     expect(pick(row as unknown as Record<string, unknown>)).toEqual(pick(full.state));
   });
+
+  it("a bounded (as-of) replay is read-only: it never moves the stored snapshot to an older event", async () => {
+    const aggId = "rp1-asof-readonly-" + randomUUID();
+    await appendLedger(aggId, 1, 6);
+    await EventReplayEngine.replayAggregate(aggId, AGGREGATE_TYPE, workspaceId);
+    expect(await snapshotEventNumber(aggId)).toBe(6);
+
+    const asOf3 = await EventReplayEngine.replayAggregate(aggId, AGGREGATE_TYPE, workspaceId, 3);
+    expect(appliedEventNumbers(asOf3)).toEqual([1, 2, 3]);
+    expect(derivedState(asOf3)).toEqual(expectedLedgerState(aggId, 3));
+    expect(await snapshotEventNumber(aggId)).toBe(6);
+
+    const head = await EventReplayEngine.replayAggregate(aggId, AGGREGATE_TYPE, workspaceId);
+    expect(head.usedSnapshot).toBe(true);
+    expect(appliedEventNumbers(head)).toEqual([]);
+    expect(derivedState(head)).toEqual(expectedLedgerState(aggId, 6));
+  });
+
+  it("upToEventNumber = 0 is a real bound (no events), not 'unbounded'", async () => {
+    const aggId = "rp1-asof-zero-" + randomUUID();
+    await appendLedger(aggId, 1, 3);
+    await expect(
+      EventReplayEngine.replayAggregate(aggId, AGGREGATE_TYPE, workspaceId, 0)
+    ).rejects.toThrow(`No events found for aggregate ${aggId}/${AGGREGATE_TYPE}`);
+  });
 });

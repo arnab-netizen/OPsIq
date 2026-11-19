@@ -53,7 +53,7 @@ export class EventReplayEngine {
     // upToEventNumber, so it cannot produce the as-of state: replay from event 1.
     const snapshotWithinBound =
       validSnapshot !== null &&
-      (!upToEventNumber || validSnapshot.lastEventNumber <= upToEventNumber);
+      (upToEventNumber === undefined || validSnapshot.lastEventNumber <= upToEventNumber);
 
     if (validSnapshot && snapshotWithinBound) {
       usedSnapshot = true;
@@ -73,7 +73,7 @@ export class EventReplayEngine {
     // sides in a single eventNumber filter: (snapshotEventNumber, upToEventNumber].
     const eventNumberFilter = {
       ...(snapshotEventNumber > 0 && { gt: snapshotEventNumber }),
-      ...(upToEventNumber && { lte: upToEventNumber }),
+      ...(upToEventNumber !== undefined && { lte: upToEventNumber }),
     };
     const query = {
       where: {
@@ -136,8 +136,9 @@ export class EventReplayEngine {
       usedSnapshot,
     };
 
-    // Step 4: Create/update snapshot for optimization if replay yielded new events
-    if (events.length > 0 && lastEvent) {
+    // Step 4: Create/update snapshot for optimization if replay yielded new events. A bounded (as-of) replay is a
+    // read-only query: it must not move the single stored snapshot to an older event number.
+    if (upToEventNumber === undefined && events.length > 0 && lastEvent) {
       try {
         // Create snapshot without events array (only derived state)
         const snapshotState = { ...state };
