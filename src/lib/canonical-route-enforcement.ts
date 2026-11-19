@@ -19,7 +19,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/infra/logger";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { classifyOperatorError, scrubLogText } from "@/lib/operator-error-governance";
 import { type VerifiedWorkspaceId, asVerifiedWorkspaceId } from "@/lib/workspace-identity";
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import { getSessionFact, getPolicyContextFact } from "@/services/auth";
@@ -42,7 +42,6 @@ import {
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
-import { safeDiagnosticMessage, sanitizedErrorForLog } from "@/infra/telemetry-sanitizer";
 import { isCanonicalJsonResponse, stringifyRouteResponse } from "@/lib/canonical-json-response";
 import { db } from "@/lib/db";
 import { verifyDiagnosticKey } from "@/lib/security/diagnostic-key";
@@ -177,6 +176,28 @@ export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string
 
 /** 4xx statuses an owner-safe domain AppError uses to reject a request it understood. */
 const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
+
+/** Caught-error text for ClassifiedApiError messages, trace stages and log context: scrubbed by the governed log scrubber and length-capped. */
+function describeThrown(thrown: unknown, maxLength = 500): string {
+  let text: string;
+  try {
+    text = thrown instanceof Error ? thrown.message : String(thrown);
+  } catch {
+    text = "[unprintable error]";
+  }
+  const scrubbed = scrubLogText(text);
+  return scrubbed.length > maxLength ? `${scrubbed.slice(0, maxLength)}…` : scrubbed;
+}
+
+/** The thrown value for the logger: same error name, message and stack passed through the governed log scrubber. */
+function scrubbedErrorForLog(thrown: unknown): Error {
+  const safe = new Error(describeThrown(thrown));
+  if (thrown instanceof Error) {
+    safe.name = thrown.name;
+    safe.stack = thrown.stack ? describeThrown(thrown.stack, 8000) : undefined;
+  }
+  return safe;
+}
 
 /** The message of a thrown AppError that reports a 4xx status: owner-safe by construction (see src/infra/errors.ts). */
 function readOwnerSafeMessage(thrown: unknown): string {
@@ -422,7 +443,7 @@ export function withCanonicalEnforcement(
             throw error;
           }
           // Wrap unexpected errors as workspace context invalid
-          const errorMsg = safeDiagnosticMessage(error);
+          const errorMsg = describeThrown(error);
           throw new ClassifiedApiError(
             `Failed to derive verified workspace ID from membership: ${errorMsg}`,
             "workspace_context_invalid",
@@ -764,7 +785,7 @@ export function withCanonicalEnforcement(
         const errorCode = typeof appError.code === "string" ? appError.code : "INTERNAL_ERROR";
         // A 4xx AppError carries an owner-safe message by construction and is shown to the client verbatim (a
         // 5xx message never reaches the client), so only the 5xx text is passed through the diagnostic sanitizer.
-        const errorMessage = statusCode >= 400 && statusCode < 500 ? readOwnerSafeMessage(error) : safeDiagnosticMessage(error);
+        const errorMessage = statusCode >= 400 && statusCode < 500 ? readOwnerSafeMessage(error) : describeThrown(error);
 
         classifiedError = new ClassifiedApiError(
           errorMessage,
@@ -782,7 +803,7 @@ export function withCanonicalEnforcement(
         const fallbackStage = "handler_invocation";
 
         classifiedError = new ClassifiedApiError(
-          safeDiagnosticMessage(error),
+          describeThrown(error),
           fallbackClassification,
           fallbackStage,
           500,
@@ -819,7 +840,7 @@ export function withCanonicalEnforcement(
 
       try {
         if (traceManager) {
-          traceManager.recordStage("HANDLER_FAILED", "failed", safeDiagnosticMessage(error));
+          traceManager.recordStage("HANDLER_FAILED", "failed", describeThrown(error));
           const failedTrace = traceManager.finalize({
             allowed: false,
             statusCode: 500,
@@ -855,7 +876,7 @@ export function withCanonicalEnforcement(
         classification: classifiedError.classification,
         statusCode: classifiedError.statusCode,
         errorName: safErrorName,
-        errorMessage: safeDiagnosticMessage(error),
+        errorMessage: describeThrown(error),
         operation: operationName,
       };
       if (expectedClientRejection) {
@@ -866,7 +887,7 @@ export function withCanonicalEnforcement(
       } else {
         // The error goes in the error slot (the context was previously passed there and logged
         // as "[object Object]").
-        logger.error("[WRAPPER_FAILED]", sanitizedErrorForLog(error), wrapperLogContext);
+        logger.error("[WRAPPER_FAILED]", scrubbedErrorForLog(error), wrapperLogContext);
       }
 
       const clientFacingMessage = isKnownSafeClientError
