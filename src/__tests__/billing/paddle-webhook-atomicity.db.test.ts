@@ -231,6 +231,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Paddle webhook — atomic claim + ap
     expect((await sub())?.paddleSubscriptionId).toBe(SUB);
   });
 
+  it("the ordering watermark pair always names one event: a Paddle event replaces a stale Stripe lastEventId", async () => {
+    const created = evt("subscription.created", T(1), subData());
+    expect((await deliver(created)).status).toBe(200);
+    expect(await sub()).toMatchObject({ lastEventId: `paddle:${created.event_id}`, lastEventTimestamp: new Date(T(1)) });
+
+    // A row last moved by a Stripe event (or the pre-upgrade code) carries a foreign event id.
+    await db.subscription.updateMany({ where: { billingAccountId: ACCT_ID }, data: { lastEventId: "evt_stripe_stale" } });
+    const pastDue = evt("subscription.past_due", T(6), subData({ status: "past_due" }));
+    expect((await deliver(pastDue)).status).toBe(200);
+    expect(await sub()).toMatchObject({ status: "past_due", lastEventId: `paddle:${pastDue.event_id}`, lastEventTimestamp: new Date(T(6)) });
+  });
+
   it("the claimed apply refuses an event this delivery does not hold the processing claim for", async () => {
     await bindSubscription();
     const pastDue = evt("subscription.past_due", T(8), subData({ status: "past_due" }));

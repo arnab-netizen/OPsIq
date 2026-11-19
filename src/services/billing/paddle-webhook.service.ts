@@ -22,6 +22,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { PaddleApiError, cancelSubscriptionImmediately } from "@/services/billing/paddle-client";
 import { applyClaimedWebhookEvent, isUniqueViolation } from "@/services/webhook.service";
 import {
+  PADDLE_EVENT_KEY_PREFIX,
   PADDLE_PROVIDER,
   isPaddleSubscriptionEvent,
   isPaddleTransactionEvent,
@@ -141,6 +142,9 @@ async function applySubscriptionEvent(tx: Tx, envelope: PaddleEnvelope): Promise
     cancelAtPeriodEnd,
     paddleSubscriptionId: data.id,
     lastEventTimestamp: occurredAt,
+    // The watermark pair always names ONE event: never leave a stale Stripe event id beside a
+    // Paddle timestamp (the Stripe tiebreak reads lastEventId).
+    lastEventId: `${PADDLE_EVENT_KEY_PREFIX}${envelope.event_id}`,
   };
 
   let subscriptionId: string;
