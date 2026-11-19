@@ -334,3 +334,18 @@ describe("PHASE I10.5: Error Normalization Enforcement", () => {
     });
   });
 });
+
+describe("internal diagnostics keep the raw message but never a credential (governed log scrub)", () => {
+  it("createDBError keeps ordinary text and masks a connection string and a token", () => {
+    const err = createDBError(
+      "connect failed postgresql://svc:hunter2@db.internal:5432/app token=abc123def456 for owner@example.com",
+      requestContext.createErrorContext(),
+      false,
+    );
+    const original = String((err.metadata.internal_diagnostic as { original_message: string }).original_message);
+    expect(original).toContain("connect failed");
+    expect(original).not.toContain("hunter2");
+    expect(original).not.toContain("abc123def456");
+    expect(original).not.toContain("owner@example.com");
+  });
+});
