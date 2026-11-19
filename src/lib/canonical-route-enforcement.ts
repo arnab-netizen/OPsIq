@@ -657,7 +657,7 @@ export function withCanonicalEnforcement(
         },
         correlationId,
         requestId,
-        request: req,
+        request: withClientSafeJsonBody(req),
         session,
         policy,
       };
@@ -1068,4 +1068,31 @@ function retryAfterHeaderFor(error: unknown, statusCode: number): Record<string,
   const seconds = details && typeof details === "object" ? (details as { retryAfterSeconds?: unknown }).retryAfterSeconds : undefined;
   if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) return {};
   return { "retry-after": String(Math.ceil(seconds)) };
+}
+
+/**
+ * The request handed to handlers: identical to `req`, except that `json()` maps a body-parse failure (malformed or
+ * empty JSON — the platform parser's SyntaxError) to the canonical ValidationError (400) with a generic message,
+ * the same one parseRequestBody uses. Many handlers read `ctx.request.json()` directly; without this a client's
+ * malformed body surfaced as an unknown 500. Only a SyntaxError from the parser is mapped — every other failure
+ * (e.g. a body read twice) propagates unchanged — and no parser detail reaches the client.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+function withClientSafeJsonBody(req: NextRequest): NextRequest {
+  if (!req || typeof req.json !== "function") return req;
+  const parseJson = req.json.bind(req);
+  Object.defineProperty(req, "json", {
+    configurable: true,
+    writable: true,
+    value: async () => {
+      try {
+        return await parseJson();
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+        const { ValidationError } = await import("@/infra/errors");
+        throw new ValidationError("Invalid JSON in request body");
+      }
+    },
+  });
+  return req;
 }
