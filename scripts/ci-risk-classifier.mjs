@@ -123,6 +123,16 @@ const RULES = [
       p === '.claude/runtime-proof-manifest.json' ||
       p === 'scripts/ci/check-runtime-proof.mjs' ||
       p === 'src/__tests__/ci-cd/runtime-proof-manifest.test.ts' },
+  // Production release path: the migration/role-reconcile gate, planner, release evidence, the role-cutover tool and the
+  // topology verifier are proven only by DB-lane steps inside db-verify, so changing any of them must run db-verify
+  // (otherwise a green aggregate can release unproven code against production).
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      /^scripts\/(release|db)\//.test(p) ||
+      p === 'src/services/privacy-erasure/role-topology.ts' ||
+      p === '.github/workflows/migrate-production.yml' ||
+      p === '.github/workflows/reconcile-runtime-role.yml' ||
+      p === 'src/__tests__/deployment/production-release-reconcile.test.ts' ||
+      p === 'src/__tests__/deployment/release-plan.test.ts' },
   // Canonical event store: append-only events, numbering, idempotency, replay, snapshots, projections (rp1, rp3-isolation, rp6-rp10, phase-3-*).
   { tier: TIERS.DB_RUNTIME, test: (p) =>
       /^src\/services\/(event-emitter|event-replay-engine|projection-engine|projection-rebuild-engine|snapshot-engine|snapshot-optimization-engine|replay-failure-handler|idempotency)\.ts$/.test(p) ||
