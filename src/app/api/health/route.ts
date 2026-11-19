@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 let lastCleanupTime = 0;
-let applicationStartTime = Date.now();
+const applicationStartTime = Date.now();
 
 export async function GET(): Promise<NextResponse> {
   // Ensure database is initialized before any operations
