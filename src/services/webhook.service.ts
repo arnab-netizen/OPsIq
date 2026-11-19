@@ -1,3 +1,6 @@
+import type Stripe from "stripe";
+import { z } from "zod";
+import type { Prisma, Subscription, WebhookEvent } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
@@ -10,24 +13,58 @@ const RETRY_ALERT_THRESHOLD = 3; // Alert when attempts >= 3
 const MAX_ATTEMPTS = 5; // Move to dead-letter after 5 attempts
 const SIGNATURE_TIMESTAMP_TOLERANCE_S = 300; // 5 minutes
 
-export interface StripeSubscriptionEvent {
+/**
+ * Runtime schemas for the `data.object` payloads this service acts on. The signature proves the
+ * bytes came from Stripe; these schemas prove the fields a handler reads have the shape it relies
+ * on (no unchecked casts). Unknown fields pass through untouched. A payload that fails its schema
+ * throws, so the event is marked failed and Stripe retries it, exactly like any other handler error.
+ */
+const StripeCheckoutSessionObjectSchema = z
+  .object({
+    id: z.string().min(1),
+    customer: z.string().nullish(),
+    subscription: z.string().nullish(),
+  })
+  .passthrough();
+
+/** customer.subscription.created / .updated: the period bounds are written to the subscription. */
+const StripeSubscriptionObjectSchema = z
+  .object({
+    id: z.string().min(1),
+    customer: z.string().min(1),
+    status: z.string().min(1),
+    current_period_start: z.number().int(),
+    current_period_end: z.number().int(),
+    trial_end: z.number().int().nullish(),
+    canceled_at: z.number().int().nullish(),
+    cancel_reason: z.string().nullish(),
+  })
+  .passthrough();
+
+/** customer.subscription.deleted only needs the customer to locate the subscription. */
+const StripeSubscriptionDeletedObjectSchema = z
+  .object({
+    id: z.string().nullish(),
+    customer: z.string().min(1),
+  })
+  .passthrough();
+
+/** `data` of a Stripe event envelope; `object` is validated per event type before use. */
+const StripeEventDataSchema = z.object({ object: z.unknown() }).passthrough();
+
+export type StripeSubscriptionEvent = z.infer<typeof StripeSubscriptionObjectSchema>;
+export type StripeCheckoutSessionEvent = z.infer<typeof StripeCheckoutSessionObjectSchema>;
+
+/** The signature-verified, envelope-validated event the route hands to handleWebhookEvent. */
+export interface StripeWebhookEventInput {
   id: string;
-  customer: string;
-  status: "trialing" | "active" | "past_due" | "canceled" | "unpaid";
-  current_period_start: number;
-  current_period_end: number;
-  trial_end?: number;
-  canceled_at?: number;
-  cancel_reason?: string;
+  type: string;
+  data?: unknown;
 }
 
-export interface StripeCheckoutSessionEvent {
-  id: string;
-  customer: string;
-  subscription?: string;
-  status: "open" | "complete" | "expired";
-  mode: "payment" | "subscription";
-}
+type BillingAccountWithSubscription = Prisma.BillingAccountGetPayload<{
+  include: { subscription: true };
+}>;
 
 /**
  * Resolve the Stripe secret key from the environment.
@@ -60,7 +97,7 @@ async function getStripe() {
 export async function verifyWebhookSignature(
   body: string,
   signature: string
-): Promise<{ event: any; timestamp: number }> {
+): Promise<{ event: Stripe.Event; timestamp: number }> {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!secret) {
@@ -73,7 +110,7 @@ export async function verifyWebhookSignature(
 
   try {
     const stripe = await getStripe();
-    const event = stripe.webhooks.constructEvent(body, signature, secret);
+    const event: Stripe.Event = stripe.webhooks.constructEvent(body, signature, secret);
 
     // Extract timestamp from Stripe event (included by Stripe SDK after verification)
     const timestamp = Math.floor(Date.now() / 1000); // Use current time since Stripe includes it
@@ -172,7 +209,7 @@ export async function getOrCreateWebhookEvent(
   type: string,
   timestamp: number
 ): Promise<{
-  event: any;
+  event: WebhookEvent;
   isNew: boolean;
   shouldProcess: boolean;
   shouldRetry: boolean;
@@ -183,7 +220,7 @@ export async function getOrCreateWebhookEvent(
     await recoverStaleProcessingEvents();
 
     // Try to find existing event
-    const existingEvent = await db.webhookEvent.findUnique({
+    const existingEvent: WebhookEvent | null = await db.webhookEvent.findUnique({
       where: { stripeEventId },
     });
 
@@ -268,7 +305,7 @@ export async function getOrCreateWebhookEvent(
     }
 
     // No existing event - create new one with status=processing
-    const newEvent = await db.webhookEvent.create({
+    const newEvent: WebhookEvent = await db.webhookEvent.create({
       data: {
         stripeEventId,
         type,
@@ -301,8 +338,8 @@ export async function getOrCreateWebhookEvent(
  */
 async function getBillingAccountByStripeCustomer(
   stripeCustomerId: string
-): Promise<any> {
-  const billingAccount = await db.billingAccount.findUnique({
+): Promise<BillingAccountWithSubscription> {
+  const billingAccount: BillingAccountWithSubscription | null = await db.billingAccount.findUnique({
     where: { stripeCustomerId },
     include: { subscription: true },
   });
@@ -319,7 +356,7 @@ async function getBillingAccountByStripeCustomer(
  * Fails closed: throws if plan not found or missing stripePriceId
  */
 async function validatePlanAndGetPriceId(planId: string): Promise<string> {
-  const plan = await db.plan.findUnique({
+  const plan: { stripePriceId: string | null } | null = await db.plan.findUnique({
     where: { id: planId },
   });
 
@@ -340,7 +377,7 @@ async function validatePlanAndGetPriceId(planId: string): Promise<string> {
  */
 async function syncEntitlementsForSubscription(
   workspaceId: string,
-  subscription: any
+  subscription: Subscription
 ): Promise<void> {
   try {
     if (subscription.status !== "active") {
@@ -389,14 +426,10 @@ async function syncEntitlementsForSubscription(
 /**
  * Check event ordering: prevent processing if previous event for same customer not processed
  */
-async function checkEventOrdering(
-  stripeEventId: string,
-  type: string,
-  stripeCustomerId: string
-): Promise<void> {
+async function checkEventOrdering(stripeEventId: string): Promise<void> {
   try {
-    // Get all events for subscription customers ordered by createdAt
-    const customerEvents = await db.webhookEvent.findMany({
+    // Get all subscription lifecycle events ordered by createdAt
+    const customerEvents: WebhookEvent[] = await db.webhookEvent.findMany({
       where: {
         type: {
           in: ["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"],
@@ -406,7 +439,7 @@ async function checkEventOrdering(
     });
 
     // Find current event in list
-    const currentIndex = customerEvents.findIndex((e: any) => e.stripeEventId === stripeEventId);
+    const currentIndex = customerEvents.findIndex((e) => e.stripeEventId === stripeEventId);
     if (currentIndex === -1) {
       return; // Event not found (new event, proceed)
     }
@@ -558,7 +591,7 @@ async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent)
     await validatePlanAndGetPriceId(billingAccount.subscription.planId);
 
     // Update subscription within transaction
-    const updatedSubscription = await db.subscription.update({
+    const updatedSubscription: Subscription = await db.subscription.update({
       where: { id: billingAccount.subscription.id },
       data: {
         stripeSubscriptionId: event.subscription,
@@ -595,7 +628,7 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
     }
 
     // Check event ordering
-    await checkEventOrdering(event.id, "customer.subscription.created", event.customer);
+    await checkEventOrdering(event.id);
 
     // Get account and validate
     const billingAccount = await getBillingAccountByStripeCustomer(event.customer);
@@ -613,7 +646,7 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
     const trialEndsAt = event.trial_end ? new Date(event.trial_end * 1000) : null;
 
     // Update subscription within transaction
-    const updatedSubscription = await db.subscription.update({
+    const updatedSubscription: Subscription = await db.subscription.update({
       where: { id: billingAccount.subscription.id },
       data: {
         stripeSubscriptionId: event.id,
@@ -646,7 +679,9 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
  * Handle customer.subscription.deleted with transactional integrity
  * Cancels subscription
  */
-async function handleCustomerSubscriptionDeleted(event: StripeSubscriptionEvent): Promise<void> {
+async function handleCustomerSubscriptionDeleted(
+  event: z.infer<typeof StripeSubscriptionDeletedObjectSchema>
+): Promise<void> {
   try {
     if (!event.customer) {
       throw new Error("customer.subscription.deleted missing customer");
@@ -698,7 +733,11 @@ export async function syncSubscriptionStatus(
     }
 
     // Find billing account by provider customer ID (backward compat)
-    const billingAccount = await db.billingAccount.findFirst({
+    const billingAccount: {
+      id: string;
+      workspaceId: string;
+      subscription: { id: string; lastEventTimestamp: Date | null } | null;
+    } | null = await db.billingAccount.findFirst({
       where: {
         providerCustomerId,
       },
@@ -785,7 +824,7 @@ export async function syncSubscriptionStatus(
  * Handle webhook event from Stripe with timeout protection
  * Throws on processing errors (caller marks event as failed)
  */
-export async function handleWebhookEvent(event: any): Promise<void> {
+export async function handleWebhookEvent(event: StripeWebhookEventInput): Promise<void> {
   const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(
       () => reject(new Error(`Webhook processing timeout after ${PROCESSING_TIMEOUT_MS}ms`)),
@@ -798,31 +837,34 @@ export async function handleWebhookEvent(event: any): Promise<void> {
       const eventType = event.type;
       logger.info("Processing webhook event", { eventType, stripeEventId: event.id });
 
+      // `data.object` absent: nothing to apply (acknowledged as before). Present: validated per type.
+      const data = StripeEventDataSchema.safeParse(event.data);
+      const object = data.success ? data.data.object : undefined;
+      const hasObject = object !== undefined && object !== null;
+
       switch (eventType) {
         case "checkout.session.completed":
-          if (event.data?.object) {
-            await handleCheckoutSessionCompleted(event.data.object as StripeCheckoutSessionEvent);
+          if (hasObject) {
+            await handleCheckoutSessionCompleted(StripeCheckoutSessionObjectSchema.parse(object));
           }
           break;
 
         case "customer.subscription.created":
-          if (event.data?.object) {
-            await handleCustomerSubscriptionCreated(event.data.object as StripeSubscriptionEvent);
+          if (hasObject) {
+            await handleCustomerSubscriptionCreated(StripeSubscriptionObjectSchema.parse(object));
           }
           break;
 
         case "customer.subscription.updated":
-          if (event.data?.object) {
-            await syncSubscriptionStatus(
-              event.data.object as StripeSubscriptionEvent,
-              event.data.object.customer
-            );
+          if (hasObject) {
+            const subscriptionObject = StripeSubscriptionObjectSchema.parse(object);
+            await syncSubscriptionStatus(subscriptionObject, subscriptionObject.customer);
           }
           break;
 
         case "customer.subscription.deleted":
-          if (event.data?.object) {
-            await handleCustomerSubscriptionDeleted(event.data.object as StripeSubscriptionEvent);
+          if (hasObject) {
+            await handleCustomerSubscriptionDeleted(StripeSubscriptionDeletedObjectSchema.parse(object));
           }
           break;
 
