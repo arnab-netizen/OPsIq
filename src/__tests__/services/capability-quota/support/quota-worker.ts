@@ -18,7 +18,13 @@ import { createRecommendation } from "@/services/recommendation";
 import { createEngagement } from "@/services/engagement";
 import { createAction } from "@/services/action";
 import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
-import { createDecision } from "@/services/decisions/decision-creation-service";
+import {
+  createDecision,
+  persistDecisionItemWithinQuota,
+  addDecisionItemsWithinQuota,
+} from "@/services/decisions/decision-creation-service";
+import { buildIntakeOperatorItemData } from "@/app/api/decisions/intake/intake-data";
+import { generateOperatorItems } from "@/services/operator/generate";
 import type { QuotaWorkerJob, QuotaWorkerOutcome } from "./quota-workers";
 
 function waitForGo(): Promise<void> {
@@ -94,6 +100,30 @@ async function run(job: QuotaWorkerJob): Promise<{ id: string; status?: string }
         verifiedWorkspaceId: job.workspaceId,
       });
       return { id: decision.id };
+    }
+    case "intake": {
+      // The exact write POST /api/decisions/intake performs after its idempotency claim.
+      const decision = await persistDecisionItemWithinQuota(
+        job.workspaceId,
+        buildIntakeOperatorItemData(
+          { title: String(input.title), description: "Quota race intake", confidence: 0.5, risk: "medium" },
+          job.workspaceId,
+          job.actorId
+        )
+      );
+      return { id: decision.id };
+    }
+    case "run": {
+      // The exact write POST /api/run performs once its gates pass: the engine's decisions as OperatorItems.
+      const items = generateOperatorItems(
+        [{ problem: String(input.title), action: "Reprice the low-margin tier", impactMultiplier: 1, confidence: 0.6, ruleId: "quota-race" }],
+        { impactLow: 800, impactExpected: 1000, impactHigh: 1200, confidenceWeight: 0.6 },
+        job.workspaceId,
+        job.actorId,
+        job.actorId
+      );
+      await addDecisionItemsWithinQuota(job.workspaceId, items);
+      return { id: items[0].id };
     }
   }
 }

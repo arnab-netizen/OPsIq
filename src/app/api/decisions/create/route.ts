@@ -7,8 +7,7 @@ import {
   type VerifiedDecisionInput,
 } from "@/services/decisions/decision-creation-service";
 import { logger } from "@/infra/logger";
-import { assertCapability } from "@/services/entitlement.service";
-import { PlanLimitError, UnauthorizedError, ValidationError } from "@/infra/errors";
+import { UnauthorizedError, ValidationError } from "@/infra/errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   checkIdempotencyKey,
@@ -21,12 +20,9 @@ export const POST = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
     const actorId = ctx.verifiedActorId;
 
-    // Check plan-based entitlement
-    const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
-    if (!capabilityCheck.allowed) {
-      throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
-    }
-
+    // Plan quota: decision:create is checked and recorded atomically with each decision insert
+    // (createDecision), after the idempotency claim, so a replayed key returns its cached response and
+    // never consumes or is refused for a unit it already used.
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
       throw new ValidationError("idempotency-key header is required");
@@ -39,7 +35,7 @@ export const POST = withCanonicalEnforcement(
 
       if (body.decisions && Array.isArray(body.decisions)) {
         // Bulk creation via JSON
-        const decisions = body.decisions.map((d: any) => ({
+        const decisions = body.decisions.map((d: VerifiedDecisionInput) => ({
           ...d,
           verifiedWorkspaceId: workspaceId,
           verifiedActorId: actorId,
@@ -160,7 +156,7 @@ export const POST = withCanonicalEnforcement(
 
       try {
         const parsedDecisions = parseCSV(csvContent, workspaceId, actorId);
-        const verifiedDecisions = parsedDecisions.map((d: any) => ({
+        const verifiedDecisions = parsedDecisions.map((d) => ({
           ...d,
           verifiedWorkspaceId: workspaceId,
           verifiedActorId: actorId,

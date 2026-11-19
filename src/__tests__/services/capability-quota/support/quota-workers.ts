@@ -11,7 +11,7 @@ const TSX = join(ROOT, "node_modules", ".bin", "tsx");
 const WORKER = join(ROOT, "src", "__tests__", "services", "capability-quota", "support", "quota-worker.ts");
 const WORKER_DEADLINE_MS = 120_000;
 
-export type QuotaWorkerOp = "recommendation" | "engagement" | "action" | "pipeline" | "decision";
+export type QuotaWorkerOp = "recommendation" | "engagement" | "action" | "pipeline" | "decision" | "intake" | "run";
 
 export interface QuotaWorkerJob {
   op: QuotaWorkerOp;

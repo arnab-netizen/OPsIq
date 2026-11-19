@@ -207,6 +207,38 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] atomic capability quota under concur
     expect(await usageSum(ws.workspaceId, "decision:create")).toBe(LIMIT);
   }, 180_000);
 
+  it(`[db] decision:create via POST /api/decisions/intake's write: ${PARALLEL} concurrent intakes with limit ${LIMIT} admit exactly ${LIMIT}`, async () => {
+    const ws = await freshWorkspace({ "decision:create": LIMIT });
+    const outcomes = await race(ws, "intake", (i) => ({ title: `Race intake ${stamp} ${i}` }));
+    const { ok, denied, other } = tally(outcomes);
+    expect(other).toEqual([]);
+    expect(ok).toHaveLength(LIMIT);
+    expect(denied).toHaveLength(PARALLEL - LIMIT);
+    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(LIMIT);
+    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(LIMIT);
+  }, 180_000);
+
+  it(`[db] decision:create via POST /api/run's write: ${PARALLEL} concurrent runs with limit ${LIMIT} admit exactly ${LIMIT}`, async () => {
+    const ws = await freshWorkspace({ "decision:create": LIMIT });
+    const outcomes = await race(ws, "run", (i) => ({ title: `Race run ${stamp} ${i}` }));
+    const { ok, denied, other } = tally(outcomes);
+    expect(other).toEqual([]);
+    expect(ok).toHaveLength(LIMIT);
+    expect(denied).toHaveLength(PARALLEL - LIMIT);
+    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(LIMIT);
+    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(LIMIT);
+  }, 180_000);
+
+  it(`[db] decision:create: a plan with a null (unlimited) limit admits all ${PARALLEL} concurrent creates`, async () => {
+    const ws = await freshWorkspace({ "decision:create": null });
+    const outcomes = await race(ws, "decision", (i) => ({ title: `Unlimited decision ${stamp} ${i}` }));
+    const { ok, other } = tally(outcomes);
+    expect(other).toEqual([]);
+    expect(ok).toHaveLength(PARALLEL);
+    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(PARALLEL);
+    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(PARALLEL);
+  }, 180_000);
+
   it("[db] decision:create: a bulk create stops at the limit and reports the over-limit items as failed", async () => {
     const ws = await freshWorkspace({ "decision:create": 2 });
     const result = await createDecisionsBulk({

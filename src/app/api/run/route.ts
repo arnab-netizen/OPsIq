@@ -2,7 +2,8 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { UnauthorizedError } from "@/infra/errors";
 import { runSystem } from "@/services/system/run";
 import { generateOperatorItems } from "@/services/operator/generate";
-import { addItems, addBlockedDecision } from "@/services/operator/store";
+import { addBlockedDecision } from "@/services/operator/store";
+import { addDecisionItemsWithinQuota } from "@/services/decisions/decision-creation-service";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { canEdit, resolveApprovalGrant } from "@/services/auth/access";
@@ -1041,7 +1042,8 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       baselineMetrics,
       recommendationId
     );
-    await addItems(operatorItems);
+    // Plan quota: one decision:create unit per created decision (PlanLimitError 402 over the limit).
+    await addDecisionItemsWithinQuota(workspace.workspaceId, operatorItems);
 
     // Get first operator item ID for lifecycle tracking
     const firstOperatorItemId = operatorItems.length > 0 ? operatorItems[0].id : undefined;

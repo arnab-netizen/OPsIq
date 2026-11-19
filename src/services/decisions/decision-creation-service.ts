@@ -7,7 +7,9 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { consumeCapabilityUsage } from "@/services/entitlement.service";
+import { consumeCapabilityUsage, withCapabilityQuota } from "@/services/entitlement.service";
+import { addItems } from "@/services/operator/store";
+import type { OperatorItem } from "@/domain/operator/types";
 
 export interface VerifiedDecisionInput {
   // Business data
@@ -137,6 +139,42 @@ export async function createDecision(
     });
     throw error;
   }
+}
+
+/**
+ * Persist one caller-built decision OperatorItem (POST /api/decisions/intake) under the decision:create
+ * plan quota: the limit check, the usage record and the insert run in ONE transaction under the capability
+ * lock, so concurrent intakes can never exceed the limit (PlanLimitError 402 at the limit).
+ */
+export async function persistDecisionItemWithinQuota(
+  workspaceId: string,
+  data: Prisma.OperatorItemUncheckedCreateInput
+) {
+  enforceWorkspaceId(workspaceId, "persistDecisionItemWithinQuota", "OperatorItem");
+  if (data.workspaceId !== workspaceId) {
+    throw new Error("Decision data must belong to the verified workspace");
+  }
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE);
+    return tx.operatorItem.create({ data });
+  });
+}
+
+/**
+ * Persist the decisions produced by a decision-engine run (POST /api/run) under the decision:create plan
+ * quota: one unit per decision, reserved atomically before the write (PlanLimitError 402 when the run would
+ * exceed the limit) and returned if the write fails. addItems writes through the global db in its own
+ * per-item transactions, so the reservation cannot share one transaction with it.
+ */
+export async function addDecisionItemsWithinQuota(workspaceId: string, items: OperatorItem[]): Promise<void> {
+  enforceWorkspaceId(workspaceId, "addDecisionItemsWithinQuota", "OperatorItem");
+  if (items.length === 0) return;
+  if (items.some((item) => item.workspaceId !== workspaceId)) {
+    throw new Error("Decision items must belong to the verified workspace");
+  }
+  await withCapabilityQuota(workspaceId, CAPABILITIES.DECISION_CREATE, () => addItems(items), {
+    amount: items.length,
+  });
 }
 
 export interface BulkCreateInput {
