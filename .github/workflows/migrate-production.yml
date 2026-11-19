@@ -249,6 +249,12 @@ jobs:
           MAIN_SHA=$(git rev-parse origin/main)
           echo "Checked-out SHA: $CURRENT_SHA"
           echo "origin/main SHA: $MAIN_SHA"
+          # Stale-release guard BEFORE any database step: the SHA this run was dispatched against must be exactly
+          # what is checked out. If main advanced between dispatch and checkout, stop now, not after the migration.
+          if [ "$CURRENT_SHA" != "${GITHUB_SHA}" ]; then
+            echo "::error::Checked-out SHA ($CURRENT_SHA) differs from the SHA this run was dispatched on (${GITHUB_SHA}); main advanced. Re-dispatch against the current main. No database step has run."
+            exit 1
+          fi
           # Verify the checked-out commit is an ancestor of (or equal to) main.
           # This workflow always checks out main directly (see "ref: main"
           # above); this check documents and enforces that invariant rather
@@ -486,10 +492,11 @@ jobs:
       # against the SAME OPERATOR_DATABASE_URL secret this job already holds (re-exposed under the
       # OWNER_DATABASE_URL name the tool itself requires; no new secret). It never calls `apply`, never
       # mutates anything, and `continue-on-error: true` guarantees a non-PASS result, or the check being
-      # unable to run at all, can never fail this migration job -- applying a migration and reconciling the
-      # runtime role's grants are separate, independently owner-authorized operations by design (see that
-      # doc's status line). The result is parsed by the shared scripts/db/parse-role-topology-verify.mjs and
-      # only ever surfaced in the job summary below.
+      # unable to run at all, can never fail this migration job. (The blocking reconcile and least-privilege gate
+      # that follows this step is what decides promotion; this informational step only feeds a pre-reconcile summary
+      # snapshot.) Its read-only guarantee now comes from the tool's own explicit BEGIN READ ONLY verification; PGOPTIONS
+      # below is a redundant extra layer, not the guarantee. The result is parsed by the shared
+      # scripts/db/parse-role-topology-verify.mjs and only ever surfaced in the job summary below.
       - name: Informational - check runtime role access after migration (read-only, non-blocking)
         if: success() && env.POST_VERIFY_SUCCEEDED == 'true'
         continue-on-error: true
@@ -515,6 +522,33 @@ jobs:
           # own job is only to inform, never to gate -- it must never contribute a red X to this job.
           exit 0
 
+      # BLOCKING runtime-role reconcile (root-cause fix for the search_console_metrics incident: a migration
+      # added a table, nothing reconciled opsiq_app's grants, and six consecutive production builds were
+      # refused by the release gate). Applying a migration and reconciling the runtime role are now ONE
+      # dependent sequence inside this already-approved, exact-host-pinned job: migration -> reconcile ->
+      # least-privilege verification -> redeploy hook. Same reviewed tool, same OPERATOR_DATABASE_URL secret
+      # this job already holds (no new secret, no new identity). The tool is reconcile-only: it never creates
+      # the role, never sets a password, and recomputes the exact privilege set from prisma/schema.prisma.
+      # MAIN mode only: PINNED_PREDEPLOY runs before the source PR merges, so its schema is not yet the
+      # schema the reconcile would be computed from. A failure here fails the job and the redeploy hook below
+      # does not run, so a release whose grants are not verified is never promoted.
+      - name: Reconcile runtime role grants (blocking, reconcile-only)
+        if: success() && inputs.mode == 'MAIN' && env.POST_VERIFY_SUCCEEDED == 'true'
+        env:
+          OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
+          EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          OPSIQ_RECONCILE_TARGET: production
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+        run: |
+          set -euo pipefail
+          # All decisions live in the unit-tested gate: valid exit statuses, complete/consistent verifier output,
+          # production runtime role present, no grant gap/excess, no DDL/ownership/membership, exact release SHA.
+          node scripts/release/runtime-role-reconcile-gate.mjs | tee "$RUNNER_TEMP/rr-gate.txt"
+          grep -q '^RUNTIME_ROLE_GATE=PASS$' "$RUNNER_TEMP/rr-gate.txt"
+          echo "RUNTIME_ROLE_RECONCILED=true" >> "$GITHUB_ENV"
+
       - name: Structural post-migration verification (version-controlled, parameterized query — no arbitrary SQL)
         if: inputs.mode == 'PINNED_PREDEPLOY'
         env:
@@ -532,7 +566,7 @@ jobs:
       # main in Vercel (docs/deployment/PRODUCTION_RELEASE_PROCEDURE.md). The hook
       # URL is a secret and is never echoed.
       - name: Trigger production redeploy of main (release gate re-check)
-        if: success() && inputs.mode == 'MAIN' && env.POST_VERIFY_SUCCEEDED == 'true'
+        if: success() && inputs.mode == 'MAIN' && env.POST_VERIFY_SUCCEEDED == 'true' && env.RUNTIME_ROLE_RECONCILED == 'true'
         env:
           DEPLOY_HOOK_URL: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK_URL }}
         run: |
@@ -559,6 +593,11 @@ jobs:
           echo "| Deploy started | ${DEPLOY_STARTED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Deploy succeeded | ${DEPLOY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Post-verify succeeded | ${POST_VERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Runtime role reconciled and verified (blocking gate) | ${RUNTIME_ROLE_RECONCILED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$RUNNER_TEMP/rr-gate.txt" ]; then
+            GATE_CODE=$(grep -m1 '^RUNTIME_ROLE_GATE_CODE=' "$RUNNER_TEMP/rr-gate.txt" | cut -d= -f2 | tr -cd 'A-Z_')
+            echo "| Runtime role gate code | ${GATE_CODE:-none} |" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Migration (owner-authorized, exact-one-pending enforced — both modes) | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
@@ -575,11 +614,9 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Informational, non-blocking: surfaces whether the just-applied migration added any
-          # Prisma-modelled table the opsiq_app runtime role cannot yet access. This NEVER affects
-          # DEPLOY_SUCCEEDED/POST_VERIFY_SUCCEEDED or this job's pass/fail outcome above or below --
-          # applying the migration and reconciling the runtime role's grants are separate steps by design.
-          echo "### Runtime role (\`opsiq_app\`) access after this migration — informational, non-blocking" >> "$GITHUB_STEP_SUMMARY"
+          # Informational, non-blocking, PRE-RECONCILE snapshot: what the read-only check saw right after the migration and
+          # BEFORE the blocking reconcile/gate step. It never affects DEPLOY_SUCCEEDED/POST_VERIFY_SUCCEEDED or the job outcome.
+          echo "### Runtime role (\`opsiq_app\`) access right after the migration, before the reconcile — informational, non-blocking" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ "${RUNTIME_ROLE_CHECK_RAN:-false}" == "true" ] && [ -f runtime-role-verify-summary.txt ]; then
             RR_PARSE_RESULT=$(grep '^PARSE_RESULT=' runtime-role-verify-summary.txt | cut -d= -f2)
@@ -591,9 +628,13 @@ jobs:
             elif [ "$RR_STATE" == "ABSENT" ]; then
               echo "The \`opsiq_app\` runtime role does not exist in production yet (the runtime-role cutover has not been performed). This check is only meaningful after that cutover; no action is needed from this migration alone." >> "$GITHUB_STEP_SUMMARY"
             elif [ -n "$RR_GAP_COUNT" ] && [ "$RR_GAP_COUNT" != "0" ]; then
-              echo "⚠️ **This migration added table(s) the runtime role cannot yet access — run the 'Reconcile Runtime Role' workflow (APPLY mode) before relying on this table in production, or the next deploy's release gate will block again.**" >> "$GITHUB_STEP_SUMMARY"
+              if [ "${RUNTIME_ROLE_RECONCILED:-false}" == "true" ]; then
+                echo "This migration added table(s) the runtime role could not yet access; the blocking reconcile in this run has since granted and verified them (see the gate row above)." >> "$GITHUB_STEP_SUMMARY"
+              else
+              echo "⚠️ **This migration added table(s) the runtime role cannot yet access and the blocking reconcile did not complete — run the 'Reconcile Runtime Role' workflow (APPLY mode) before relying on this table in production, or the next deploy's release gate will block again.**" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
               echo "Inaccessible table(s) ($RR_GAP_COUNT): \`${RR_GAP_TABLES:-unknown}\`" >> "$GITHUB_STEP_SUMMARY"
+              fi
             else
               echo "✓ The runtime role already has full access to every Prisma-modelled table — no reconcile needed." >> "$GITHUB_STEP_SUMMARY"
             fi
@@ -613,7 +654,11 @@ jobs:
             if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
               echo "Production now has \`${{ inputs.migration_name }}\` applied." >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "Production migrations applied successfully." >> "$GITHUB_STEP_SUMMARY"
+              if [ "${RUNTIME_ROLE_RECONCILED:-false}" == "true" ]; then
+              echo "Production migrations applied successfully and the runtime role was reconciled and verified." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "**Migrations applied, but the runtime-role gate did NOT pass: the release is NOT promoted (no redeploy). Inspect the gate step.**" >> "$GITHUB_STEP_SUMMARY"
+            fi
             fi
           elif [ "${DEPLOY_STARTED:-false}" != "true" ]; then
             echo "**MIGRATION_NOT_EXECUTED** — preflight did not pass; \`prisma migrate deploy\` was never run. No production schema mutation occurred in this run." >> "$GITHUB_STEP_SUMMARY"

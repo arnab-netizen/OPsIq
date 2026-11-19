@@ -32,7 +32,7 @@ import {
   assertRoleCutoverStaticTarget,
   type RoleCutoverCommand,
 } from "../../src/infra/role-cutover-target";
-import { applyAndVerifyRoleTopology, readModeledTables, roleTopologyStatements, verifyRoleTopology } from "../../src/services/privacy-erasure/role-topology";
+import { applyAndVerifyRoleTopology, readModeledTables, roleTopologyStatements, verifyRoleTopologyReadOnly } from "../../src/services/privacy-erasure/role-topology";
 import { probeRuntimeRole } from "../../src/services/privacy-erasure/runtime-role-probe";
 
 interface Args { cmd: string; target?: string; runtimeRole: string; eraserLogins: string[]; expectedHost?: string; confirm?: string; dryRun: boolean; phase: "pre" | "post"; onlyIfPresent: boolean }
@@ -109,7 +109,7 @@ async function main() {
       return;
     }
     if (cmd === "verify") {
-      const r = await verifyRoleTopology(c, names);
+      const r = await verifyRoleTopologyReadOnly(c, names); // explicit BEGIN READ ONLY, effective mode proven, always rolled back
       const absentOk = args.phase === "pre" && r.facts.runtime_role_exists === false;
       const checks = absentOk ? r.checks.filter((x) => x.name !== "runtime role exists") : r.checks;
       const failed = checks.filter((x) => !x.ok).map((x) => x.name);
