@@ -6,6 +6,8 @@ import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { consumeCapabilityUsage } from "@/services/entitlement.service";
 
 export interface VerifiedDecisionInput {
   // Business data
@@ -62,6 +64,9 @@ export async function createDecision(
 
   try {
     const decision = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Plan quota: decision:create is checked and recorded atomically in the SAME transaction as the
+      // decision row and its audit event (PlanLimitError 402 at the limit); a failed insert rolls it back.
+      await consumeCapabilityUsage(tx, workspaceId, CAPABILITIES.DECISION_CREATE);
       const created = await tx.operatorItem.create({
         data: {
           id: randomUUID(),

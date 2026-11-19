@@ -22,11 +22,12 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { createEngagement } from "@/services/engagement";
 import { createRecommendation } from "@/services/recommendation";
 import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
+import { createDecisionsBulk } from "@/services/decisions/decision-creation-service";
 import { runQuotaWorkersConcurrently, type QuotaWorkerOutcome, type QuotaWorkerOp } from "./support/quota-workers";
 
 const LIMIT = 3;
 const PARALLEL = 7;
-const QUOTA_KEYS = ["generate_recommendation", "create_engagement", "action_create", "decision_engine"];
+const QUOTA_KEYS = ["generate_recommendation", "create_engagement", "action_create", "decision_engine", "decision:create"];
 
 interface QuotaWorkspace {
   workspaceId: string;
@@ -103,6 +104,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] atomic capability quota under concur
       const engagements = await db.engagement.findMany({ where: { workspaceId: { in: ids } }, select: { id: true } });
       const engagementIds = engagements.map((e: { id: string }) => e.id);
       await db.action.deleteMany({ where: { engagementId: { in: engagementIds } } });
+      await db.operatorItem.deleteMany({ where: { workspaceId: { in: ids } } });
       await db.finding.deleteMany({ where: { engagementId: { in: engagementIds } } });
       await db.evidence.deleteMany({ where: { engagementId: { in: engagementIds } } });
       await db.recommendation.deleteMany({ where: { workspaceId: { in: ids } } });
@@ -191,6 +193,31 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] atomic capability quota under concur
     const result = await runConsultingPipeline(ws.engagementId, ctx(ws.actorId, ws.workspaceId), ws.workspaceId);
     expect(result.status).toBe("INSUFFICIENT_DATA");
     expect(await usageSum(ws.workspaceId, "decision_engine")).toBe(0);
+  }, 60_000);
+
+  it(`[db] decision:create: ${PARALLEL} concurrent createDecision calls with limit ${LIMIT} admit exactly ${LIMIT} and record usage`, async () => {
+    const ws = await freshWorkspace({ "decision:create": LIMIT });
+    const outcomes = await race(ws, "decision", (i) => ({ title: `Race decision ${stamp} ${i}` }));
+    const { ok, denied, other } = tally(outcomes);
+    expect(other).toEqual([]);
+    expect(ok).toHaveLength(LIMIT);
+    expect(denied).toHaveLength(PARALLEL - LIMIT);
+    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(LIMIT);
+    // The usage is recorded in the same transaction as the decision row and its audit event.
+    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(LIMIT);
+  }, 180_000);
+
+  it("[db] decision:create: a bulk create stops at the limit and reports the over-limit items as failed", async () => {
+    const ws = await freshWorkspace({ "decision:create": 2 });
+    const result = await createDecisionsBulk({
+      decisions: [0, 1, 2].map((i) => ({
+        title: `Bulk decision ${stamp} ${i}`, type: "pricing", impact: 1000, confidence: 0.5,
+        verifiedActorId: ws.actorId, verifiedWorkspaceId: ws.workspaceId,
+      })),
+    });
+    expect(result.summary).toEqual({ total: 3, succeeded: 2, failed: 1 });
+    expect(await db.operatorItem.count({ where: { workspaceId: ws.workspaceId } })).toBe(2);
+    expect(await usageSum(ws.workspaceId, "decision:create")).toBe(2);
   }, 60_000);
 
   it("[db] create_engagement: an idempotent replay of the same engagement does not consume a second unit", async () => {
