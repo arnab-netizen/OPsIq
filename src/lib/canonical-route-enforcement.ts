@@ -174,8 +174,8 @@ export interface ServiceAuthEnvelope {
  */
 export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<unknown>;
 
-/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood. */
-const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
+/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood (429: rate limited). */
+const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422, 429]);
 
 /** Caught-error text for ClassifiedApiError messages, trace stages and log context: scrubbed by the governed log scrubber and length-capped. */
 function describeThrown(thrown: unknown, maxLength = 500): string {
@@ -207,7 +207,7 @@ function readOwnerSafeMessage(thrown: unknown): string {
 
 /**
  * True when a handler rejected the request on purpose with an owner-safe domain AppError
- * (validation 400, not-found 404, conflict 409, invalid transition 422) that is not flagged
+ * (validation 400, not-found 404, conflict 409, invalid transition 422, rate limit 429) not flagged
  * security-relevant. Such rejections are expected outcomes and are logged below ERROR.
  */
 export function isExpectedClientRejection(error: unknown, isKnownSafeClientError: boolean, statusCode: number): boolean {
@@ -858,8 +858,8 @@ export function withCanonicalEnforcement(
       }
 
       // An expected domain rejection (e.g. a duplicate-period 409 ConflictError, a 400 validation
-      // error, a 404) is the request being answered correctly, not a server failure: it is logged
-      // at WARN. Security-relevant rejections, auth/permission/rate-limit 4xx and every 5xx or
+      // error, a 404, a rate-limit 429) is the request being answered correctly, not a server failure:
+      // logged at WARN. Security-relevant rejections, auth/permission 4xx and every 5xx or
       // unclassified error keep ERROR.
       const expectedClientRejection = isExpectedClientRejection(error, isKnownSafeClientError, classifiedError.statusCode);
 
