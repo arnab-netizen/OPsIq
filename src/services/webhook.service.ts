@@ -165,6 +165,13 @@ export interface StripeEventPosition {
   created: Date;
 }
 
+/** Stripe subscription statuses after which the subscription grants nothing and cannot resume. */
+const TERMINAL_SUBSCRIPTION_STATUSES = ["canceled", "incomplete_expired"];
+
+export function isTerminalSubscriptionStatus(status: string): boolean {
+  return TERMINAL_SUBSCRIPTION_STATUSES.includes(status);
+}
+
 function positionOf(event: StripeWebhookEventInput): StripeEventPosition {
   if (!Number.isSafeInteger(event.created) || event.created < 0) {
     throw new Error(`Stripe event ${event.id} has no valid created timestamp`);
@@ -897,20 +904,34 @@ export async function markWebhookEventFailed(
 }
 
 /**
- * Strictly-newer-than-watermark predicate: (created, eventId) > (lastEventTimestamp, lastEventId).
+ * Strictly-newer-than-watermark predicate on the ordering key (created, terminal, eventId):
+ *   (event.created, isTerminal(event), event.id) > (lastEventTimestamp, isTerminal(row.status), lastEventId)
+ *
+ * Stripe's created is whole seconds and its event ids are NOT time-ordered, so within one second
+ * the id is only a deterministic tiebreak. A terminal result (deleted / canceled /
+ * incomplete_expired) outranks a non-terminal one at the same second: a same-second update can
+ * never undo a cancellation, in either delivery order, whatever the ids. A strictly newer event
+ * still applies (a later reactivation / resubscription is time-ordered). The stored side's
+ * terminality is the row's current status, which is exactly the state a tie would overwrite.
  *
  * A row with no lastEventId has no provider-event watermark: either it was never moved by a
  * provider event, or its lastEventTimestamp was written by the pre-ordering code as a RECEIVE time
  * (not comparable with event.created). Such a row accepts the next event, which then records both
  * halves of the watermark.
  */
-function newerThanWatermark(position: StripeEventPosition): Prisma.SubscriptionWhereInput {
+function newerThanWatermark(position: StripeEventPosition, eventIsTerminal: boolean): Prisma.SubscriptionWhereInput {
+  const rowIsNonTerminal: Prisma.SubscriptionWhereInput = { status: { notIn: TERMINAL_SUBSCRIPTION_STATUSES } };
+  const laterIdAtSameSecond: Prisma.SubscriptionWhereInput = { lastEventId: { lt: position.stripeEventId } };
   return {
     OR: [
       { lastEventId: null },
       { lastEventTimestamp: null },
       { lastEventTimestamp: { lt: position.created } },
-      { lastEventTimestamp: position.created, lastEventId: { lt: position.stripeEventId } },
+      eventIsTerminal
+        ? // terminal event: beats a non-terminal row outright; vs a terminal row, by id
+          { lastEventTimestamp: position.created, OR: [rowIsNonTerminal, laterIdAtSameSecond] }
+        : // non-terminal event: never beats a terminal row at the same second; vs non-terminal, by id
+          { lastEventTimestamp: position.created, AND: [rowIsNonTerminal, laterIdAtSameSecond] },
     ],
   };
 }
@@ -947,7 +968,13 @@ async function applyIfNewer(
   data: Prisma.SubscriptionUpdateManyMutationInput
 ): Promise<Subscription | null> {
   const applied = await tx.subscription.updateMany({
-    where: { AND: [{ id: target.subscriptionId }, newerThanWatermark(position), identityPredicate(identity)] },
+    where: {
+      AND: [
+        { id: target.subscriptionId },
+        newerThanWatermark(position, typeof data.status === "string" && isTerminalSubscriptionStatus(data.status)),
+        identityPredicate(identity),
+      ],
+    },
     data: { ...data, lastEventTimestamp: position.created, lastEventId: position.stripeEventId },
   });
 
