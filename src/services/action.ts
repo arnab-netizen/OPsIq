@@ -17,6 +17,7 @@ import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
+import { readActionBlockerReason, withActionBlockerReason } from "@/domain/execution/action-metadata";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -307,10 +308,12 @@ export async function updateActionStatus(
   }
 
   // Enforce action lifecycle rules
+  const blockerReason =
+    input.blockerReason ?? input.blockageReason ?? (newStatus === previousStatus ? readActionBlockerReason(action.metadata) : null);
   const updatedActionData = {
     ...action,
     status: newStatus,
-    blockerReason: input.blockerReason ?? input.blockageReason ?? action.blockerReason,
+    blockerReason,
   };
   const violations = await enforceActionRules(updatedActionData);
   if (violations.length > 0) {
@@ -320,7 +323,7 @@ export async function updateActionStatus(
   }
 
   // Optimistic locking: update only if version matches
-  const blockerReason = input.blockerReason ?? input.blockageReason ?? action.blockerReason;
+  const nextMetadata = withActionBlockerReason(action.metadata, newStatus, blockerReason);
   const updateResult = await db.action.updateMany({
     where: {
       id: actionId,
@@ -329,7 +332,7 @@ export async function updateActionStatus(
     },
     data: {
       status: newStatus,
-      blockerReason: blockerReason ?? null,
+      metadata: nextMetadata as Prisma.InputJsonValue,
       version: { increment: 1 },
     },
   });
@@ -355,7 +358,7 @@ export async function updateActionStatus(
     payload: {
       previousStatus,
       newStatus,
-      blockageReason: input.blockageReason,
+      blockerReason: readActionBlockerReason(nextMetadata),
     },
     visibility: "internal",
   });
@@ -381,7 +384,7 @@ export async function updateActionStatus(
     updatedBy: actorId,
   });
 
-  return updated;
+  return { ...updated, blockerReason: readActionBlockerReason(updated.metadata) };
 }
 
 export async function detectOverdueActions(engagementId: string, authContext: CanonicalAuthContext, workspaceId: string) {

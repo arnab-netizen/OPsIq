@@ -4,6 +4,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { readActionBlockerReason, withActionBlockerReason } from "@/domain/execution/action-metadata";
 
 // ─── Action Lifecycle States ──────────────────────────────────────────────────
 
@@ -176,10 +177,15 @@ export async function transitionActionState(
     where: { id: actionId, engagement: { workspaceId: context.workspaceId } },
     data: {
       status: nextState,
-      blockerReason: nextState === "blocked" ? context.reason : action.blockerReason,
+      // Action has no blocker-reason / verified-by columns: the reason lives in metadata
+      // (see withActionBlockerReason) and the reviewer is recorded on the audit event below.
+      metadata: withActionBlockerReason(
+        action.metadata,
+        nextState,
+        nextState === "blocked" ? context.reason ?? null : readActionBlockerReason(action.metadata)
+      ) as object,
       completedAt: nextState === "completed" ? new Date() : action.completedAt,
       verifiedAt: nextState === "verified" ? new Date() : action.verifiedAt,
-      verifiedBy: nextState === "verified" ? context.reviewerId : action.verifiedBy,
       version: { increment: 1 },
     },
   });
