@@ -26,10 +26,16 @@ import {
   createSystemRecommendation,
   recordOwnerDecision,
   runIdeaArbitration,
+  assessAndPersistReadiness,
+  updateContextProfile,
+  buildAndPersistBusinessModel,
+  buildAndPersistMarketSizing,
+  buildAndPersistValidationPlan,
 } from "@/services/owner-strategy/startup-session.service";
 import { NotFoundError } from "@/infra/errors";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { EconomicInputs } from "@/domain/owner-strategy/startup-economics";
+import type { ReadinessInputs } from "@/domain/owner-strategy/startup-readiness";
 import type { StartupIntake, StartupIdea } from "@/domain/owner-strategy/startup-mode.types";
 
 const actor = randomUUID();
@@ -90,6 +96,24 @@ let sessB = "";
 let ideaB = "";
 let econA = "";
 let sysRecA = "";
+// Workspace B: one session with two ideas and a complete, genuine set of artifacts for ideaB.
+let sessB2 = "";
+let ideaB2a = "";
+let ideaB2b = "";
+const bLinks = { sysRec: "", profile: "", econ: "", readiness: "", businessModel: "", marketSizing: "", validationPlan: "" };
+
+const readinessInputs: ReadinessInputs = {
+  capitalAvailableCents: 1000000n,
+  startupCostCents: 200000n,
+  cashRunwayMonths: 6,
+  cashFlowPositiveByMonth: 3,
+  ownerHoursPerWeek: 30,
+  requiredHoursPerWeek: 20,
+  hasRegulatoryClearance: true,
+  criticalHypothesesCount: 0,
+  failedCriticalHypothesesCount: 0,
+  economicClassification: "VIABLE",
+};
 
 const arbitraryLinks = () => ({
   linkedSystemRecId: randomUUID(),
@@ -115,6 +139,19 @@ beforeAll(async () => {
   ideaB = (await db.startupIdeaRecord.findFirstOrThrow({ where: { sessionId: sessB, workspaceId: wsB } })).id;
   econA = await buildAndPersistEconomicModel(wsA, sessA, ideaA, actor, economicInputs);
   sysRecA = await createSystemRecommendation(wsA, sessA, actor, { ideaId: ideaA, recommendation: "HOLD", rationale: "r", confidence: 40, inputSnapshot: {} });
+
+  sessB2 = await createStartupSession({ workspaceId: wsB, actorId: actor, intake, ideas: [idea, { ...idea, name: "Mobile Dog Grooming" }] });
+  const bIdeas = await db.startupIdeaRecord.findMany({ where: { sessionId: sessB2, workspaceId: wsB }, orderBy: { name: "asc" } });
+  ideaB2a = bIdeas[0].id;
+  ideaB2b = bIdeas[1].id;
+  bLinks.sysRec = await createSystemRecommendation(wsB, sessB2, actor, { ideaId: ideaB2a, recommendation: "HOLD", rationale: "r", confidence: 40, inputSnapshot: {} });
+  bLinks.profile = (await updateContextProfile(wsB, sessB2, actor, { step: "b" }, "b profile")).versionId;
+  bLinks.econ = await buildAndPersistEconomicModel(wsB, sessB2, ideaB2a, actor, economicInputs);
+  await assessAndPersistReadiness(wsB, sessB2, ideaB2a, actor, readinessInputs);
+  bLinks.readiness = (await db.startupReadinessAssessment.findFirstOrThrow({ where: { workspaceId: wsB, ideaId: ideaB2a } })).id;
+  bLinks.businessModel = await buildAndPersistBusinessModel(wsB, sessB2, ideaB2a, actor, { customerSegment: "SMB", customerProblem: "p", valueProposition: "v", deliveryMethod: "d", revenueModel: "r", pricingHypothesis: "$100/mo" });
+  bLinks.marketSizing = await buildAndPersistMarketSizing(wsB, sessB2, ideaB2a, actor, { sizingStatus: "ESTIMATED", confidence: 40 });
+  bLinks.validationPlan = await buildAndPersistValidationPlan(wsB, sessB2, ideaB2a, actor, { passCriteria: "3 paying customers", failCriteria: "0 after 30 days" });
 });
 
 afterAll(async () => {
@@ -124,6 +161,11 @@ afterAll(async () => {
     await db.goalArbitrationRecord.deleteMany({ where: { workspaceId: ws } });
     await db.operatingMemoryEntry.deleteMany({ where: { workspaceId: ws } });
     await db.startupSystemRecommendation.deleteMany({ where: { workspaceId: ws } });
+    await db.startupValidationPlan.deleteMany({ where: { workspaceId: ws } });
+    await db.startupMarketSizing.deleteMany({ where: { workspaceId: ws } });
+    await db.startupBusinessModelVersion.deleteMany({ where: { workspaceId: ws } });
+    await db.startupReadinessAssessment.deleteMany({ where: { workspaceId: ws } });
+    await db.startupContextProfileVersion.deleteMany({ where: { workspaceId: ws } });
     await db.startupEconomicModel.deleteMany({ where: { workspaceId: ws } });
     await db.startupIdeaRecord.deleteMany({ where: { workspaceId: ws } });
     await db.ownerStartupSession.deleteMany({ where: { workspaceId: ws } });
@@ -166,6 +208,64 @@ describe("recordOwnerDecision — idea and linked artifacts must belong to the c
     await expect(
       recordOwnerDecision(wsB, sessB, actor, { decisionType: "HOLD", linkedReadinessId: randomUUID() })
     ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("[db] N1: B's own complete set of 4 linked ids plus A's ideaId → NotFound, no row (the idea check is the only blocker)", async () => {
+    const before = await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } });
+    await expect(
+      recordOwnerDecision(wsB, sessB2, actor, {
+        decisionType: "GO",
+        ideaId: ideaA,
+        linkedSystemRecId: bLinks.sysRec,
+        linkedProfileVersionId: bLinks.profile,
+        linkedEconomicModelId: bLinks.econ,
+        linkedReadinessId: bLinks.readiness,
+      })
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } })).toBe(before);
+    expect(await db.startupOwnerDecision.count({ where: { ideaId: ideaA, workspaceId: wsB } })).toBe(0);
+  });
+
+  it("[db] N2: an idea-scoped artifact of another idea in the SAME session is NotFound (each linked kind)", async () => {
+    const before = await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } });
+    const mismatches: Array<Record<string, string>> = [
+      { linkedEconomicModelId: bLinks.econ },
+      { linkedReadinessId: bLinks.readiness },
+      { linkedBusinessModelId: bLinks.businessModel },
+      { linkedMarketSizingId: bLinks.marketSizing },
+      { linkedValidationPlanId: bLinks.validationPlan },
+    ];
+    for (const link of mismatches) {
+      // ideaB2b is a real idea of this session; every artifact above belongs to ideaB2a.
+      await expect(
+        recordOwnerDecision(wsB, sessB2, actor, {
+          decisionType: "GO",
+          ideaId: ideaB2b,
+          linkedSystemRecId: bLinks.sysRec,
+          linkedProfileVersionId: bLinks.profile,
+          linkedEconomicModelId: bLinks.econ,
+          linkedReadinessId: bLinks.readiness,
+          ...link,
+        }).then(() => "recorded", (e: unknown) => (e instanceof NotFoundError ? "not-found" : `error: ${String(e)}`))
+      ).resolves.toBe("not-found");
+    }
+    expect(await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } })).toBe(before);
+  });
+
+  it("[db] N2: the matching idea with its own full artifact set records", async () => {
+    const id = await recordOwnerDecision(wsB, sessB2, actor, {
+      decisionType: "GO",
+      ideaId: ideaB2a,
+      linkedSystemRecId: bLinks.sysRec,
+      linkedProfileVersionId: bLinks.profile,
+      linkedEconomicModelId: bLinks.econ,
+      linkedReadinessId: bLinks.readiness,
+      linkedBusinessModelId: bLinks.businessModel,
+      linkedMarketSizingId: bLinks.marketSizing,
+      linkedValidationPlanId: bLinks.validationPlan,
+    });
+    const row = await db.startupOwnerDecision.findUniqueOrThrow({ where: { id } });
+    expect(row).toMatchObject({ ideaId: ideaB2a, linkedEconomicModelId: bLinks.econ, linkedValidationPlanId: bLinks.validationPlan });
   });
 
   it("[db] legitimate decisions still record (own idea, own linked artifacts, or none)", async () => {
