@@ -20,7 +20,7 @@ durable recovery: a missed, superseded or cancelled release is simply picked up 
 production with `main`'s current state rather than reacting to one event. No existing governance test is edited by this change.
 
 ## What one run does (all in `production-operator`, shared concurrency group `migrate-production`)
-1. Verbatim origin guard -> checkout `main` -> release SHA = main HEAD, which must equal `GITHUB_SHA` -> required CI (`branch-protection`) already green at that exact SHA, else no-op.
+1. Verbatim origin guard -> checkout `main` -> release SHA = main HEAD, which must equal `GITHUB_SHA` -> **release evidence** (below), else no-op.
 2. Production identity: repository variable `PRODUCTION_DATABASE_HOST` (bare direct host; unset = fail closed), the operator URL's host, and the database's own identity.
 3. Ledger plan (`release-plan-cli.ts`, explicit `BEGIN READ ONLY`): NOOP / MIGRATE / BLOCK. BLOCK or any error fails the run before any write.
 4. **Phase 2 (implemented, untested on GitHub):** MIGRATE with every pending migration allowlisted, in ascending order, applies ONLY when a verified encrypted backup succeeded within 36 h (the backup workflow has never succeeded, so this is currently REFUSED by design), then the ledger must be NOOP. Destructive/incompatible/unknown/out-of-order/failed/modified states never auto-apply. The allowlist is a policy filter, not a compatibility proof.
@@ -48,3 +48,17 @@ production with `main`'s current state rather than reacting to one event. No exi
 - Whether `production-operator` requires a reviewer for scheduled runs is unknown from this session (the proxy refuses the environments API). If it does, runs wait for approval and the pipeline is NOT autonomous.
 - Needs `PRODUCTION_DATABASE_HOST` (non-secret variable) and the Vercel Production Branch change above.
 - Phase 2 is refused until the encrypted backup workflow has produced a success.
+
+## The CI / release deadlock and its resolution (release evidence)
+`ci.yml` runs on pull requests only and `main-integration.yml` is dispatch-only, so a merge commit on `main` has no check runs of its own; requiring
+"CI green at the main SHA" would deadlock, and borrowing the PR head's result for a different commit would be unsound. Resolution, lean and
+without a second full CI run per change (CI-MIN-01's optimisation is preserved): **verified-tree equivalence** (`scripts/release/release-evidence.mjs`).
+The ruleset requires a strictly up-to-date PR head with a green `branch-protection`, so a merge or squash of such a head yields a main commit whose
+git TREE equals the head's tree, i.e. exactly the tested content. The release SHA is eligible only if: exactly one merged PR into `main` has it as
+its merge commit; its tree equals that PR head's tree; and the head has a `branch-protection` check run authored by the pinned Actions app (id 15368),
+latest conclusion `success`. Unrelated, historical, other-app, stale, failed-rerun or other-commit evidence never counts; any API ambiguity fails closed;
+a tree mismatch is NOT eligible and needs an explicit full-suite dispatch on that commit. The migration manifest (sha256 over the chain) and the
+privilege manifest (sha256 over the derived runtime privilege set) are computed from the release tree (`release-manifest.ts`) and written, with
+SHA/tree/PR head/check run id, to the run summary; the deployment is then accepted only when the public `/api/health` reports that exact SHA.
+Contradiction check: `#689` pins the CI-MIN-01 contract (PR-only `ci.yml`), and this design consumes exactly that contract; there is no second CI contract.
+Not yet proven: an end-to-end rehearsal on GitHub (the workflow is inert).

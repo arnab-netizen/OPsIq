@@ -221,7 +221,7 @@ describe("workflow trust model (production-release-reconcile draft)", () => {
   });
   it("least privilege: read-only workflow permissions, job adds only checks/deployments read, no secrets: inherit, no continue-on-error", () => {
     expect(wf.permissions).toEqual({ contents: "read" });
-    expect(job.permissions).toEqual({ contents: "write", checks: "read", deployments: "read" }); // write ONLY for the release branch + attempt refs
+    expect(job.permissions).toEqual({ contents: "write", checks: "read", deployments: "read", "pull-requests": "read" }); // write ONLY for the release branch + attempt refs
     expect(JSON.stringify(wf)).not.toMatch(/inherit/); // parsed YAML: comments excluded
     expect(job.steps.some((s) => s["continue-on-error"])).toBe(false);
     expect([...text.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).sort()).toEqual(["OPERATOR_DATABASE_URL", "VERCEL_PRODUCTION_DEPLOY_HOOK_URL"]);
@@ -230,7 +230,7 @@ describe("workflow trust model (production-release-reconcile draft)", () => {
     expect(wf.concurrency).toEqual({ group: "migrate-production", "cancel-in-progress": false });
   });
   it("ordering: guard < checkout < exact SHA < CI < host < ledger plan < Phase 2 < gate < decision < trigger < hook < verify; every DB/secret step is gated on CI-green", () => {
-    const order = [/Assert workflow origin/, /Checkout main/, /Resolve the exact release SHA/, /Require required CI green/, /Validate the pinned production host/, /Release plan from the REAL migration ledger/, /Phase 2 - apply pending migrations/, /Runtime-role reconcile and strict/, /Release decision/, /Trigger exact-SHA release/, /Retry the SAME sha/, /Verify the PUBLIC site serves/].map(idx);
+    const order = [/Assert workflow origin/, /Checkout main/, /Resolve the exact release SHA/, /Verify release evidence/, /Validate the pinned production host/, /Release plan from the REAL migration ledger/, /Phase 2 - apply pending migrations/, /Runtime-role reconcile and strict/, /Release decision/, /Trigger exact-SHA release/, /Retry the SAME sha/, /Verify the PUBLIC site serves/].map(idx);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     for (const re of [/Release plan from/, /Runtime-role reconcile/, /Preflight check - OPERATOR/, /Release decision/]) expect(job.steps[idx(re)].if).toContain("steps.ci.outputs.ready == 'true'");
   });
@@ -331,5 +331,70 @@ describe("scheduled-run continuity watchdog (inert draft, unprivileged)", () => 
     expect(raw).toContain("status=success");
     expect(raw).toContain("gh issue close");
     expect(raw).toContain("MAX_AGE_HOURS: '4'");
+  });
+});
+
+// @ts-expect-error -- plain ESM script without type declarations
+import { verifyReleaseEvidence, ACTIONS_APP_ID, REQUIRED_CHECK } from "../../../scripts/release/release-evidence.mjs";
+import { migrationManifest, privilegeManifest } from "../../../scripts/release/release-manifest";
+
+describe("release evidence: verified-tree equivalence (no fabricated or historical CI)", () => {
+  const REL = "a".repeat(40), HEAD = "b".repeat(40), TREE = "c".repeat(40);
+  const pr = (o: object = {}) => ({ number: 7, merged_at: "2026-11-19T00:00:00Z", base: { ref: "main" }, head: { sha: HEAD }, merge_commit_sha: REL, ...o });
+  const check = (o: object = {}) => ({ id: 99, name: REQUIRED_CHECK, status: "completed", conclusion: "success", head_sha: HEAD, completed_at: "2026-11-19T00:10:00Z", app: { id: ACTIONS_APP_ID }, ...o });
+  const api = (over: { prs?: unknown; relTree?: string; headTree?: string; checks?: unknown } = {}) => async (p: string) => {
+    if (p.includes("/pulls")) return over.prs ?? [pr()];
+    if (p.includes(`/git/commits/${REL}`)) return { tree: { sha: over.relTree ?? TREE } };
+    if (p.includes(`/git/commits/${HEAD}`)) return { tree: { sha: over.headTree ?? TREE } };
+    if (p.includes("/check-runs")) return { check_runs: over.checks ?? [check()] };
+    throw new Error("unexpected " + p);
+  };
+  const run = (over = {}) => verifyReleaseEvidence({ fetchJson: api(over), repo: "o/r", sha: REL });
+  it("verifies a merged PR whose release tree equals the CI-tested head tree, and binds sha/tree/PR/check", async () => {
+    expect(await run()).toMatchObject({ ok: true, evidence: { releaseSha: REL, treeSha: TREE, prNumber: 7, prHeadSha: HEAD, checkRunId: 99 } });
+  });
+  it("rejects direct pushes, unmerged or other-base PRs, someone else's merge commit, and ambiguous matches", async () => {
+    expect((await run({ prs: [] })).code).toBe("NOT_A_MERGED_PULL_REQUEST_COMMIT");
+    expect((await run({ prs: [pr({ merged_at: null })] })).code).toBe("NOT_A_MERGED_PULL_REQUEST_COMMIT");
+    expect((await run({ prs: [pr({ base: { ref: "release/production" } })] })).code).toBe("NOT_A_MERGED_PULL_REQUEST_COMMIT");
+    expect((await run({ prs: [pr({ merge_commit_sha: "d".repeat(40) })] })).code).toBe("NOT_A_MERGED_PULL_REQUEST_COMMIT");
+    expect((await run({ prs: [pr(), pr({ number: 8 })] })).code).toBe("AMBIGUOUS_PULL_REQUEST");
+  });
+  it("rejects a release whose tree is not the tested tree (untested content never ships on borrowed CI)", async () => {
+    expect((await run({ headTree: "e".repeat(40) })).code).toBe("TREE_DIFFERS_FROM_TESTED_PR_HEAD");
+  });
+  it("rejects missing, failed, stale, other-app, in-progress and wrong-name checks; the LATEST run decides", async () => {
+    expect((await run({ checks: [] })).code).toBe("NO_REQUIRED_CHECK_FROM_THE_PINNED_APP");
+    expect((await run({ checks: [check({ app: { id: 1 } })] })).code).toBe("NO_REQUIRED_CHECK_FROM_THE_PINNED_APP");
+    expect((await run({ checks: [check({ name: "lint" })] })).code).toBe("NO_REQUIRED_CHECK_FROM_THE_PINNED_APP");
+    expect((await run({ checks: [check({ status: "in_progress", conclusion: null })] })).code).toBe("NO_REQUIRED_CHECK_FROM_THE_PINNED_APP");
+    expect((await run({ checks: [check({ head_sha: "f".repeat(40) })] })).code).toBe("NO_REQUIRED_CHECK_FROM_THE_PINNED_APP"); // historical/other-commit evidence
+    expect((await run({ checks: [check({ conclusion: "failure" })] })).code).toBe("REQUIRED_CHECK_NOT_SUCCESS");
+    expect((await run({ checks: [check(), check({ id: 100, conclusion: "failure", completed_at: "2026-11-19T01:00:00Z" })] })).code).toBe("REQUIRED_CHECK_NOT_SUCCESS"); // later failed re-run wins
+    expect((await run({ checks: [check({ conclusion: "failure" }), check({ id: 101, completed_at: "2026-11-19T02:00:00Z" })] })).ok).toBe(true); // later successful re-run wins
+  });
+  it("fails closed on malformed shas, provider errors and unexpected responses", async () => {
+    expect((await verifyReleaseEvidence({ fetchJson: api(), repo: "o/r", sha: "main" })).code).toBe("BAD_RELEASE_SHA");
+    expect((await verifyReleaseEvidence({ fetchJson: async () => { throw new Error("boom"); }, repo: "o/r", sha: REL })).code).toBe("API_ERROR");
+    expect((await run({ prs: { message: "x" } })).code).toBe("UNEXPECTED_PULLS_RESPONSE");
+    expect((await run({ checks: { not: "list" } as never })).code).toBe("UNEXPECTED_CHECK_RUNS_RESPONSE");
+  });
+});
+
+describe("release manifests", () => {
+  it("migration manifest is deterministic over the real chain and changes if any migration byte changes; privilege manifest is stable and covers the classes", () => {
+    const m1 = migrationManifest(join(ROOT, "prisma", "migrations")), m2 = migrationManifest(join(ROOT, "prisma", "migrations"));
+    expect(m1.sha256).toBe(m2.sha256);
+    expect(m1.lines.length).toBeGreaterThan(150);
+    const dir = mkdtempSync(join(tmpdir(), "mf-"));
+    mkdirSync(join(dir, "20260101000000_a")); writeFileSync(join(dir, "20260101000000_a", "migration.sql"), "SELECT 1;");
+    const a = migrationManifest(dir).sha256;
+    writeFileSync(join(dir, "20260101000000_a", "migration.sql"), "SELECT 2;");
+    expect(migrationManifest(dir).sha256).not.toBe(a);
+    const p = privilegeManifest();
+    expect(p.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(p.writable).toBeGreaterThan(100);
+    expect(p.denied).toBeGreaterThanOrEqual(1);
+    expect(privilegeManifest().sha256).toBe(p.sha256);
   });
 });

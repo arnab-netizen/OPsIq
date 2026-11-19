@@ -5,7 +5,9 @@ name: Production Release Reconcile
 # the verbatim origin guard below additionally refuses any other trigger/ref/definition).
 #
 # One run, in order, all in the protected `production-operator` environment (its approval/branch rules are NOT changed here):
-#   1. exact release SHA = main HEAD at run start; CI (`branch-protection`) must already be green at that exact SHA, else no-op
+#   1. exact release SHA = main HEAD at run start. ci.yml runs on pull requests only, so main has no check runs of its own: the commit is
+#      eligible only through VERIFIED-TREE EQUIVALENCE (merged PR into main, release tree == CI-tested PR-head tree, `branch-protection`
+#      success authored by the pinned Actions app on that head), else no-op. Migration and privilege manifests are computed from the tree
 #   2. production identity: exact pinned direct host (repository variable PRODUCTION_DATABASE_HOST) AND the database's own identity
 #   3. REAL migration ledger vs the complete committed chain (read-only transaction): NOOP / MIGRATE / BLOCK.
 #   4. Phase 2: MIGRATE (every pending migration allowlisted, ascending order) applies them ONLY with a fresh verified backup, then the ledger
@@ -39,6 +41,7 @@ jobs:
       contents: write   # ONLY to fast-forward the release branch and write durable attempt refs (refs/release-attempts/*); main is ruleset-protected
       checks: read
       deployments: read
+      pull-requests: read
 
     steps:
       - name: Assert workflow origin is main (fail-closed)
@@ -74,15 +77,22 @@ jobs:
           fi
           echo "RELEASE_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
 
-      - name: Require required CI green at this exact SHA (otherwise do nothing)
+      - name: Verify release evidence (verified-tree equivalence to a CI-green merged PR head; otherwise do nothing)
         id: ci
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          C=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/check-runs?per_page=100" --jq '[.check_runs[] | select(.name=="branch-protection")] | sort_by(.completed_at) | last | .conclusion // "none"')
-          echo "branch-protection conclusion at $RELEASE_SHA: $C"
-          if [ "$C" = "success" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "ready=false" >> "$GITHUB_OUTPUT"; echo "::notice::CI is not green at this SHA yet; nothing to release this run."; fi
+          set +e
+          node scripts/release/release-evidence.mjs | tee "$RUNNER_TEMP/evidence.txt"
+          RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$RC" -eq 0 ] && grep -q '^RELEASE_EVIDENCE=VERIFIED$' "$RUNNER_TEMP/evidence.txt"; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::main commit $RELEASE_SHA is not an eligible release (no verified CI evidence for its tree); nothing is released this run."
+          fi
 
       - name: Validate the pinned production host variable (bare hostname)
         if: steps.ci.outputs.ready == 'true'
@@ -122,6 +132,21 @@ jobs:
       - name: Remove local environment files
         if: steps.ci.outputs.ready == 'true'
         run: rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+
+      - name: Compute and record the release manifests (migration chain + runtime privilege set) bound to this SHA
+        if: steps.ci.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          TREE=$(git rev-parse HEAD^{tree})
+          npx tsx scripts/release/release-manifest.ts | tee "$RUNNER_TEMP/manifest.txt"
+          {
+            echo "### Release evidence"
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Release SHA | \`$RELEASE_SHA\` |"
+            echo "| Tree | \`$TREE\` |"
+            grep -E '^(EVIDENCE_|MIGRATION_|PRIVILEGE_)' "$RUNNER_TEMP/evidence.txt" "$RUNNER_TEMP/manifest.txt" | sed -E 's/^[^:]*://; s/=/ | /; s/^/| /; s/$/ |/'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify exact production database host (workflow-level gate)
         if: steps.ci.outputs.ready == 'true'
