@@ -21,7 +21,8 @@ import type { EngagementStatus, InterventionMode } from "@/domain/constants/stat
 import { INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { withCapabilityQuota } from "@/services/entitlement.service";
+import { withCapabilityQuota, type CapabilityReservation } from "@/services/entitlement.service";
+import type { Prisma } from "@/generated/prisma/client";
 
 // Service version for diagnostics - exported for route proof endpoint
 export const ENGAGEMENTS_SERVICE_VERSION = "engagements-service-prisma-debug-v2";
@@ -98,19 +99,20 @@ export async function createEngagement(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string; code: string }> {
-  // Plan quota: create_engagement is checked and recorded atomically before the write (PlanLimitError
-  // 402 at the limit). A failed create returns the unit; an idempotent replay of the same engagement
-  // consumes none.
-  const outcome = await withCapabilityQuota(workspaceId, "create_engagement", () => persistEngagement(input, authContext, workspaceId), {
-    consumedAmount: (o) => (o.isNew ? 1 : 0),
-  });
+  // Plan quota: create_engagement is reserved atomically before the write (PlanLimitError 402 at the
+  // limit) and kept only by settling it inside the engagement insert's transaction. A failed create or an
+  // idempotent replay of the same engagement settles nothing, so the unit is returned.
+  const outcome = await withCapabilityQuota(workspaceId, "create_engagement", (reservation) =>
+    persistEngagement(input, authContext, workspaceId, reservation)
+  );
   return { id: outcome.id, code: outcome.code };
 }
 
 async function persistEngagement(
   input: CreateEngagementInput,
   authContext: CanonicalAuthContext,
-  workspaceId: string
+  workspaceId: string,
+  reservation: CapabilityReservation
 ): Promise<{ id: string; code: string; isNew: boolean }> {
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -150,26 +152,31 @@ async function persistEngagement(
       // takes the same code fails the unique index. Surface that as a safe, retryable conflict.
       let engagement;
       try {
-        engagement = await db.engagement.create({
-          data: {
-            id: randomUUID(),
-            updatedAt: new Date(),
-            code,
-            title: input.title,
-            clientId: input.clientId,
-            workspaceId: validatedWorkspaceId,
-            serviceTier: input.serviceTier,
-            engagementMode: input.engagementMode,
-            description: input.description ?? null,
-            startDate: input.startDate ? new Date(input.startDate) : null,
-            targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
-            ownerId: input.ownerId ?? null,
-            assignedConsultantId: input.assignedConsultantId ?? null,
-            parentEngagementId: input.parentEngagementId ?? null,
-            createdBy: actorId,
-            status: "draft",
-            healthStatus: "unknown",
-          },
+        // The insert and the kept create_engagement unit commit together.
+        engagement = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+          const created = await tx.engagement.create({
+            data: {
+              id: randomUUID(),
+              updatedAt: new Date(),
+              code,
+              title: input.title,
+              clientId: input.clientId,
+              workspaceId: validatedWorkspaceId,
+              serviceTier: input.serviceTier,
+              engagementMode: input.engagementMode,
+              description: input.description ?? null,
+              startDate: input.startDate ? new Date(input.startDate) : null,
+              targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
+              ownerId: input.ownerId ?? null,
+              assignedConsultantId: input.assignedConsultantId ?? null,
+              parentEngagementId: input.parentEngagementId ?? null,
+              createdBy: actorId,
+              status: "draft",
+              healthStatus: "unknown",
+            },
+          });
+          await reservation.settle(tx);
+          return created;
         });
       } catch (error) {
         if ((error as { code?: string })?.code === "P2002") {

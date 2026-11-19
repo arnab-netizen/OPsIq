@@ -1,7 +1,9 @@
 import { randomUUID } from "crypto";
 import { db, withStatementTimeout } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import { NotFoundError, ValidationError, ForbiddenError, PlanLimitError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ForbiddenError, PlanLimitError, ConflictError } from "@/infra/errors";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logger } from "@/infra/logger";
 import { resolveAccess } from "@/domain/billing/paddle";
@@ -388,6 +390,37 @@ export async function consumeCapabilityUsage(
   key: string,
   amount: number = 1
 ): Promise<CapabilityCheck> {
+  return recordCapabilityUsageWithinLimit(tx, workspaceId, key, amount, null);
+}
+
+/** UsageEvent.reservationEntry values written by a quota reservation (see the UsageEvent model). */
+const RESERVATION_ENTRY = { RESERVE: "reserve", SETTLE: "settle", RELEASE: "release" } as const;
+
+/**
+ * Age after which a reservation with no release row is treated as abandoned (its process died between
+ * reserving and finalizing) and returned by reconcileExpiredCapabilityReservations. Far longer than any
+ * quota-limited operation can run (every one is bounded by the platform request timeout), and a business
+ * write that still arrives after its reservation was returned is rejected by settle (see below), so a
+ * returned unit can never be kept by a late write.
+ */
+export const CAPABILITY_RESERVATION_TTL_MS = 30 * 60_000;
+
+/**
+ * Oldest reservation the sweep still examines. Usage only counts against a limit within its billing
+ * period; this bound keeps every sweep an index range scan instead of a scan of the whole ledger.
+ */
+const CAPABILITY_RESERVATION_RECOVERY_HORIZON_MS = 35 * 86_400_000;
+
+/** Upper bound on reservations one sweep call finalizes; the rest are taken by the next call. */
+const CAPABILITY_RESERVATION_SWEEP_BATCH = 200;
+
+async function recordCapabilityUsageWithinLimit(
+  tx: Prisma.TransactionClient,
+  workspaceId: string,
+  key: string,
+  amount: number,
+  reservationId: string | null
+): Promise<CapabilityCheck> {
   if (!workspaceId || !key) {
     throw new ValidationError("workspaceId and key are required");
   }
@@ -410,25 +443,135 @@ export async function consumeCapabilityUsage(
 
   await tx.usageEvent.create({
     data: {
-      id: randomUUID(),
+      id: reservationId ?? randomUUID(),
       workspaceId,
       key,
       value: amount,
       timestamp: new Date(),
+      ...(reservationId ? { reservationId, reservationEntry: RESERVATION_ENTRY.RESERVE } : {}),
     },
   });
 
   return { ...check, usage: (check.usage ?? 0) + amount };
 }
 
+/**
+ * Handle on the units withCapabilityQuota reserved for one operation. The operation keeps a unit by
+ * calling `settle(tx)` with the transaction client of the business write that consumes it, as the LAST
+ * statement of that transaction: the unit is then kept exactly when the business write commits. Units
+ * the operation does not settle are returned when it finishes, or by the expiry sweep if the process
+ * dies first.
+ */
+export interface CapabilityReservation {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly key: string;
+  readonly amount: number;
+  /**
+   * Keep one reserved unit, atomically with the business write running in `tx`. Throws ConflictError
+   * (rolling that write back) when the reservation was already finalized, e.g. returned by the expiry
+   * sweep, and an Error when every reserved unit is already settled.
+   */
+  settle(tx: Prisma.TransactionClient): Promise<void>;
+}
+
 export interface CapabilityQuotaOptions<T> {
   /** Units reserved before the operation runs (default 1). */
   amount?: number;
   /**
-   * Units the operation actually consumed (0..amount), derived from its result. Defaults to `amount`.
-   * Return 0 for an idempotent replay or a run that produced nothing, so it does not consume quota.
+   * Units kept from the operation's RESULT, for an operation whose business outcome spans several
+   * transactions and so cannot settle inside one (0..amount, default 0). Added to the units settled
+   * in-transaction, capped at `amount`. Units kept this way are recorded when the operation returns, so a
+   * crash between the business writes and that moment returns them: prefer `reservation.settle(tx)`.
    */
-  consumedAmount?: (result: T) => number;
+  keptFromResult?: (result: T) => number;
+}
+
+/** Lock the reservation's own row: serializes settle, completion and sweep of ONE reservation. */
+async function lockReservation(tx: Prisma.TransactionClient, reservationId: string, workspaceId: string): Promise<boolean> {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM usage_events
+    WHERE id = ${reservationId}::uuid AND workspace_id = ${workspaceId}::uuid AND reservation_entry = 'reserve'
+    FOR UPDATE`;
+  return rows.length === 1;
+}
+
+async function isReservationFinalized(tx: Prisma.TransactionClient, reservationId: string): Promise<boolean> {
+  const released = await tx.usageEvent.count({
+    where: { reservationId, reservationEntry: RESERVATION_ENTRY.RELEASE },
+  });
+  return released > 0;
+}
+
+async function countSettledUnits(tx: Prisma.TransactionClient, reservationId: string): Promise<number> {
+  return tx.usageEvent.count({ where: { reservationId, reservationEntry: RESERVATION_ENTRY.SETTLE } });
+}
+
+function createReservation(id: string, workspaceId: string, key: string, amount: number): CapabilityReservation {
+  return {
+    id,
+    workspaceId,
+    key,
+    amount,
+    async settle(tx: Prisma.TransactionClient): Promise<void> {
+      if (!(await lockReservation(tx, id, workspaceId))) {
+        throw new ConflictError("The plan usage reserved for this operation no longer exists. Nothing was saved; please try again.");
+      }
+      if (await isReservationFinalized(tx, id)) {
+        throw new ConflictError("The plan usage reserved for this operation has expired. Nothing was saved; please try again.");
+      }
+      if ((await countSettledUnits(tx, id)) >= amount) {
+        throw new Error(`Capability reservation ${id} has no unsettled unit left (${amount} reserved)`);
+      }
+      await tx.usageEvent.create({
+        data: {
+          id: randomUUID(),
+          workspaceId,
+          key,
+          value: 0,
+          timestamp: new Date(),
+          reservationId: id,
+          reservationEntry: RESERVATION_ENTRY.SETTLE,
+        },
+      });
+    },
+  };
+}
+
+export interface ReservationFinalization {
+  /** Units returned to the plan (0 when every reserved unit was kept). */
+  returned: number;
+  kept: number;
+}
+
+/**
+ * Finalize one reservation inside `tx`: return every unit that was not settled (plus `extraKept` kept
+ * from a result) with ONE compensating release row. Returns null when the reservation was already
+ * finalized, so completion and the expiry sweep can race without returning a unit twice (row lock, then
+ * re-check; the partial unique index usage_events_one_release_per_reservation enforces it in the database).
+ */
+async function finalizeReservationInTransaction(
+  tx: Prisma.TransactionClient,
+  reservation: { id: string; workspaceId: string; key: string; amount: number },
+  extraKept: number
+): Promise<ReservationFinalization | null> {
+  if (!(await lockReservation(tx, reservation.id, reservation.workspaceId))) return null;
+  if (await isReservationFinalized(tx, reservation.id)) return null;
+  const settled = await countSettledUnits(tx, reservation.id);
+  const kept = Math.min(reservation.amount, settled + Math.max(0, Math.trunc(extraKept)));
+  const returned = reservation.amount - kept;
+  await tx.usageEvent.create({
+    data: {
+      id: randomUUID(),
+      workspaceId: reservation.workspaceId,
+      key: reservation.key,
+      value: -returned,
+      timestamp: new Date(),
+      reservationId: reservation.id,
+      reservationEntry: RESERVATION_ENTRY.RELEASE,
+    },
+  });
+  return { returned, kept };
 }
 
 /**
@@ -436,90 +579,208 @@ export interface CapabilityQuotaOptions<T> {
  * transaction: the per-process pool has a single connection, so a write through the global `db` inside
  * an open interactive transaction would wait on that transaction's own connection).
  *
- * The limit check and the usage record are made atomic by reserving the units FIRST, in their own short
- * transaction under the capability lock (consumeCapabilityUsage). The operation then runs; if it throws,
- * or reports consuming fewer units than reserved, the unused units are returned with a compensating
- * (negative) usage event. Usage is append-only: no usage row is ever updated or deleted.
+ * 1. Reserve: the limit check and a durable reservation row are written atomically in their own short
+ *    transaction under the capability lock. Throws PlanLimitError (402) here, before the operation runs,
+ *    when the limit would be exceeded.
+ * 2. Run: the operation receives the reservation and keeps each unit it consumes with
+ *    `reservation.settle(tx)` inside the transaction of the business write consuming it.
+ * 3. Finalize: when the operation returns or throws, every unit not settled is returned with one
+ *    compensating release row. Usage is append-only: no usage row is ever updated or deleted.
  *
- * Throws PlanLimitError (402) before the operation runs when the limit would be exceeded.
+ * If the process dies between 1 and 3, or finalization fails, the reservation stays open and
+ * reconcileExpiredCapabilityReservations returns its unsettled units once it is older than
+ * CAPABILITY_RESERVATION_TTL_MS; settled units are never returned.
  */
 export async function withCapabilityQuota<T>(
   workspaceId: string,
   key: string,
-  operation: () => Promise<T>,
+  operation: (reservation: CapabilityReservation) => Promise<T>,
   options: CapabilityQuotaOptions<T> = {}
 ): Promise<T> {
   const amount = options.amount ?? 1;
+  const reservationId = randomUUID();
 
   try {
     await withStatementTimeout(
       db,
       CAPABILITY_QUOTA_TRANSACTION_TIMEOUT_MS,
-      (tx) => consumeCapabilityUsage(tx, workspaceId, key, amount),
+      (tx) => recordCapabilityUsageWithinLimit(tx, workspaceId, key, amount, reservationId),
       `capability_quota.reserve:${key}`
     );
   } catch (error) {
     // Fail closed, as assertCapability does: an unverifiable entitlement is a denial.
-    if (error instanceof PlanLimitError) throw error;
+    if (error instanceof PlanLimitError || error instanceof ValidationError) throw error;
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     throw new PlanLimitError(key, `Entitlement check failed: ${governed.operatorMessage}`);
   }
 
+  const reservation = createReservation(reservationId, workspaceId, key, amount);
   let result: T;
   try {
-    result = await operation();
+    result = await operation(reservation);
   } catch (error) {
-    await releaseCapabilityUsage(workspaceId, key, amount, "operation_failed");
+    await finalizeCapabilityReservation(reservation, 0, "operation_failed");
     throw error;
   }
 
-  const consumed = options.consumedAmount ? options.consumedAmount(result) : amount;
-  const unused = amount - Math.min(Math.max(Math.trunc(consumed), 0), amount);
-  if (unused > 0) {
-    await releaseCapabilityUsage(workspaceId, key, unused, "not_consumed");
-  }
+  await finalizeCapabilityReservation(reservation, options.keptFromResult ? options.keptFromResult(result) : 0, "completed");
   return result;
 }
 
 /**
- * Return reserved-but-unused units with a compensating negative usage event, under the same capability
- * lock. Never throws: a failed release leaves the units counted (fail safe — the limit can only be
- * under-used, never overrun), and is logged for reconciliation.
+ * Finalize a reservation after its operation. Never throws: a failed finalization leaves the
+ * reservation open, and the expiry sweep returns its unsettled units later (logged here).
  */
-async function releaseCapabilityUsage(
-  workspaceId: string,
-  key: string,
-  amount: number,
-  reason: "operation_failed" | "not_consumed"
+async function finalizeCapabilityReservation(
+  reservation: CapabilityReservation,
+  extraKept: number,
+  reason: "operation_failed" | "completed"
 ): Promise<void> {
   try {
     await withStatementTimeout(
       db,
       CAPABILITY_QUOTA_TRANSACTION_TIMEOUT_MS,
-      async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${capabilityQuotaLockKey(workspaceId, key)}, 0))`;
-        await tx.usageEvent.create({
-          data: {
-            id: randomUUID(),
-            workspaceId,
-            key,
-            value: -amount,
-            timestamp: new Date(),
-          },
-        });
-      },
-      `capability_quota.release:${key}`
+      (tx) => finalizeReservationInTransaction(tx, reservation, extraKept),
+      `capability_quota.finalize:${reservation.key}`
     );
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.error("Failed to release reserved capability usage; units stay counted", {
-      workspaceId,
-      key,
-      amount,
+    logger.error("Failed to finalize a capability reservation; the expiry sweep will return its unsettled units", {
+      workspaceId: reservation.workspaceId,
+      key: reservation.key,
+      reservationId: reservation.id,
       reason,
       error: governed.operatorMessage,
     });
   }
+}
+
+export interface CapabilityReservationSweepResult {
+  /** Expired, still-open reservations found for the workspace (at most one batch). */
+  examined: number;
+  /** Reservations this call finalized (a reservation finalized concurrently by another caller is not counted). */
+  finalized: number;
+  /** Units returned to the plan across those reservations. */
+  unitsReturned: number;
+}
+
+/**
+ * Reconcile one workspace's abandoned quota reservations: every reservation older than `ttlMs` (default
+ * CAPABILITY_RESERVATION_TTL_MS) that was never finalized gets its UNSETTLED units returned with one
+ * release row and an audit event, in one transaction per reservation. Settled units (business writes
+ * that committed) are kept; a reservation younger than the TTL (possibly still in flight) is untouched.
+ *
+ * Idempotent and concurrency-safe: each reservation is finalized under its own row lock with a re-check,
+ * and the database admits one release row per reservation, so concurrent or repeated sweeps (and a late
+ * normal completion) return each unit at most once. Workspace-scoped: it only reads and writes rows of
+ * `workspaceId`.
+ */
+export async function reconcileExpiredCapabilityReservations(
+  workspaceId: string,
+  now: Date = new Date(),
+  ttlMs: number = CAPABILITY_RESERVATION_TTL_MS
+): Promise<CapabilityReservationSweepResult> {
+  if (!workspaceId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId)) {
+    throw new ValidationError("workspaceId must be a UUID");
+  }
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
+    throw new ValidationError("now must be a valid date");
+  }
+  if (!Number.isFinite(ttlMs) || ttlMs < CAPABILITY_RESERVATION_TTL_MS) {
+    throw new ValidationError(`ttlMs must be at least ${CAPABILITY_RESERVATION_TTL_MS}ms`);
+  }
+  const cutoff = new Date(now.getTime() - ttlMs);
+  const horizon = new Date(now.getTime() - CAPABILITY_RESERVATION_RECOVERY_HORIZON_MS);
+
+  const open = await findOpenReservations({ workspaceId, before: cutoff, notBefore: horizon });
+
+  let finalized = 0;
+  let unitsReturned = 0;
+  for (const reservation of open) {
+    const outcome = await withStatementTimeout(
+      db,
+      CAPABILITY_QUOTA_TRANSACTION_TIMEOUT_MS,
+      async (tx) => {
+        const done = await finalizeReservationInTransaction(tx, reservation, 0);
+        if (!done) return null;
+        await emitAuditEvent(
+          {
+            eventName: AUDIT_EVENTS.BILLING_USAGE_RESERVATION_RECOVERED,
+            workspaceId,
+            actorType: "system",
+            entityType: "usage_reservation",
+            entityId: reservation.id,
+            payload: {
+              capability: reservation.key,
+              reserved: reservation.amount,
+              kept: done.kept,
+              returned: done.returned,
+              reservedAt: reservation.timestamp.toISOString(),
+              ttlMs,
+            },
+            visibility: "internal",
+          },
+          tx
+        );
+        return done;
+      },
+      `capability_quota.sweep:${reservation.key}`
+    );
+    if (outcome) {
+      finalized += 1;
+      unitsReturned += outcome.returned;
+    }
+  }
+
+  if (finalized > 0) {
+    logger.warn("Returned the unsettled units of abandoned capability reservations", { workspaceId, finalized, unitsReturned });
+  }
+  return { examined: open.length, finalized, unitsReturned };
+}
+
+interface OpenReservationRow {
+  id: string;
+  workspaceId: string;
+  key: string;
+  amount: number;
+  timestamp: Date;
+}
+
+interface OpenReservationDbRow {
+  id: string;
+  workspace_id: string;
+  key: string;
+  value: number;
+  timestamp: Date;
+}
+
+async function findOpenReservations(scope: { workspaceId: string | null; before: Date; notBefore: Date }): Promise<OpenReservationRow[]> {
+  const rows: OpenReservationDbRow[] = await db.$queryRaw<OpenReservationDbRow[]>`
+    SELECT r.id, r.workspace_id, r.key, r.value, r.timestamp
+    FROM usage_events r
+    WHERE r.reservation_entry = 'reserve'
+      AND r.timestamp < ${scope.before}
+      AND r.timestamp >= ${scope.notBefore}
+      AND (${scope.workspaceId}::uuid IS NULL OR r.workspace_id = ${scope.workspaceId}::uuid)
+      AND NOT EXISTS (
+        SELECT 1 FROM usage_events x WHERE x.reservation_id = r.id AND x.reservation_entry = 'release'
+      )
+    ORDER BY r.timestamp ASC
+    LIMIT ${CAPABILITY_RESERVATION_SWEEP_BATCH}`;
+  return rows.map((r) => ({ id: r.id, workspaceId: r.workspace_id, key: r.key, amount: r.value, timestamp: r.timestamp }));
+}
+
+/**
+ * Workspaces holding at least one abandoned (expired, never finalized) quota reservation: the producer
+ * scan for the scheduled reservation sweep. Bounded to one batch; the rest are found on the next scan.
+ */
+export async function findWorkspacesWithExpiredCapabilityReservations(now: Date = new Date()): Promise<string[]> {
+  const open = await findOpenReservations({
+    workspaceId: null,
+    before: new Date(now.getTime() - CAPABILITY_RESERVATION_TTL_MS),
+    notBefore: new Date(now.getTime() - CAPABILITY_RESERVATION_RECOVERY_HORIZON_MS),
+  });
+  return [...new Set(open.map((r) => r.workspaceId))];
 }
 
 /**

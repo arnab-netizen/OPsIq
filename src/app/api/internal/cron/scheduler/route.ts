@@ -50,6 +50,7 @@ import {
   enqueueDueFinanceLearningBridgeTasks,
   enqueueDueReassessmentScanTasks,
   enqueueDueRiskReviewScanTasks,
+  enqueueDueQuotaReservationSweepTasks,
 } from "@/services/scheduler/scheduler-producers";
 import { enqueueDueQboSyncTasks } from "@/services/quickbooks/qbo-sync-scheduling";
 import { captureError } from "@/infra/observability";
@@ -120,6 +121,15 @@ export async function GET(request: Request): Promise<NextResponse> {
     (results.producers as Record<string, unknown>).qboSync = await enqueueDueQboSyncTasks();
   } catch (err) {
     errors.push("producers.qboSync: failed to enqueue QuickBooks sync tasks");
+    captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
+  }
+
+  // Plan-quota reservation sweep producer runs on its own, like QuickBooks: its failure must not hide the others.
+  try {
+    results.producers = results.producers ?? {};
+    (results.producers as Record<string, unknown>).quotaReservationSweep = await enqueueDueQuotaReservationSweepTasks();
+  } catch (err) {
+    errors.push("producers.quotaReservationSweep: failed to enqueue plan-quota reservation sweep tasks");
     captureError(err, { category: "UNEXPECTED_ERROR", route: "/api/internal/cron/scheduler" });
   }
 

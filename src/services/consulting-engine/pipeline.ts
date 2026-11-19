@@ -25,13 +25,14 @@ export async function runConsultingPipeline(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<ConsultingEnginePipelineResult> {
-  // Plan quota: one decision_engine unit is checked and recorded atomically before the run (PlanLimitError
-  // 402 at the limit). It stays consumed only for a SUCCESS run; a failed or non-success run returns it.
+  // Plan quota: one decision_engine unit is reserved atomically before the run (PlanLimitError 402 at the
+  // limit). It is kept only for a SUCCESS run; a failed or non-success run returns it. A run's outcome spans
+  // many transactions (recommendations, actions, audit), so the unit is kept from the run's result.
   return withCapabilityQuota(
     workspaceId,
     "decision_engine",
     () => executeConsultingPipeline(engagementId, authContext, workspaceId),
-    { consumedAmount: (result) => (result.status === "SUCCESS" ? 1 : 0) }
+    { keptFromResult: (result) => (result.status === "SUCCESS" ? 1 : 0) }
   );
 }
 

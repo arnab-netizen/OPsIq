@@ -12,7 +12,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { enforceActionRules } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { withCapabilityQuota } from "@/services/entitlement.service";
+import { withCapabilityQuota, type CapabilityReservation } from "@/services/entitlement.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
 import type { Prisma } from "@/generated/prisma/client";
@@ -78,16 +78,13 @@ export async function createAction(
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  // Plan quota: action_create is checked and recorded atomically before the write (PlanLimitError 402 at
-  // the limit), for every caller (route, consulting pipeline, execute workflow). A failed write returns
-  // the unit; an idempotent replay consumes none. Auth and workspace context are verified first, before any
-  // database access.
+  // Plan quota: action_create is reserved atomically before the write (PlanLimitError 402 at the limit),
+  // for every caller (route, consulting pipeline, execute workflow), and kept only by settling it inside
+  // the action insert's transaction. A failed write or an idempotent replay settles nothing, so the unit
+  // is returned. Auth and workspace context are verified first, before any database access.
   requireServiceContext(authContext, workspaceId);
-  const outcome = await withCapabilityQuota(
-    workspaceId,
-    "action_create",
-    () => persistAction(input, authContext, workspaceId, idempotencyKey),
-    { consumedAmount: (o) => (o.isNew ? 1 : 0) }
+  const outcome = await withCapabilityQuota(workspaceId, "action_create", (reservation) =>
+    persistAction(input, authContext, workspaceId, reservation, idempotencyKey)
   );
   return outcome.action;
 }
@@ -96,6 +93,7 @@ async function persistAction(
   input: CreateActionInput,
   authContext: CanonicalAuthContext,
   workspaceId: string,
+  reservation: CapabilityReservation,
   idempotencyKey?: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -160,6 +158,8 @@ async function persistAction(
             visibility: "internal",
           }, tx);
 
+          // Keep the reserved action_create unit atomically with the insert (last statement).
+          await reservation.settle(tx);
           return action;
         }, { timeout: 30000 });
       },
@@ -196,18 +196,23 @@ async function persistAction(
     return { action: result.result, isNew: result.isNew };
   }
 
-  const action = await db.action.create({
-    data: {
-      id: randomUUID(),
-      engagementId: input.engagementId,
-      recommendationId: input.recommendationId,
-      title: input.title,
-      description: input.description || null,
-      assignedTo: input.assignedTo || null,
-      dueAt: input.dueDate ? new Date(input.dueDate) : null,
-      status: "draft",
-      updatedAt: new Date(),
-    },
+  // The insert and the kept action_create unit commit together.
+  const action = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.action.create({
+      data: {
+        id: randomUUID(),
+        engagementId: input.engagementId,
+        recommendationId: input.recommendationId,
+        title: input.title,
+        description: input.description || null,
+        assignedTo: input.assignedTo || null,
+        dueAt: input.dueDate ? new Date(input.dueDate) : null,
+        status: "draft",
+        updatedAt: new Date(),
+      },
+    });
+    await reservation.settle(tx);
+    return created;
   });
 
   // Emit event sourcing event (non-blocking)

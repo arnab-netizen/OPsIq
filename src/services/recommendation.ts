@@ -16,7 +16,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { withCapabilityQuota } from "@/services/entitlement.service";
+import { withCapabilityQuota, type CapabilityReservation } from "@/services/entitlement.service";
 import { validateRecommendationTransition, type RecommendationStoredStatus } from "@/policies/state-transition";
 import type { RecommendationStatus } from "@/domain/constants/statuses";
 import { EventEmitterService } from "@/services/event-emitter";
@@ -388,13 +388,11 @@ export async function createRecommendation(
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  // Plan quota: generate_recommendation is checked and recorded atomically before the write
-  // (PlanLimitError 402 at the limit). A failed write returns the unit; an idempotent replay consumes none.
-  const outcome = await withCapabilityQuota(
-    workspaceId,
-    "generate_recommendation",
-    () => persistRecommendation(input, authContext, workspaceId, idempotencyKey),
-    { consumedAmount: (o) => (o.isNew ? 1 : 0) }
+  // Plan quota: generate_recommendation is reserved atomically before the write (PlanLimitError 402 at the
+  // limit) and kept only by settling it inside the recommendation insert's transaction. A failed write or
+  // an idempotent replay settles nothing, so the unit is returned.
+  const outcome = await withCapabilityQuota(workspaceId, "generate_recommendation", (reservation) =>
+    persistRecommendation(input, authContext, workspaceId, reservation, idempotencyKey)
   );
   return outcome.recommendation;
 }
@@ -403,6 +401,7 @@ async function persistRecommendation(
   input: CreateRecommendationInput,
   authContext: CanonicalAuthContext,
   workspaceId: string,
+  reservation: CapabilityReservation,
   idempotencyKey?: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
@@ -542,6 +541,8 @@ async function persistRecommendation(
             sensitivityClassification: "standard",
           });
 
+          // Keep the reserved generate_recommendation unit atomically with the insert (last statement).
+          await reservation.settle(tx);
           return recommendation;
         });
       },
@@ -566,25 +567,30 @@ async function persistRecommendation(
 
   const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
-  const recommendation = await db.recommendation.create({
-    data: {
-      engagementId: input.engagementId,
-      findingId: input.findingId,
-      priority: derivedPriority,
-      title: input.title,
-      description: input.description,
-      estimatedImpact: input.expectedImpact,
-      workspaceId: validatedWorkspaceId,
-      createdBy: userId,
-      evidenceValidationScore: Math.round(
-        evidenceAssessment.validationScore * 100
-      ),
-      reliabilityLevel: evidenceAssessment.reliabilityLevel,
-      kpiHealthScore:
-        kpiAssessment.healthScore === null ? null : Math.round(kpiAssessment.healthScore * 100),
-      kpiRiskLevel: kpiAssessment.riskLevel,
-      ...(constraintsConsidered && { constraintsConsidered }),
-    },
+  // The insert and the kept generate_recommendation unit commit together.
+  const recommendation = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.recommendation.create({
+      data: {
+        engagementId: input.engagementId,
+        findingId: input.findingId,
+        priority: derivedPriority,
+        title: input.title,
+        description: input.description,
+        estimatedImpact: input.expectedImpact,
+        workspaceId: validatedWorkspaceId,
+        createdBy: userId,
+        evidenceValidationScore: Math.round(
+          evidenceAssessment.validationScore * 100
+        ),
+        reliabilityLevel: evidenceAssessment.reliabilityLevel,
+        kpiHealthScore:
+          kpiAssessment.healthScore === null ? null : Math.round(kpiAssessment.healthScore * 100),
+        kpiRiskLevel: kpiAssessment.riskLevel,
+        ...(constraintsConsidered && { constraintsConsidered }),
+      },
+    });
+    await reservation.settle(tx);
+    return created;
   });
 
   await emitAuditEvent({

@@ -222,7 +222,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/engagement.ts",
-      "line": 506,
+      "line": 513,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
@@ -231,7 +231,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/engagement.ts",
-      "line": 545,
+      "line": 552,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
@@ -240,7 +240,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/engagement.ts",
-      "line": 594,
+      "line": 601,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"

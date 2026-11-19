@@ -174,6 +174,7 @@ export async function addDecisionItemsWithinQuota(workspaceId: string, items: Op
   }
   await withCapabilityQuota(workspaceId, CAPABILITIES.DECISION_CREATE, () => addItems(items), {
     amount: items.length,
+    keptFromResult: () => items.length,
   });
 }
 
