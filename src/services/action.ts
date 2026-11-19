@@ -5,7 +5,8 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { triggerReEvaluation } from "@/services/re-evaluation";
+import { triggerReEvaluation, ReEvaluationInProgressError } from "@/services/re-evaluation";
+import { blockerReEvaluationEvent, enqueueActionBlockerReEvaluation } from "@/services/action-reevaluation-scheduling";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
@@ -318,7 +319,13 @@ async function prepareActionStatusChange(
   return { previousStatus, newStatus, blockerReason, metadataPatch: blockerReasonPatch(newStatus, blockerReason) };
 }
 
-/** A newly blocked action is an unresolved blocker: route it into governed re-evaluation. */
+/**
+ * A newly blocked action is an unresolved blocker: route it into governed re-evaluation. Runs AFTER
+ * the write committed, so a re-evaluation of the same engagement already in progress must not fail
+ * the request (the row is written; the client must get its new version). That running evaluation
+ * may already have read the pre-block state, so the event is deferred through the scheduler
+ * instead of being dropped (services/action-reevaluation-scheduling.ts).
+ */
 async function reEvaluateIfNewlyBlocked(args: {
   actionId: string;
   engagementId: string;
@@ -327,17 +334,18 @@ async function reEvaluateIfNewlyBlocked(args: {
   title: string;
   previousStatus: string;
   newStatus: string;
+  committedVersion: number;
 }): Promise<void> {
-  if (args.newStatus === "blocked" && args.previousStatus !== "blocked") {
-    await triggerReEvaluation({
-      changeType: "unresolved_critical_blocker",
-      entityType: "action",
-      entityId: args.actionId,
-      engagementId: args.engagementId,
+  if (args.newStatus !== "blocked" || args.previousStatus === "blocked") return;
+  try {
+    await triggerReEvaluation(blockerReEvaluationEvent(args));
+  } catch (error) {
+    if (!(error instanceof ReEvaluationInProgressError)) throw error;
+    await enqueueActionBlockerReEvaluation({
+      actionId: args.actionId,
       workspaceId: args.workspaceId,
-      severity: "high",
-      description: `Action blocked: ${args.title || "action"}`,
-      triggeredBy: args.actorId,
+      actorId: args.actorId,
+      version: args.committedVersion,
     });
   }
 }
@@ -407,6 +415,7 @@ export async function updateActionStatus(
     title: action.title,
     previousStatus,
     newStatus,
+    committedVersion: updated.version,
   });
 
   logger.info("Action status updated", {
@@ -578,6 +587,7 @@ export async function updateAction(
       title: updated.title,
       previousStatus: statusChange.previousStatus,
       newStatus: statusChange.newStatus,
+      committedVersion: updated.version,
     });
   }
 
