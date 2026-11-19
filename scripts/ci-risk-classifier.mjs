@@ -133,16 +133,20 @@ const RULES = [
       p === 'src/lib/db.ts' ||
       p === 'src/lib/enforced-route.ts' ||
       p === 'src/lib/canonical-route-enforcement.ts' ||
+      p === 'src/lib/execution-reentry-detector.ts' ||
+      p === 'src/infra/telemetry-sanitizer.ts' ||
       p === 'src/lib/canonical-capability-resolver.ts' ||
       p === 'src/domain/constants/capabilities.ts' },
   // Quota / entitlement / billing webhooks (rp5, rp2). Exact names: broader entitlement*/billing* file-name rules keep their tier-4 treatment.
   { tier: TIERS.DB_RUNTIME, test: (p) =>
       p === 'src/services/entitlement.service.ts' ||
       p === 'src/middleware/tier-enforcement.ts' ||
+      p === 'src/services/webhook.service.ts' || p === 'src/services/webhooks.service.ts' || p === 'src/services/billing/paddle-webhook.service.ts' ||
       /^src\/app\/api\/(entitlement|webhooks)\//.test(p) },
   // Operational survivability: health/readiness/liveness handlers and rate limiting (rp3-survivability).
   { tier: TIERS.DB_RUNTIME, test: (p) =>
       /^src\/app\/api\/(health|readiness|liveness)\//.test(p) ||
+      p === 'src/runtime/resilience/circuit-breaker.ts' ||
       p === 'src/infra/rate-limit.ts' || p === 'src/middleware/rate-limit.ts' || p === 'src/services/rate-limit.ts' },
 
   // ---- Tier 4: security / auth / tenancy / entitlement ----

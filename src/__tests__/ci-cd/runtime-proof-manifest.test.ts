@@ -62,6 +62,7 @@ describe("classifier: runtime-proof changes and protected capabilities require t
       "src/lib/prisma-workspace-enforcement.ts", "src/lib/db.ts", "src/lib/enforced-route.ts", "src/domain/constants/capabilities.ts",
       "src/services/entitlement.service.ts", "src/middleware/tier-enforcement.ts", "src/app/api/webhooks/stripe/route.ts", "src/app/api/entitlement/quota/route.ts",
       "src/app/api/health/route.ts", "src/app/api/readiness/route.ts", "src/infra/rate-limit.ts",
+      "src/lib/execution-reentry-detector.ts", "src/infra/telemetry-sanitizer.ts", "src/services/webhook.service.ts", "src/services/billing/paddle-webhook.service.ts", "src/runtime/resilience/circuit-breaker.ts",
     ]) expect(db([p]), p).toBe(true);
   });
   it("docs and unrelated cosmetic application changes do not", () => {
