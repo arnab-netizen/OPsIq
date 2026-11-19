@@ -57,7 +57,12 @@ vi.mock("@/infra/audit", async (importOriginal) => {
 });
 
 import { POST } from "@/app/api/webhooks/stripe/route";
-import { checkSignatureTimestamp, handleWebhookEvent, verifyWebhookSignature } from "@/services/webhook.service";
+import {
+  PROCESSING_TIMEOUT_MS,
+  checkSignatureTimestamp,
+  handleWebhookEvent,
+  verifyWebhookSignature,
+} from "@/services/webhook.service";
 
 const RUN = randomUUID().slice(0, 8);
 const SECRET = `whsec_test_${RUN}`;
@@ -607,5 +612,39 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     expect(row?.processedAt).toBeInstanceOf(Date);
     expect((await subscription())?.status).toBe("active");
     expect(await activationAudits()).toBe(1);
+  });
+  // ── Timeout backstop timer must not outlive the processing it guards ──────
+
+  /** Count backstop timers (delay === PROCESSING_TIMEOUT_MS) armed during `run` and never cleared. */
+  async function backstopTimersLeftArmed(run: () => Promise<unknown>) {
+    // Call-through spies: timers behave normally, the spies only record handles.
+    const setSpy = vi.spyOn(globalThis, "setTimeout");
+    const clearSpy = vi.spyOn(globalThis, "clearTimeout");
+    try {
+      await run().catch(() => undefined);
+      const armed = setSpy.mock.calls
+        .map((call, i) => ({ ms: call[1], handle: setSpy.mock.results[i]?.value }))
+        .filter((t) => t.ms === PROCESSING_TIMEOUT_MS)
+        .map((t) => t.handle);
+      const cleared = new Set(clearSpy.mock.calls.map((call) => call[0]));
+      return armed.filter((handle) => !cleared.has(handle)).length;
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    }
+  }
+
+  it("processing timeout timer is cleared once processing succeeds", async () => {
+    const id = nextEventId();
+    await db.webhookEvent.create({ data: { stripeEventId: id, type: "invoice.paid", status: "processing", attempts: 0 } });
+    expect(await backstopTimersLeftArmed(() => handleWebhookEvent({ id, type: "invoice.paid", data: { object: {} } }))).toBe(0);
+    expect((await eventRow(id))?.status).toBe("processed");
+  });
+
+  it("processing timeout timer is cleared once processing fails", async () => {
+    const id = nextEventId();
+    await db.webhookEvent.create({ data: { stripeEventId: id, type: "checkout.session.completed", status: "processing", attempts: 0 } });
+    expect(await backstopTimersLeftArmed(() => handleWebhookEvent(checkoutCompleted(id, `cus_unknown_${RUN}`)))).toBe(0);
+    expect((await eventRow(id))?.status).toBe("processing");
   });
 });

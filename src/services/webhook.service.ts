@@ -20,7 +20,7 @@ const WEBHOOK_STATEMENT_TIMEOUT_MS = 10_000;
  * (queue wait + acquire maxWait + its transaction timeout) plus the repo's client-side margin, so
  * it can never fire while the transaction could still legitimately commit (src/lib/db.ts).
  */
-const PROCESSING_TIMEOUT_MS =
+export const PROCESSING_TIMEOUT_MS =
   ACQUISITION_QUEUE_WAIT_MS +
   TRANSACTION_ACQUIRE_MAX_WAIT_MS +
   Math.max(WEBHOOK_STATEMENT_TIMEOUT_MS + 2_000, 5_000) +
@@ -1085,12 +1085,13 @@ async function applyWebhookEvent(tx: WebhookTx, event: StripeWebhookEventInput):
  * caller to mark failed; a retry then re-applies from a clean state exactly once.
  */
 export async function handleWebhookEvent(event: StripeWebhookEventInput): Promise<void> {
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(
       () => reject(new Error(`Webhook processing timeout after ${PROCESSING_TIMEOUT_MS}ms`)),
       PROCESSING_TIMEOUT_MS
-    )
-  );
+    );
+  });
 
   const processingPromise = (async () => {
     try {
@@ -1120,5 +1121,11 @@ export async function handleWebhookEvent(event: StripeWebhookEventInput): Promis
     }
   })();
 
-  return Promise.race([processingPromise, timeoutPromise]);
+  try {
+    return await Promise.race([processingPromise, timeoutPromise]);
+  } finally {
+    // The backstop must not outlive the work it guards (it kept the process / vitest alive for
+    // the full window after every delivery).
+    clearTimeout(timeoutHandle);
+  }
 }
