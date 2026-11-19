@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { updateRecommendation } from "@/services/recommendation";
@@ -178,5 +178,29 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("updateRecommendation — status changes f
     expect(payload.previousStatus).toBe("proposed");
     expect(payload.status).toBe("endorsed");
     expect(payload.priority).toBe("high");
+  });
+
+  it("[db] N3: result and audit describe this call's write even if another writer commits right after the CAS", async () => {
+    const id = await makeRec("proposed");
+    const realUpdateMany = db.recommendation.updateMany.bind(db.recommendation);
+    const spy = vi.spyOn(db.recommendation, "updateMany").mockImplementationOnce(async (args: Parameters<typeof realUpdateMany>[0]) => {
+      const result = await realUpdateMany(args);
+      // A second writer lands between this call's compare-and-set and its next statement.
+      await realUpdateMany({ where: { id }, data: { status: "withdrawn", version: { increment: 1 } } });
+      return result;
+    });
+    try {
+      const returned = await updateRecommendation(id, { version: 1, status: "endorsed" }, ctx(ws), ws);
+      expect(returned.status).toBe("endorsed");
+      expect(returned.version).toBe(2);
+      const event = await db.auditEvent.findFirstOrThrow({ where: { workspaceId: ws, entityId: id, eventName: "recommendation.updated" } });
+      const payload = (typeof event.payload === "string" ? JSON.parse(event.payload) : event.payload) as Record<string, unknown>;
+      expect(payload).toMatchObject({ previousStatus: "proposed", status: "endorsed", previousVersion: 1, version: 2 });
+    } finally {
+      spy.mockRestore();
+    }
+    // The interleaved writer really committed after this call's CAS (the row moved past v2);
+    // its later content is owned by that writer and the event projection, not by this call.
+    expect((await row(id)).version).toBeGreaterThanOrEqual(3);
   });
 });

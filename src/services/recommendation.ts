@@ -1362,13 +1362,16 @@ export async function updateRecommendation(
     );
   }
 
-  const updated = await db.recommendation.findUnique({
-    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
-  });
-
-  if (!updated) {
-    throw new NotFoundError("Recommendation", recommendationId);
-  }
+  // Exactly the row this call committed (a re-read could observe a later writer's state).
+  const updated = {
+    ...rec,
+    status: statusChanged ? (updates.status as string) : rec.status,
+    priority: input.priority ?? rec.priority,
+    constraintsConsidered: hasExpectationField
+      ? (updates.constraintsConsidered as typeof rec.constraintsConsidered)
+      : rec.constraintsConsidered,
+    version: rec.version + 1,
+  };
 
   await emitAuditEvent({
     eventName: "recommendation.updated",
