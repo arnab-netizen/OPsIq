@@ -250,9 +250,13 @@ export async function recordIdempotencyResponse(
   // IdempotencyRecord schema does not have workspaceId field
   // Clients must ensure idempotencyKey is globally unique
 
-  // Only the claimed (pending) record is completed: a finished record, possibly another caller's, is final.
+  // Finalize this caller's claim: the pending record, or a FAILED record being re-run. Callers that do not
+  // replay cachedError re-run a failed key's write; completing the failed record makes later retries replay
+  // the success instead of re-running again. Only the record's own caller can get here: checkIdempotencyKey
+  // refuses any other workspace/actor (assertRecordMatches) before the write, and no route records for a
+  // key it did not pass the check for. A completed record is final and never overwritten.
   await db.idempotencyRecord.updateMany({
-    where: { idempotencyKey, status: "pending" },
+    where: { idempotencyKey, status: { in: ["pending", "failed"] } },
     data: {
       status: "completed",
       responseCode: statusCode,
@@ -280,9 +284,9 @@ export async function recordIdempotencyError(
   }
 
   const recorded = toRecordedError(error);
-  // Only the claimed (pending) record is failed: a finished record, possibly another caller's, is final.
+  // Finalize this caller's claim (pending, or a failed record being re-run; see recordIdempotencyResponse).
   await db.idempotencyRecord.updateMany({
-    where: { idempotencyKey, status: "pending" },
+    where: { idempotencyKey, status: { in: ["pending", "failed"] } },
     data: {
       status: "failed",
       responseCode: recorded.statusCode,

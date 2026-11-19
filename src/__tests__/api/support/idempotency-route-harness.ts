@@ -9,7 +9,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { seedPlanEntitlement, cleanupPlanEntitlement, type PlanEntitlementFixture } from "@/__tests__/test-helpers/plan-entitlement";
-import { TooManyRequestsError } from "@/infra/errors";
+import { TooManyRequestsError, ValidationError } from "@/infra/errors";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { checkIdempotencyKey, recordIdempotencyError, recordIdempotencyResponse } from "@/services/idempotency";
 import { withCapabilityQuota, reconcileExpiredCapabilityReservations, CAPABILITY_RESERVATION_TTL_MS } from "@/services/entitlement.service";
@@ -19,7 +19,7 @@ export interface Tenant {
   actorId: string;
 }
 
-export type HarnessMode = "rate_limited_once" | "reservation_expires_once" | "quota_write" | "ok";
+export type HarnessMode = "rate_limited_once" | "reservation_expires_once" | "quota_write" | "fail_once" | "ok";
 
 /** Executions per idempotency key: proves whether a retry re-ran or replayed. */
 export const executions = new Map<string, number>();
@@ -83,6 +83,38 @@ export const harness = withCanonicalEnforcement(
   { requireWorkspace: true }
 );
 
+/**
+ * The pattern of the routes that never look at cachedError (clients, findings, evidence, leads, execute,
+ * engagements, admin, billing, diagnosis, users, ...): replay a cached RESPONSE, otherwise (new key, or a
+ * key whose record failed) run the write and record its outcome.
+ */
+export const cachedErrorIgnoringHarness = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const key = ctx.request!.headers.get("idempotency-key")!;
+    const body = (await ctx.request!.json()) as { mode: HarnessMode; label: string };
+    const check = await checkIdempotencyKey({
+      idempotencyKey: key,
+      operationName: "ignoringProof",
+      actorId: ctx.verifiedActorId,
+      workspaceId: ctx.verifiedWorkspaceId,
+      payload: body,
+    });
+    if (!check.isNew && check.cachedResponse) return check.cachedResponse.body;
+    try {
+      const run = (executions.get(key) ?? 0) + 1;
+      executions.set(key, run);
+      if (body.mode === "fail_once" && run === 1) throw new ValidationError("The first attempt is rejected.");
+      const result = { label: body.label, workspaceId: ctx.verifiedWorkspaceId, run };
+      await recordIdempotencyResponse(key, 200, result);
+      return result;
+    } catch (error) {
+      await recordIdempotencyError(key, error instanceof Error ? error : new Error(String(error)));
+      throw error;
+    }
+  },
+  { requireWorkspace: true }
+);
+
 export type RouteHandler = typeof harness;
 
 /** Drive `handler` as `tenant` (the test's mocked session/policy read `ids`). */
@@ -92,7 +124,8 @@ export function makeCaller(ids: { actorId: string; workspaceId: string }) {
     path: string,
     tenant: Tenant,
     key: string,
-    body: Record<string, unknown>
+    body: Record<string, unknown>,
+    params: Record<string, string> = {}
   ): Promise<{ status: number; body: Record<string, unknown> }> {
     ids.actorId = tenant.actorId;
     ids.workspaceId = tenant.workspaceId;
@@ -101,7 +134,7 @@ export function makeCaller(ids: { actorId: string; workspaceId: string }) {
       headers: new Headers({ "content-type": "application/json", "idempotency-key": key, "x-workspace-id": tenant.workspaceId }),
       body: JSON.stringify(body),
     });
-    const res = (await handler(req, { params: Promise.resolve({}) })) as Response;
+    const res = (await handler(req, { params: Promise.resolve(params) })) as Response;
     return { status: res.status, body: (await res.json()) as Record<string, unknown> };
   };
 }
