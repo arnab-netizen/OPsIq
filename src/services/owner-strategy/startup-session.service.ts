@@ -59,6 +59,40 @@ export interface StartupSessionSummary {
   createdAt: Date;
 }
 
+// ─── Workspace ownership of caller-supplied parent ids ───────────────────────
+//
+// Every /api/owner/startup/sessions/[sessionId]/** route hands the URL sessionId /
+// ideaId (and body ideaId / hypothesisId) straight to this service alongside the
+// verified workspaceId. Those ids feed by-unique-id writes and parent FKs, which the
+// Prisma backstop cannot scope, so each writer/reader that does not already load the
+// parent with a workspace predicate MUST call these first. A foreign or unknown id is
+// reported as NotFound (404) — never as a distinct "forbidden" — so existence in another
+// workspace is not disclosed.
+
+async function assertSessionInWorkspace(workspaceId: string, sessionId: string): Promise<void> {
+  const session = await db.ownerStartupSession.findFirst({
+    where: { id: sessionId, workspaceId },
+    select: { id: true },
+  });
+  if (!session) throw new NotFoundError("OwnerStartupSession", sessionId);
+}
+
+async function assertIdeaInSession(workspaceId: string, sessionId: string, ideaId: string): Promise<void> {
+  const idea = await db.startupIdeaRecord.findFirst({
+    where: { id: ideaId, sessionId, workspaceId },
+    select: { id: true },
+  });
+  if (!idea) throw new NotFoundError("StartupIdeaRecord", ideaId);
+}
+
+async function assertHypothesisInSession(workspaceId: string, sessionId: string, hypothesisId: string): Promise<void> {
+  const hypothesis = await db.startupHypothesis.findFirst({
+    where: { id: hypothesisId, sessionId, workspaceId },
+    select: { id: true },
+  });
+  if (!hypothesis) throw new NotFoundError("StartupHypothesis", hypothesisId);
+}
+
 function ideaToRecord(eval_: IdeaEvaluation, sessionId: string, workspaceId: string) {
   return {
     id: randomUUID(),
@@ -313,7 +347,7 @@ export async function transitionSession(
       }
     } else {
       await tx.ownerStartupSession.update({
-        where: { id: sessionId },
+        where: { id: sessionId, workspaceId },
         data: { status: newStatus },
       });
     }
@@ -489,7 +523,7 @@ export async function screenIdeaRecord(
     // owner diagnosis writers. No-op when OFF.
     await assertStartupAnalysisAllowance(tx, workspaceId, sessionId);
     await tx.startupIdeaRecord.update({
-      where: { id: ideaId },
+      where: { id: ideaId, workspaceId },
       data: {
         screeningStatus: result.status,
         screeningData: result as unknown as object,
@@ -678,10 +712,14 @@ export async function recordEvidenceItem(
   actorId: string,
   input: EvidenceInput
 ): Promise<string> {
+  await assertSessionInWorkspace(workspaceId, sessionId);
+  if (input.ideaId) await assertIdeaInSession(workspaceId, sessionId, input.ideaId);
+  if (input.hypothesisId) await assertHypothesisInSession(workspaceId, sessionId, input.hypothesisId);
+
   // Idempotency check
   if (input.idempotencyKey) {
     const existing = await db.startupEvidenceRecord.findFirst({
-      where: { sessionId, idempotencyKey: input.idempotencyKey },
+      where: { sessionId, workspaceId, idempotencyKey: input.idempotencyKey },
       select: { id: true },
     });
     if (existing) return existing.id;
@@ -804,6 +842,7 @@ export async function buildAndPersistEconomicModel(
   actorId: string,
   inputs: EconomicInputs
 ): Promise<string> {
+  await assertIdeaInSession(workspaceId, sessionId, ideaId);
   const modelId = randomUUID();
   const result = buildEconomicModel(inputs);
 
@@ -855,7 +894,7 @@ export async function buildAndPersistEconomicModel(
     });
 
     await tx.startupIdeaRecord.update({
-      where: { id: ideaId },
+      where: { id: ideaId, workspaceId },
       data: { currentEconomicModelVersionId: modelId },
     });
 
@@ -879,6 +918,7 @@ export async function assessAndPersistReadiness(
   actorId: string,
   inputs: ReadinessInputs
 ): Promise<ReturnType<typeof assessReadiness>> {
+  await assertIdeaInSession(workspaceId, sessionId, ideaId);
   const assessmentId = randomUUID();
   const result = assessReadiness(inputs);
 
@@ -915,7 +955,7 @@ export async function assessAndPersistReadiness(
     });
 
     await tx.startupIdeaRecord.update({
-      where: { id: ideaId },
+      where: { id: ideaId, workspaceId },
       data: { currentReadinessId: assessmentId },
     });
 
@@ -947,6 +987,8 @@ export async function createSystemRecommendation(
   actorId: string,
   input: SystemRecommendationInput
 ): Promise<string> {
+  await assertSessionInWorkspace(workspaceId, sessionId);
+  if (input.ideaId) await assertIdeaInSession(workspaceId, sessionId, input.ideaId);
   const recId = randomUUID();
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -969,7 +1011,7 @@ export async function createSystemRecommendation(
     });
 
     await tx.ownerStartupSession.update({
-      where: { id: sessionId },
+      where: { id: sessionId, workspaceId },
       data: { currentSystemRecId: recId, updatedAt: new Date() },
     });
 
@@ -1007,6 +1049,7 @@ export async function buildAndPersistBusinessModel(
   actorId: string,
   input: BusinessModelInput
 ): Promise<string> {
+  await assertIdeaInSession(workspaceId, sessionId, ideaId);
   const modelId = randomUUID();
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -1074,6 +1117,7 @@ export async function buildAndPersistValidationPlan(
   actorId: string,
   input: ValidationPlanInput
 ): Promise<string> {
+  await assertIdeaInSession(workspaceId, sessionId, ideaId);
   // Wire domain engine: derive plan structure from active hypotheses when available
   const activeHypotheses = await db.startupHypothesis.findMany({
     where: { ideaId, workspaceId, result: null },
@@ -1166,6 +1210,7 @@ export async function buildAndPersistMarketSizing(
   actorId: string,
   input: MarketSizingInput
 ): Promise<string> {
+  await assertIdeaInSession(workspaceId, sessionId, ideaId);
   const sizingId = randomUUID();
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -1828,7 +1873,7 @@ export async function recordOwnerDecision(
     });
 
     await tx.ownerStartupSession.update({
-      where: { id: sessionId },
+      where: { id: sessionId, workspaceId },
       data: { currentOwnerDecisionId: decisionId, updatedAt: new Date() },
     });
 
@@ -1863,13 +1908,14 @@ export async function buildAndPersistResearchPlan(
   ideaName: string,
   industry: string
 ): Promise<string> {
+  await assertSessionInWorkspace(workspaceId, sessionId);
   const plan = buildResearchPlan(ideaName, industry);
   const planId = randomUUID();
 
   await db.$transaction(async (tx: Prisma.TransactionClient) => {
     // Upsert — one plan per session
-    const existing = await tx.startupResearchPlan.findUnique({
-      where: { sessionId },
+    const existing = await tx.startupResearchPlan.findFirst({
+      where: { sessionId, workspaceId },
       select: { id: true },
     });
 
@@ -1922,8 +1968,9 @@ export async function executeAutoResearch(
   sessionId: string,
   actorId: string
 ): Promise<AutoResearchResult[]> {
-  const plan = await db.startupResearchPlan.findUnique({
-    where: { sessionId },
+  await assertSessionInWorkspace(workspaceId, sessionId);
+  const plan = await db.startupResearchPlan.findFirst({
+    where: { sessionId, workspaceId },
     select: { id: true, evidenceDomains: true },
   });
   if (!plan) return [];
@@ -1970,8 +2017,9 @@ export async function getOwnerResearchTasks(
   workspaceId: string,
   sessionId: string
 ): Promise<ReturnType<typeof minimizeOwnerTasks>> {
-  const plan = await db.startupResearchPlan.findUnique({
-    where: { sessionId },
+  await assertSessionInWorkspace(workspaceId, sessionId);
+  const plan = await db.startupResearchPlan.findFirst({
+    where: { sessionId, workspaceId },
     include: { acquisitions: { where: { status: "ACQUIRED" }, select: { domain: true } } },
   });
   if (!plan) return [];
@@ -2067,6 +2115,8 @@ export async function buildAndPersistStartupExplanation(
   actorId: string,
   inputs: Omit<StartupExplanationInputs, "sessionId" | "ideaId">
 ): Promise<{ explanationId: string; explanation: StartupExplanation }> {
+  await assertSessionInWorkspace(workspaceId, sessionId);
+  if (ideaId) await assertIdeaInSession(workspaceId, sessionId, ideaId);
   const fullInputs: StartupExplanationInputs = { sessionId, ideaId, ...inputs };
   const explanation = buildStartupExplanation(fullInputs);
 
@@ -2123,6 +2173,7 @@ export async function generateIdeasForNeedOptionsPath(
   actorId: string,
   profile: GenerationProfile
 ): Promise<IdeaGenerationResultWithBatch> {
+  await assertSessionInWorkspace(workspaceId, sessionId);
   const providerEnv = process.env["IDEA_GENERATION_PROVIDER"];
   const providerConfigured = !!providerEnv && providerEnv.trim().length > 0;
 
@@ -2367,7 +2418,7 @@ export async function reviseIdea(
     const existing = await tx.$queryRaw<{ id: string; version: number; name: string; industry: string; origin_data: unknown; origin_type: string; superseded_by_id: string | null }[]>`
       SELECT id, version, name, industry, origin_data, origin_type, superseded_by_id
       FROM startup_idea_record
-      WHERE id = ${ideaId} AND workspace_id = ${workspaceId}
+      WHERE id = ${ideaId} AND workspace_id = ${workspaceId} AND session_id = ${sessionId}
       FOR UPDATE
     `;
     if (existing.length === 0) throw new NotFoundError("StartupIdeaRecord", ideaId);
@@ -2392,7 +2443,7 @@ export async function reviseIdea(
 
     // Supersede previous version
     await tx.startupIdeaRecord.update({
-      where: { id: ideaId },
+      where: { id: ideaId, workspaceId },
       data: { supersededById: newIdeaId },
     });
 
