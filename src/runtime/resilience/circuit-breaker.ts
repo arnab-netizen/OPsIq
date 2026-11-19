@@ -90,8 +90,10 @@ class CircuitBreaker {
     this.last_failure_time = new Date();
 
     if (this.total_requests >= this.config.min_requests_before_eval) {
+      // Both sides are percentages: getFailureRate() returns 0-100 and
+      // failure_threshold is documented as a percent of requests.
       const failure_rate = this.getFailureRate();
-      if (failure_rate > this.config.failure_threshold / 100) {
+      if (failure_rate > this.config.failure_threshold) {
         this.open();
       }
     }
