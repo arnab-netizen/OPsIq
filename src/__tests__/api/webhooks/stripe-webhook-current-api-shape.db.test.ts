@@ -86,4 +86,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Stripe webhook — current Stripe AP
     await f.deliverApplied(active);
     expect((await f.subscription()).status).toBe("trialing");
   });
+
+  it("a period whose end precedes its start fails closed (500, retryable), nothing applied", async () => {
+    await f.resetSubscription(f.STRIPE_SUB, "active");
+    for (const object of [
+      f.dahliaSubscription({ status: "past_due", periods: [[f.BASE_S + 100, f.BASE_S + 50]] }),
+      f.legacySubscription({ status: "past_due", current_period_start: f.BASE_S + 100, current_period_end: f.BASE_S + 50 }),
+    ]) {
+      const id = f.nextEventId();
+      const res = await f.deliver(f.envelope(id, "customer.subscription.updated", f.BASE_S + 650, object));
+      expect(res.status).toBe(500);
+      expect(await f.eventRow(id)).toMatchObject({ status: "failed", attempts: 1 });
+    }
+    expect((await f.subscription()).status).toBe("active");
+  });
 });

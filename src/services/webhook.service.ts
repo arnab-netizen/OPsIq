@@ -124,8 +124,8 @@ export type StripeSubscriptionEvent = z.infer<typeof StripeSubscriptionObjectSch
 /**
  * The subscription's current billing period, in either API shape: across items (the earliest
  * item start and the latest item end, so a multi-item subscription is covered end to end), else
- * the legacy top-level fields. No period in either shape is a malformed payload: throw, so the
- * event is marked failed and retried rather than applied with a guessed period.
+ * the legacy top-level fields. No period in either shape, or a period ending before it starts, is
+ * a malformed payload: throw, so the event is marked failed and retried rather than applied.
  */
 export function subscriptionPeriodOf(subscription: StripeSubscriptionEvent): { start: Date; end: Date } {
   const itemPeriods = (subscription.items?.data ?? []).flatMap((item) =>
@@ -141,6 +141,9 @@ export function subscriptionPeriodOf(subscription: StripeSubscriptionEvent): { s
         : [];
   if (periods.length === 0) {
     throw new Error(`Stripe subscription ${subscription.id} carries no current billing period`);
+  }
+  if (periods.some((p) => p.end < p.start)) {
+    throw new Error(`Stripe subscription ${subscription.id} carries a billing period that ends before it starts`);
   }
   return {
     start: new Date(Math.min(...periods.map((p) => p.start)) * 1000),
