@@ -688,7 +688,7 @@ export function withCanonicalEnforcement(
         },
         correlationId,
         requestId,
-        request: req,
+        request: withClientSafeJsonBody(req),
         session,
         policy,
       };
@@ -976,6 +976,7 @@ export function withCanonicalEnforcement(
         headers: {
           "x-correlation-id": finalCorrelationId,
           "content-type": "application/json",
+          ...retryAfterHeaderFor(error, classifiedError.statusCode),
         },
       });
     }
@@ -1090,4 +1091,45 @@ async function enforceCommercialRequirement(
   if (!capability) return;
   const { assertCommercialCapability } = await import("@/services/billing/commercial-policy.service");
   await assertCommercialCapability(workspaceId, capability);
+}
+
+/**
+ * Retry-After for a rate-limited (429) error response, when the thrown AppError knows its window
+ * (TooManyRequestsError/RateLimitError carry details.retryAfterSeconds). Any other status, or a 429 without a
+ * known window, gets no header. Structural check (not instanceof) so it works across module boundaries.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+function retryAfterHeaderFor(error: unknown, statusCode: number): Record<string, string> {
+  if (statusCode !== 429 || !error || typeof error !== "object") return {};
+  const details = (error as { details?: unknown }).details;
+  const seconds = details && typeof details === "object" ? (details as { retryAfterSeconds?: unknown }).retryAfterSeconds : undefined;
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) return {};
+  return { "retry-after": String(Math.ceil(seconds)) };
+}
+
+/**
+ * The request handed to handlers: identical to `req`, except that `json()` maps a body-parse failure (malformed or
+ * empty JSON — the platform parser's SyntaxError) to the canonical ValidationError (400) with a generic message,
+ * the same one parseRequestBody uses. Many handlers read `ctx.request.json()` directly; without this a client's
+ * malformed body surfaced as an unknown 500. Only a SyntaxError from the parser is mapped — every other failure
+ * (e.g. a body read twice) propagates unchanged — and no parser detail reaches the client.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+function withClientSafeJsonBody(req: NextRequest): NextRequest {
+  if (!req || typeof req.json !== "function") return req;
+  const parseJson = req.json.bind(req);
+  Object.defineProperty(req, "json", {
+    configurable: true,
+    writable: true,
+    value: async () => {
+      try {
+        return await parseJson();
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+        const { ValidationError } = await import("@/infra/errors");
+        throw new ValidationError("Invalid JSON in request body");
+      }
+    },
+  });
+  return req;
 }
