@@ -9,8 +9,9 @@
  * verification (`stripe.webhooks.constructEvent`, offline HMAC — no network), the real
  * webhook.service state machine and the real handlers write to real tables. Signatures are
  * produced with the SDK's own `webhooks.generateTestHeaderString` and a test-only secret.
- * No live key, no Stripe network call, no money: STRIPE_SECRET_KEY is a dummy `sk_test_` value
- * that only satisfies the SDK constructor (webhook verification never calls the Stripe API).
+ * No live key, no Stripe network call, no money: STRIPE_SECRET_KEY is set to a dummy `sk_test_`
+ * value only to mirror a configured deployment; webhook verification uses the SDK's static offline
+ * helper and never needs it (a dedicated case proves verification works with the key unset).
  *
  * The webhook.service exports and emitAuditEvent are wrapped in call-through spies so the
  * matrix can PROVE that a rejected request never reaches the record/processing layer, and
@@ -55,6 +56,7 @@ vi.mock("@/infra/audit", async (importOriginal) => {
 });
 
 import { POST } from "@/app/api/webhooks/stripe/route";
+import { checkSignatureTimestamp, verifyWebhookSignature } from "@/services/webhook.service";
 
 const RUN = randomUUID().slice(0, 8);
 const SECRET = `whsec_test_${RUN}`;
@@ -353,5 +355,61 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] POST /api/webhooks/stripe — signat
     expect((await subscription())?.status).toBe("active");
     expect(await activationAudits()).toBe(1);
     expect(spies.handleWebhookEvent).toHaveBeenCalledTimes(2);
+  });
+  // ── Replay protection uses the SIGNED timestamp (t=), not the receive time ──
+
+  it("signature timestamp 10 min in the future -> 401, nothing recorded (verified t= is checked, not Date.now())", async () => {
+    const before = await businessState();
+    const payload = JSON.stringify(checkoutCompleted(nextEventId()));
+    const res = await post(payload, sign(payload, { timestamp: Math.floor(Date.now() / 1000) + 600 }));
+    expect(res.status).toBe(401);
+    expectNothingReachedProcessing();
+    expect(await businessState()).toEqual(before);
+  });
+
+  it("small forward clock skew (+60s) inside tolerance is still accepted", async () => {
+    const id = nextEventId();
+    const payload = JSON.stringify(checkoutCompleted(id));
+    const res = await post(payload, sign(payload, { timestamp: Math.floor(Date.now() / 1000) + 60 }));
+    expect(res.status).toBe(202);
+    await settled(id, "processed");
+  });
+
+  it("the recorded stripeTimestamp is the verified signature t=, not the receive time", async () => {
+    const id = nextEventId();
+    const payload = JSON.stringify(checkoutCompleted(id));
+    const signedAt = Math.floor(Date.now() / 1000) - 120;
+    expect((await post(payload, sign(payload, { timestamp: signedAt }))).status).toBe(202);
+    await settled(id, "processed");
+    expect((await eventRow(id))?.stripeTimestamp).toBe(signedAt);
+  });
+
+  it("verifyWebhookSignature returns the signed t= and rejects a header with an ambiguous timestamp", async () => {
+    const payload = JSON.stringify(checkoutCompleted(nextEventId()));
+    const signedAt = Math.floor(Date.now() / 1000) - 42;
+    const header = sign(payload, { timestamp: signedAt });
+    expect((await verifyWebhookSignature(payload, header)).timestamp).toBe(signedAt);
+    // A second t= element makes the signed timestamp ambiguous: fail closed.
+    await expect(verifyWebhookSignature(payload, `t=${signedAt + 1},${header}`)).rejects.toThrow();
+  });
+
+  it("checkSignatureTimestamp enforces the tolerance window in both directions", () => {
+    const now = Math.floor(Date.now() / 1000);
+    expect(() => checkSignatureTimestamp(now)).not.toThrow();
+    expect(() => checkSignatureTimestamp(now - 299)).not.toThrow();
+    expect(() => checkSignatureTimestamp(now + 60)).not.toThrow();
+    expect(() => checkSignatureTimestamp(now - 301)).toThrow(/too old/);
+    expect(() => checkSignatureTimestamp(now + 301)).toThrow(/future/);
+    expect(() => checkSignatureTimestamp(Number.NaN)).toThrow();
+  });
+
+  it("verification needs no STRIPE_SECRET_KEY (offline HMAC): valid -> 202, forged -> 401", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_API_KEY;
+    const id = nextEventId();
+    const payload = JSON.stringify(checkoutCompleted(id));
+    expect((await post(payload, sign(payload, { secret: "whsec_attacker" }))).status).toBe(401);
+    expect((await post(payload, sign(payload))).status).toBe(202);
+    await settled(id, "processed");
   });
 });

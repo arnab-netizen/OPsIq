@@ -12,6 +12,13 @@ const STALE_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const RETRY_ALERT_THRESHOLD = 3; // Alert when attempts >= 3
 const MAX_ATTEMPTS = 5; // Move to dead-letter after 5 attempts
 const SIGNATURE_TIMESTAMP_TOLERANCE_S = 300; // 5 minutes
+/**
+ * Maximum forward clock skew accepted for a signature timestamp. Stripe stamps `t=` with its own
+ * clock at signing time, so a receiver whose clock lags Stripe's by a few seconds sees a slightly
+ * "future" timestamp on every legitimate delivery; rejecting any future value would 401 (and so
+ * stall) all deliveries during ordinary NTP drift. Bounded by the same window as the past side.
+ */
+const SIGNATURE_MAX_FUTURE_SKEW_S = SIGNATURE_TIMESTAMP_TOLERANCE_S;
 
 /**
  * Runtime schemas for the `data.object` payloads this service acts on. The signature proves the
@@ -78,21 +85,41 @@ export function resolveStripeSecretKey(): string | null {
   return process.env.STRIPE_SECRET_KEY ?? process.env.STRIPE_API_KEY ?? null;
 }
 
-async function getStripe() {
-  const apiKey = resolveStripeSecretKey();
-  if (!apiKey) {
-    throw new Error(
-      "Stripe secret key is not set (STRIPE_SECRET_KEY or legacy STRIPE_API_KEY)"
-    );
+/**
+ * Extract the signed timestamp from a `stripe-signature` header (`t=<unix>,v1=<hmac>[,...]`).
+ *
+ * Mirrors the SDK's own header parsing (elements split on ",", key/value on "=", key exactly "t"),
+ * which is the value the SDK feeds into the HMAC (`${t}.${payload}`), so once constructEvent has
+ * accepted the header this IS the authenticated signing time. Stricter than the SDK, fail closed:
+ * exactly one `t=` element made only of digits; anything else throws.
+ */
+function parseSignedTimestamp(signatureHeader: string): number {
+  const values = signatureHeader
+    .split(",")
+    .map((element) => element.split("="))
+    .filter(([key]) => key === "t")
+    .map(([, value]) => value ?? "");
+
+  if (values.length !== 1 || !/^\d+$/.test(values[0])) {
+    throw new Error("stripe-signature header must carry exactly one numeric t= timestamp");
   }
-  const Stripe = (await import("stripe")).default;
-  return new Stripe(apiKey);
+
+  const timestamp = Number(values[0]);
+  if (!Number.isSafeInteger(timestamp)) {
+    throw new Error("stripe-signature t= timestamp is out of range");
+  }
+  return timestamp;
 }
 
 /**
  * Verify webhook signature using Stripe.webhooks.constructEvent
- * Returns event + timestamp for replay protection
+ * Returns the verified event + the SIGNED timestamp (t=) for replay protection
  * Fails closed: throws on any verification error
+ *
+ * Verification is an offline HMAC over the raw body with STRIPE_WEBHOOK_SECRET. It never calls
+ * the Stripe API, so it uses the SDK's static `Stripe.webhooks` helper and does not require
+ * STRIPE_SECRET_KEY: a deployment missing the API key must not 401 every genuine webhook.
+ * The SDK is given the same tolerance as checkSignatureTimestamp, so both controls agree.
  */
 export async function verifyWebhookSignature(
   body: string,
@@ -109,12 +136,17 @@ export async function verifyWebhookSignature(
   }
 
   try {
-    const stripe = await getStripe();
-    const event: Stripe.Event = stripe.webhooks.constructEvent(body, signature, secret);
+    const { default: StripeSdk } = await import("stripe");
+    const event: Stripe.Event = StripeSdk.webhooks.constructEvent(
+      body,
+      signature,
+      secret,
+      SIGNATURE_TIMESTAMP_TOLERANCE_S
+    );
 
-    // Extract timestamp from Stripe event (included by Stripe SDK after verification)
-    const timestamp = Math.floor(Date.now() / 1000); // Use current time since Stripe includes it
-    // In production, could parse from signature header if needed
+    // The authenticated signing time (t=), not the receive time: checkSignatureTimestamp and the
+    // recorded stripeTimestamp both depend on it being the value the HMAC covered.
+    const timestamp = parseSignedTimestamp(signature);
 
     return { event, timestamp };
   } catch (error) {
@@ -128,14 +160,21 @@ export async function verifyWebhookSignature(
 
 /**
  * Check signature timestamp tolerance (replay protection)
- * Fails closed: rejects if timestamp > 5 minutes old
+ * Fails closed: rejects a non-integer timestamp, one > 5 minutes old, or one more than
+ * SIGNATURE_MAX_FUTURE_SKEW_S in the future.
  */
 export function checkSignatureTimestamp(eventTimestamp: number): void {
+  if (!Number.isSafeInteger(eventTimestamp)) {
+    throw new Error("Webhook timestamp is not a valid integer");
+  }
+
   const now = Math.floor(Date.now() / 1000);
   const age = now - eventTimestamp;
 
-  if (age < 0) {
-    throw new Error("Webhook timestamp is in the future (clock skew)");
+  if (age < -SIGNATURE_MAX_FUTURE_SKEW_S) {
+    throw new Error(
+      `Webhook timestamp is in the future beyond ${SIGNATURE_MAX_FUTURE_SKEW_S}s clock-skew tolerance`
+    );
   }
 
   if (age > SIGNATURE_TIMESTAMP_TOLERANCE_S) {
