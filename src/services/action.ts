@@ -15,6 +15,8 @@ import { requireServiceContext } from "@/lib/service-auth";
 import { recordActionUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
+import type { Prisma } from "@/generated/prisma/client";
+import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -88,7 +90,7 @@ export async function createAction(
       idempotencyKey,
       "action.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: Prisma.TransactionClient) => {
           const action = await tx.action.create({
             data: {
               id: randomUUID(),
@@ -277,8 +279,10 @@ export async function updateActionStatus(
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const action = await db.action.findUnique({
-    where: { id: actionId },
+  // Scope the pre-read to the caller's workspace (owned via the engagement) so the version and
+  // transition checks below never run against — and never describe — another workspace's row.
+  const action = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -454,8 +458,11 @@ export async function updateAction(
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const action = await db.action.findUnique({
-    where: { id: actionId },
+  // Scope the pre-read to the caller's workspace (Action has no workspaceId column; it is owned via
+  // its engagement). The version and transition checks below must never run against a foreign row,
+  // or their distinct errors disclose that row's existence, version and status.
+  const action = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -463,7 +470,7 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  const updates: Prisma.ActionUncheckedUpdateManyInput = { version: { increment: 1 } };
 
   if (input.status) {
     validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
@@ -476,10 +483,20 @@ export async function updateAction(
   if (input.completedAt !== undefined) updates.completedAt = input.completedAt ? new Date(input.completedAt) : null;
   if (input.verifiedAt !== undefined) updates.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
 
-  const updated = await db.action.update({
-    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
+  // Compare-and-set on the version the checks above ran against, so a concurrent writer cannot
+  // commit on top of a version it never validated (lost update / unvalidated transition).
+  const updateResult = await db.action.updateMany({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId }, version: input.version },
     data: updates,
   });
+  if (updateResult.count === 0) {
+    throw new ConflictError("Action has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
+  }
+
+  const updated = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
+  });
+  if (!updated) throw new NotFoundError("Action", actionId);
 
   if (input.status) {
     await emitAuditEvent({
@@ -499,10 +516,18 @@ export async function updateAction(
   return updated;
 }
 
-export async function listActions(workspaceId: string, params: any) {
+export interface ListActionsParams {
+  engagementId?: string;
+  status?: string;
+  assignedTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listActions(workspaceId: string, params: ListActionsParams) {
   enforceWorkspaceId(workspaceId, "listActions", "action");
 
-  const where: any = {};
+  const where: Prisma.ActionWhereInput = {};
   if (params.engagementId) {
     where.engagementId = params.engagementId;
     where.engagement = { workspaceId };
@@ -535,7 +560,7 @@ export async function listActions(workspaceId: string, params: any) {
 
 export async function createActionsFromInterventions(
   engagementId: string,
-  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  interventions: PrioritizedIntervention[],
   authContext: CanonicalAuthContext,
   workspaceId: string
 ) {

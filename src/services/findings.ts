@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { triggerReEvaluation } from "@/services/re-evaluation";
@@ -193,8 +193,9 @@ export async function updateFinding(
 
   // Check for version conflict
   if (existing.version !== input.version) {
-    throw new ValidationError(
-      `Version conflict: current version is ${existing.version}, expected ${input.version}`
+    throw new ConflictError(
+      "Finding has been modified by another process. Please refresh and try again.",
+      { code: "STALE_VERSION" }
     );
   }
 
@@ -227,11 +228,16 @@ export async function updateFinding(
   // Increment version on update
   data.version = existing.version + 1;
 
-  const updated = await db.finding.update({
-    where: { id: findingId },
+  // Compare-and-set on the version checked above: a concurrent writer holding the same version
+  // loses with 409 instead of silently overwriting (lost update).
+  const updateResult = await db.finding.updateMany({
+    where: { id: findingId, engagement: { workspaceId: auth.verifiedWorkspaceId }, version: input.version },
     data,
-    select: { id: true, engagementId: true },
   });
+  if (updateResult.count === 0) {
+    throw new ConflictError("Finding has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
+  }
+  const updated = { id: existing.id, engagementId: existing.engagementId };
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_UPDATED,
