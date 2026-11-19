@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import crypto from "crypto";
+import { stableStringify } from "@/domain/owner-spine/owner-decision-record";
 
 /**
  * PHASE E PRIORITY 2: REPLAY DETERMINISM PROOF
@@ -22,16 +23,27 @@ import crypto from "crypto";
  * - Schema evolution handling
  */
 
+interface ReplayEvent {
+  id: string;
+  sequence: number;
+  timestamp: number;
+  workspace_id: string;
+  action: string;
+  actor_id: string;
+  data: { value: string; checksum: string };
+}
+
 describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
   // Helper: Calculate deterministic hash of state
-  function hashState(state: any): string {
-    const canonical = JSON.stringify(state, Object.keys(state).sort());
+  function hashState(state: unknown): string {
+    // Recursively key-sorted: a top-level key array as a replacer would hash every nested projection as {}.
+    const canonical = stableStringify(state);
     return crypto.createHash("sha256").update(canonical).digest("hex");
   }
 
   // Helper: Create deterministic audit events
-  function createDeterministicEvents(seed: number, count: number): Array<any> {
-    const events: Array<any> = [];
+  function createDeterministicEvents(seed: number, count: number): ReplayEvent[] {
+    const events: ReplayEvent[] = [];
     for (let i = 0; i < count; i++) {
       events.push({
         id: `evt-${seed}-${i}`, // Deterministic ID
@@ -51,17 +63,17 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
 
   // Helper: Replay events and build projection state
   function replayEvents(
-    events: Array<any>
+    events: ReplayEvent[]
   ): {
-    state: Record<string, any>;
+    state: Record<string, unknown>;
     hash: string;
     eventCount: number;
   } {
-    const state: Record<string, any> = {
-      workspaces: new Map(),
-      decisions: new Map(),
-      members: new Map(),
-      auditLog: [],
+    const state = {
+      workspaces: new Map<string, { created_at: number; actor_id: string }>(),
+      decisions: new Map<string, { workspace_id: string; created_at: number }>(),
+      members: new Map<string, string[]>(),
+      auditLog: [] as ReplayEvent[],
     };
 
     for (const event of events) {
@@ -239,7 +251,7 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
 
       // Create snapshot at event 50
       const snapshotEvents = events.slice(0, 50);
-      let snapshotState = replayEvents(snapshotEvents);
+      const snapshotState = replayEvents(snapshotEvents);
 
       // Corrupt snapshot
       snapshotState.state.decisions = {}; // Wipe decisions

@@ -692,6 +692,22 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
     });
   });
 
+  describe("production release path requires db-verify", () => {
+    it.each([
+      "scripts/release/runtime-role-reconcile-gate.mjs",
+      "scripts/release/release-plan.mjs",
+      "scripts/db/opsiq-role-cutover.ts",
+      "src/services/privacy-erasure/role-topology.ts",
+      ".github/workflows/migrate-production.yml",
+      ".github/workflows/reconcile-runtime-role.yml",
+      "src/__tests__/deployment/production-release-reconcile.test.ts",
+    ])("%s sets dbRequired", (file) => {
+      const result = classifyChangeSet([file]);
+      expect(result.tier).toBe(TIERS.DB_RUNTIME);
+      expect(result.dbRequired).toBe(true);
+    });
+  });
+
   // CI-MIN-01: a workflow-only / named-CI-script-only PR (CI_GOVERNANCE
   // tier) must not run the ~28,000-test broad application suite -- it gets
   // its own narrow TARGETED_CI_GOVERNANCE mode instead, the same pattern

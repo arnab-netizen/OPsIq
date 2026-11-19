@@ -10,6 +10,7 @@ import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { assertCapability, resolveWorkspaceTier } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
+import { RateLimitError } from "@/infra/rate-limit";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
 
 const createActionSchema = z.object({
@@ -56,7 +57,8 @@ export const POST = withCanonicalEnforcement(
     const config = getTierConfig(tier);
     const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
     if (!rateLimit.allowed) {
-      throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour`);
+      // 429 + Retry-After (canonical wrapper), never a plain Error (which is an unknown 500).
+      throw new RateLimitError(rateLimit.retryAfter ?? 3600);
     }
 
     // Distributed PG-backed check (shared across serverless instances — prevents split-brain).
@@ -65,7 +67,7 @@ export const POST = withCanonicalEnforcement(
       refillPerSecond: config.limits.requestsPerHour / 3600,
     });
     if (!pgRateLimit.allowed) {
-      throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour (distributed)`);
+      throw new RateLimitError(pgRateLimit.retryAfterSeconds ?? 3600);
     }
 
     // Check capability: action_create
