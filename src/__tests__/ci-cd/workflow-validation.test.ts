@@ -191,6 +191,15 @@ describe("CI/CD Workflow Validation", () => {
       for (const s of steps) {
         expect(s.run ?? "").not.toMatch(/prisma migrate reset|prisma db push/);
       }
+      // A step-level `if:` on any of these would let db-verify report success without running DB tests.
+      for (const name of [
+        "Generate Prisma client",
+        "Prisma validate",
+        "Prisma migrate deploy (throwaway container)",
+        "Run DB test suite (*.db.test.ts only)",
+      ]) {
+        expect(stepNamed(ciWorkflow.jobs["db-verify"], name)["if"], `${name} must run unconditionally`).toBeUndefined();
+      }
     });
 
     it("build-and-test should run TypeScript check", () => {
@@ -411,19 +420,25 @@ describe("CI/CD Workflow Validation", () => {
       protectionDocs = fs.readFileSync(docsPath, "utf-8");
     });
 
-    it("should document required status checks", () => {
-      expect(protectionDocs).toContain("CI - Build & Test");
-      expect(protectionDocs).toContain("build-and-test");
+    it("documents exactly the one required status check ci.yml provides, never a context that does not report", () => {
+      expect(protectionDocs).toContain('"context": "branch-protection"');
+      expect(protectionDocs).toContain("integration_id\": 15368");
+      expect(protectionDocs).not.toMatch(/"contexts":\s*\[/);
+      expect(protectionDocs).not.toContain('"lint"');
+      const ci = loadWorkflow("ci.yml");
+      expect(ci.jobs["branch-protection"]).toBeDefined();
+      expect(ci.jobs["lint"]).toBeUndefined();
     });
 
-    it("should document PR review requirements", () => {
-      expect(protectionDocs).toContain("Minimum 1 review approval");
-      expect(protectionDocs).toContain("required_pull_request_reviews");
+    it("documents the real review policy (0 approvals) and that the aggregate gates db-verify when required", () => {
+      expect(protectionDocs).toContain("required_approving_review_count\": 0");
+      expect(protectionDocs).not.toContain("Minimum 1 review approval");
+      expect(protectionDocs).toContain("db_required=true");
     });
 
-    it("should document branch up-to-date requirement", () => {
+    it("documents the strict up-to-date requirement", () => {
+      expect(protectionDocs).toContain("strict_required_status_checks_policy\": true");
       expect(protectionDocs).toContain("up to date");
-      expect(protectionDocs).toContain("rebased");
     });
 
     it("should include API configuration instructions", () => {
