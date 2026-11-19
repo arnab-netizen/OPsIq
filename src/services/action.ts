@@ -292,8 +292,10 @@ export async function updateActionStatus(
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const action = await db.action.findUnique({
-    where: { id: actionId },
+  // Scope the pre-read to the caller's workspace (owned via the engagement) so the version and
+  // transition checks below never run against — and never describe — another workspace's row.
+  const action = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -481,7 +483,7 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: Prisma.ActionUncheckedUpdateInput = { version: { increment: 1 } };
+  const updates: Prisma.ActionUncheckedUpdateManyInput = { version: { increment: 1 } };
 
   if (input.status) {
     validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
@@ -494,10 +496,20 @@ export async function updateAction(
   if (input.completedAt !== undefined) updates.completedAt = input.completedAt ? new Date(input.completedAt) : null;
   if (input.verifiedAt !== undefined) updates.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
 
-  const updated = await db.action.update({
-    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
+  // Compare-and-set on the version the checks above ran against, so a concurrent writer cannot
+  // commit on top of a version it never validated (lost update / unvalidated transition).
+  const updateResult = await db.action.updateMany({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId }, version: input.version },
     data: updates,
   });
+  if (updateResult.count === 0) {
+    throw new ConflictError("Action has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
+  }
+
+  const updated = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
+  });
+  if (!updated) throw new NotFoundError("Action", actionId);
 
   if (input.status) {
     await emitAuditEvent({

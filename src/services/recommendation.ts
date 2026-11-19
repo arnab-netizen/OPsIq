@@ -1296,7 +1296,10 @@ export async function updateRecommendation(
   }
 
   if (rec.version !== input.version) {
-    throw new Error("Recommendation was modified. Please refresh and try again.");
+    throw new ConflictError(
+      "Recommendation has been modified by another process. Please refresh and try again.",
+      { code: "STALE_VERSION" }
+    );
   }
 
   const updates: Record<string, unknown> = { version: { increment: 1 } };
@@ -1372,7 +1375,15 @@ export async function updateRecommendation(
     entityType: "recommendation",
     entityId: recommendationId,
     workspaceId: validatedWorkspaceId,
-    payload: updates,
+    payload: {
+      previousStatus: rec.status,
+      status: updated.status,
+      statusChanged,
+      previousVersion: rec.version,
+      version: updated.version,
+      ...(input.priority ? { previousPriority: rec.priority, priority: updated.priority } : {}),
+      ...(hasExpectationField ? { constraintsConsidered: updates.constraintsConsidered } : {}),
+    },
     visibility: "internal",
   });
 

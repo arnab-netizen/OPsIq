@@ -61,7 +61,7 @@ export interface StartupSessionSummary {
 
 // ─── Workspace ownership of caller-supplied parent ids ───────────────────────
 //
-// Every route under /api/owner/startup/sessions/[sessionId] hands the URL sessionId /
+// Every /api/owner/startup/sessions/[sessionId] (any sub-path) route hands the URL sessionId /
 // ideaId (and body ideaId / hypothesisId) straight to this service alongside the
 // verified workspaceId. Those ids feed by-unique-id writes and parent FKs, which the
 // Prisma backstop cannot scope, so each writer/reader that does not already load the
@@ -91,6 +91,28 @@ async function assertHypothesisInSession(workspaceId: string, sessionId: string,
     select: { id: true },
   });
   if (!hypothesis) throw new NotFoundError("StartupHypothesis", hypothesisId);
+}
+
+/**
+ * Every linked*Id an owner decision stores (and hashes into its approval package) must be an
+ * artifact of the SAME session in the SAME workspace. Any foreign or unknown id is NotFound.
+ */
+async function assertDecisionLinksInSession(workspaceId: string, sessionId: string, input: OwnerDecisionInput): Promise<void> {
+  const scope = { workspaceId, sessionId };
+  const checks: Array<[string, string | null | undefined, (id: string) => Promise<unknown>]> = [
+    ["StartupSystemRecommendation", input.linkedSystemRecId, (id) => db.startupSystemRecommendation.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupContextProfileVersion", input.linkedProfileVersionId, (id) => db.startupContextProfileVersion.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupEconomicModel", input.linkedEconomicModelId, (id) => db.startupEconomicModel.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupReadinessAssessment", input.linkedReadinessId, (id) => db.startupReadinessAssessment.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupIdeaRecord", input.linkedIdeaVersionId, (id) => db.startupIdeaRecord.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupBusinessModelVersion", input.linkedBusinessModelId, (id) => db.startupBusinessModelVersion.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupMarketSizing", input.linkedMarketSizingId, (id) => db.startupMarketSizing.findFirst({ where: { id, ...scope }, select: { id: true } })],
+    ["StartupValidationPlan", input.linkedValidationPlanId, (id) => db.startupValidationPlan.findFirst({ where: { id, ...scope }, select: { id: true } })],
+  ];
+  for (const [entity, id, load] of checks) {
+    if (!id) continue;
+    if (!(await load(id))) throw new NotFoundError(entity, id);
+  }
 }
 
 function ideaToRecord(eval_: IdeaEvaluation, sessionId: string, workspaceId: string) {
@@ -1776,6 +1798,9 @@ export async function recordOwnerDecision(
   actorId: string,
   input: OwnerDecisionInput
 ): Promise<string> {
+  await assertSessionInWorkspace(workspaceId, sessionId);
+  if (input.ideaId) await assertIdeaInSession(workspaceId, sessionId, input.ideaId);
+
   const decisionId = randomUUID();
 
   // Capture current snapshot arrays outside the transaction (read-only queries)
@@ -1800,6 +1825,9 @@ export async function recordOwnerDecision(
     input.linkedMarketSizingId   = input.linkedMarketSizingId   ?? canonicalState.marketSizingId   ?? null;
     input.linkedValidationPlanId = input.linkedValidationPlanId ?? canonicalState.validationPlanId ?? null;
   }
+
+  // Before any linked id reaches the stored row or the approval-package hash.
+  await assertDecisionLinksInSession(workspaceId, sessionId, input);
 
   const packageHash = computeApprovalPackageHash({
     sessionId,
@@ -2036,6 +2064,7 @@ export async function runIdeaArbitration(
   sessionId: string,
   actorId: string
 ): Promise<StartupArbitrationResult & { arbitrationRecordId: string }> {
+  await assertSessionInWorkspace(workspaceId, sessionId);
   const ideas = await db.startupIdeaRecord.findMany({
     where: { sessionId, workspaceId, supersededById: null },
     include: {
