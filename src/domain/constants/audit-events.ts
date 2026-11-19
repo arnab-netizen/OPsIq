@@ -247,6 +247,8 @@ export const AUDIT_EVENTS = {
   BILLING_PAYMENT_METHOD_UPDATE_REQUESTED: "billing.payment_method_update_requested",
   BILLING_EVENT_REJECTED: "billing.event_rejected",
   BILLING_DUPLICATE_SUBSCRIPTION_CANCELED: "billing.duplicate_subscription_canceled",
+  // Expiry sweep returned the unsettled units of an abandoned plan-quota reservation (entitlement.service).
+  BILLING_USAGE_RESERVATION_RECOVERED: "billing.usage_reservation_recovered",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
 
   // Owner Mode

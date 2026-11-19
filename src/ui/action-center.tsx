@@ -7,6 +7,7 @@ import {
   type ErrorGovernanceContext,
 } from "@/lib/operator-error-governance";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
+import { versionAfterPatch } from "@/lib/patch-version";
 
 interface Action {
   id: string;
@@ -16,7 +17,7 @@ interface Action {
   dueDate?: string;
   version: number;
   blockerReason?: string;
-  evidence?: any[];
+  evidence?: unknown[];
   linkedEvidence?: string[];
 }
 
@@ -156,7 +157,7 @@ export function ActionCenter({
             ? {
                 ...a,
                 status: updated.status || newStatus,
-                version: (updated.version || version) + 1,
+                version: versionAfterPatch(updated, version),
                 blockerReason: updated.blockerReason || a.blockerReason,
               }
             : a
