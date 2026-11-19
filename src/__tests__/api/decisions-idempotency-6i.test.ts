@@ -103,6 +103,9 @@ vi.mock("@/services/decisions/decision-creation-service", () => ({
   createDecision: mocks.createDecision,
   createDecisionsBulk: mocks.createDecisionsBulk,
   parseCSV: mocks.parseCSV,
+  // The intake route persists through the quota-governed service (quota proven by the DB tests in
+  // src/__tests__/services/capability-quota/); forward to the db mock so the route's write stays observable.
+  persistDecisionItemWithinQuota: (_workspaceId: string, data: unknown) => mocks.dbOperatorItemCreate({ data }),
 }));
 
 vi.mock("@/services/decision-validation/decision-acceptance.service", () => ({
