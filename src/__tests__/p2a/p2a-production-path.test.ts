@@ -168,7 +168,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
         actorId: testUserId,
         sessionId: uuidv4(),
         createdAt: new Date(),
-      } as any,
+      } as never,
       policy: null,
     };
 
@@ -212,7 +212,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
     expect(retrieved?.id).toBe(createdRecommendationId);
 
     // Verify constraintsConsidered contains all expectation fields
-    const constraints = retrieved?.constraintsConsidered as Record<string, any>;
+    const constraints = retrieved?.constraintsConsidered as Record<string, unknown>;
     expect(constraints).toBeDefined();
     expect(constraints.why_now).toBe(
       "Revenue declining at 2% per week for the past month"
@@ -249,7 +249,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
         actorId: testUserId,
         sessionId: uuidv4(),
         createdAt: new Date(),
-      } as any,
+      } as never,
       policy: null,
     };
 
@@ -280,7 +280,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
 
     expect(updated).toBeDefined();
 
-    const constraints = updated?.constraintsConsidered as Record<string, any>;
+    const constraints = updated?.constraintsConsidered as Record<string, unknown>;
     expect(constraints).toBeDefined();
 
     // Updated fields should be present
@@ -315,7 +315,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functi
     );
 
     if (createEvent) {
-      const payload = createEvent.payload as Record<string, any>;
+      const payload = createEvent.payload as Record<string, unknown>;
       expect(payload).toBeDefined();
       // Verify at least some expectation fields are in payload
       expect(
