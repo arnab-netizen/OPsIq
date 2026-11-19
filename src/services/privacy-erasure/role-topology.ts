@@ -299,9 +299,11 @@ export async function verifyRoleTopologyReadOnly(c: ClientBase, names: RoleTopol
     if (!blocked) throw new Error("READ_ONLY_NOT_ENFORCED: a write-class statement was not rejected");
     const report = await verifyRoleTopology(c, names, options);
     report.facts.read_only_enforced = true;
-    return report;
-  } finally {
     await c.query("ROLLBACK");
+    return report;
+  } catch (e) {
+    await c.query("ROLLBACK").catch(() => undefined); // never let a failed ROLLBACK replace the original error
+    throw e;
   }
 }
 

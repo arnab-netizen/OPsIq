@@ -493,8 +493,10 @@ jobs:
       # OWNER_DATABASE_URL name the tool itself requires; no new secret). It never calls `apply`, never
       # mutates anything, and `continue-on-error: true` guarantees a non-PASS result, or the check being
       # unable to run at all, can never fail this migration job. (The blocking reconcile and least-privilege gate
-      # that follows this step is what decides promotion; this informational step only feeds the summary.) The result is parsed by the shared scripts/db/parse-role-topology-verify.mjs and
-      # only ever surfaced in the job summary below.
+      # that follows this step is what decides promotion; this informational step only feeds a pre-reconcile summary
+      # snapshot.) Its read-only guarantee now comes from the tool's own explicit BEGIN READ ONLY verification; PGOPTIONS
+      # below is a redundant extra layer, not the guarantee. The result is parsed by the shared
+      # scripts/db/parse-role-topology-verify.mjs and only ever surfaced in the job summary below.
       - name: Informational - check runtime role access after migration (read-only, non-blocking)
         if: success() && env.POST_VERIFY_SUCCEEDED == 'true'
         continue-on-error: true
@@ -592,6 +594,10 @@ jobs:
           echo "| Deploy succeeded | ${DEPLOY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Post-verify succeeded | ${POST_VERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Runtime role reconciled and verified (blocking gate) | ${RUNTIME_ROLE_RECONCILED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$RUNNER_TEMP/rr-gate.txt" ]; then
+            GATE_CODE=$(grep -m1 '^RUNTIME_ROLE_GATE_CODE=' "$RUNNER_TEMP/rr-gate.txt" | cut -d= -f2 | tr -cd 'A-Z_')
+            echo "| Runtime role gate code | ${GATE_CODE:-none} |" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Migration (owner-authorized, exact-one-pending enforced — both modes) | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
@@ -608,11 +614,9 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Informational, non-blocking: surfaces whether the just-applied migration added any
-          # Prisma-modelled table the opsiq_app runtime role cannot yet access. This NEVER affects
-          # DEPLOY_SUCCEEDED/POST_VERIFY_SUCCEEDED or this job's pass/fail outcome above or below --
-          # applying the migration and reconciling the runtime role's grants are separate steps by design.
-          echo "### Runtime role (\`opsiq_app\`) access after this migration — informational, non-blocking" >> "$GITHUB_STEP_SUMMARY"
+          # Informational, non-blocking, PRE-RECONCILE snapshot: what the read-only check saw right after the migration and
+          # BEFORE the blocking reconcile/gate step. It never affects DEPLOY_SUCCEEDED/POST_VERIFY_SUCCEEDED or the job outcome.
+          echo "### Runtime role (\`opsiq_app\`) access right after the migration, before the reconcile — informational, non-blocking" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ "${RUNTIME_ROLE_CHECK_RAN:-false}" == "true" ] && [ -f runtime-role-verify-summary.txt ]; then
             RR_PARSE_RESULT=$(grep '^PARSE_RESULT=' runtime-role-verify-summary.txt | cut -d= -f2)
@@ -624,9 +628,13 @@ jobs:
             elif [ "$RR_STATE" == "ABSENT" ]; then
               echo "The \`opsiq_app\` runtime role does not exist in production yet (the runtime-role cutover has not been performed). This check is only meaningful after that cutover; no action is needed from this migration alone." >> "$GITHUB_STEP_SUMMARY"
             elif [ -n "$RR_GAP_COUNT" ] && [ "$RR_GAP_COUNT" != "0" ]; then
-              echo "⚠️ **This migration added table(s) the runtime role cannot yet access — run the 'Reconcile Runtime Role' workflow (APPLY mode) before relying on this table in production, or the next deploy's release gate will block again.**" >> "$GITHUB_STEP_SUMMARY"
+              if [ "${RUNTIME_ROLE_RECONCILED:-false}" == "true" ]; then
+                echo "This migration added table(s) the runtime role could not yet access; the blocking reconcile in this run has since granted and verified them (see the gate row above)." >> "$GITHUB_STEP_SUMMARY"
+              else
+              echo "⚠️ **This migration added table(s) the runtime role cannot yet access and the blocking reconcile did not complete — run the 'Reconcile Runtime Role' workflow (APPLY mode) before relying on this table in production, or the next deploy's release gate will block again.**" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
               echo "Inaccessible table(s) ($RR_GAP_COUNT): \`${RR_GAP_TABLES:-unknown}\`" >> "$GITHUB_STEP_SUMMARY"
+              fi
             else
               echo "✓ The runtime role already has full access to every Prisma-modelled table — no reconcile needed." >> "$GITHUB_STEP_SUMMARY"
             fi

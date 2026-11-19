@@ -19,6 +19,8 @@ export const APPLY_CONFIRM_PHRASE = "APPLY PRODUCTION RUNTIME ROLE TOPOLOGY";
 const ALLOWED_TARGETS = ["production", "ci"];
 
 const oneLine = (x) => String(x).replace(/[\r\n]+/g, " ");
+/** Workflow-command-safe single line: no newlines and no `::` sequence that could start or continue a command. */
+export const sanitizeProblem = (p) => oneLine(p).replace(/::/g, ": :");
 const countLines = (text, needle) => String(text ?? "").split("\n").filter((l) => l.includes(needle)).length;
 
 function parseApply(text) {
@@ -125,7 +127,7 @@ function cli() {
   const result = runReconcileGate({ target, expectedSha: env.EXPECTED_RELEASE_SHA, actualSha: (git.stdout ?? "").trim(), run: exec });
   console.log(`RUNTIME_ROLE_GATE=${result.ok ? "PASS" : "BLOCKED"}`);
   console.log(`RUNTIME_ROLE_GATE_CODE=${result.code}`);
-  for (const p of result.problems) console.log(`::error::${oneLine(p).replace(/::/g, ": :")}`);
+  for (const p of result.problems) console.log(`::error::${sanitizeProblem(p)}`);
   process.exit(result.ok ? 0 : 1);
 }
 

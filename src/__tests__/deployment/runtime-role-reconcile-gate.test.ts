@@ -10,7 +10,7 @@ import { Client } from "pg";
 import { spawnSync } from "child_process";
 import { resolve } from "path";
 // @ts-expect-error -- plain ESM script without type declarations
-import { runReconcileGate, strictVerifyProblems, toolInvocation, APPLY_CONFIRM_PHRASE } from "../../../scripts/release/runtime-role-reconcile-gate.mjs";
+import { runReconcileGate, strictVerifyProblems, toolInvocation, sanitizeProblem, APPLY_CONFIRM_PHRASE } from "../../../scripts/release/runtime-role-reconcile-gate.mjs";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import { verifyRoleTopologyReadOnly } from "@/services/privacy-erasure/role-topology";
 import { assertRoleCutoverStaticTarget } from "@/infra/role-cutover-target";
@@ -108,8 +108,11 @@ describe("gate CLI (no database needed)", () => {
     const twice = verifyOut() + verifyOut({ target: "production" });
     expect(gate({ post: { exitCode: 0, output: twice } }).ok).toBe(false);
     expect(gate({ apply: { exitCode: 0, output: applyOut() + applyOut() } }).code).toBe("APPLY_OUTPUT_MALFORMED");
-    const r = spawnSync("node", ["-e", `import("./scripts/release/runtime-role-reconcile-gate.mjs").then(m=>{const r=m.runReconcileGate({target:"production",expectedSha:"${"a".repeat(40)}",actualSha:"${"b".repeat(40)}",run:()=>({exitCode:0,output:""})});console.log(JSON.stringify(r.problems))})`], { cwd: ROOT0, encoding: "utf8" });
-    expect(r.status).toBe(0);
+    const hostile = 'tbl\n::set-output name=x::y\r\n::add-mask::secret';
+    const clean = sanitizeProblem(hostile);
+    expect(clean).not.toMatch(/[\r\n]/);
+    expect(clean).not.toContain("::");
+    expect(`::error::${clean}`.split("\n")).toHaveLength(1);
   });
 });
 
