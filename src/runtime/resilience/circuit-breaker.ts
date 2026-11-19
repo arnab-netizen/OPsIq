@@ -47,6 +47,9 @@ class CircuitBreaker {
     if (this.state === "OPEN") {
       if (this.shouldAttemptReset()) {
         this.state = "HALF_OPEN";
+        // success_threshold counts successes recorded WHILE half-open; successes
+        // recorded before the circuit opened must not close it early.
+        this.successes = 0;
       } else {
         throw new Error(
           `Circuit breaker OPEN. Retry after ${this.timeUntilReset()}ms`,
