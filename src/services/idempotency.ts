@@ -43,12 +43,73 @@ function hashPayload(payload: Record<string, unknown>): string {
   return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
+/**
+ * Stored-hash format that binds a record to the verified caller: `v2:<scope>:<payload>`, where <scope> is a
+ * hash of the verified workspace and actor (options.workspaceId / options.actorId, else the verified ids on
+ * authContext). The schema has no workspace/actor columns and the key is globally unique, so a record is
+ * bound to its caller through this hash: another workspace or actor sending the same key never matches it
+ * and is refused (400) instead of being served the first caller's cached outcome. Records written before
+ * this format (a bare payload hash) carry no caller and are matched as before until they expire.
+ */
+const SCOPED_HASH_PREFIX = "v2:";
+
+function scopeOf(options: IdempotencyOptions): string {
+  const ctx = (options.authContext && typeof options.authContext === "object" ? options.authContext : {}) as {
+    verifiedWorkspaceId?: unknown;
+    verifiedActorId?: unknown;
+  };
+  const workspaceId = options.workspaceId ?? (typeof ctx.verifiedWorkspaceId === "string" ? ctx.verifiedWorkspaceId : "");
+  const actorId = options.actorId ?? (typeof ctx.verifiedActorId === "string" ? ctx.verifiedActorId : "");
+  return crypto.createHash("sha256").update(`workspace:${workspaceId}|actor:${actorId}`).digest("hex");
+}
+
+/** Refuse a record that belongs to another caller, another operation or another payload. */
+function assertRecordMatches(
+  record: { operationName: string; payload: string | null },
+  operationName: string,
+  scopeHash: string,
+  payloadHash: string
+): void {
+  const stored = record.payload;
+  if (stored && stored.startsWith(SCOPED_HASH_PREFIX)) {
+    const [storedScope, storedPayload] = stored.slice(SCOPED_HASH_PREFIX.length).split(":");
+    // Checked first, and answered without any detail of the other caller's request.
+    if (storedScope !== scopeHash) {
+      throw new ValidationError("This idempotency key has already been used. Send the request with a new idempotency key.");
+    }
+    if (record.operationName !== operationName) {
+      throw new ValidationError(
+        `Idempotency key reused for different operation. Original: ${record.operationName}, Current: ${operationName}`
+      );
+    }
+    if (storedPayload !== payloadHash) {
+      throw new ValidationError(
+        `Idempotency key reused with different payload. Cannot retry request with different parameters.`
+      );
+    }
+    return;
+  }
+  // Legacy record (bare payload hash, no caller binding).
+  if (record.operationName !== operationName) {
+    throw new ValidationError(
+      `Idempotency key reused for different operation. Original: ${record.operationName}, Current: ${operationName}`
+    );
+  }
+  if (stored && stored !== payloadHash) {
+    throw new ValidationError(
+      `Idempotency key reused with different payload. Cannot retry request with different parameters.`
+    );
+  }
+}
+
 export async function checkIdempotencyKey(
   options: IdempotencyOptions
 ): Promise<IdempotencyCheckResult> {
   const { idempotencyKey, operationName, payload, expirationMinutes = 24 * 60 } = options;
 
   const payloadHash = hashPayload(payload);
+  const scopeHash = scopeOf(options);
+  const storedHash = `${SCOPED_HASH_PREFIX}${scopeHash}:${payloadHash}`;
   const expiresAt = new Date(Date.now() + expirationMinutes * 60 * 1000);
 
   // Atomically create or fetch existing record
@@ -59,19 +120,8 @@ export async function checkIdempotencyKey(
   });
 
   if (existing) {
-    // Verify operation name matches
-    if (existing.operationName !== operationName) {
-      throw new ValidationError(
-        `Idempotency key reused for different operation. Original: ${existing.operationName}, Current: ${operationName}`
-      );
-    }
-
-    // Verify payload matches (reject different payload with same key)
-    if (existing.payload && existing.payload !== payloadHash) {
-      throw new ValidationError(
-        `Idempotency key reused with different payload. Cannot retry request with different parameters.`
-      );
-    }
+    // Verify caller, operation name and payload match (reject any other use of the same key)
+    assertRecordMatches(existing, operationName, scopeHash, payloadHash);
 
     // If request has expired, treat as new
     if (existing.expiresAt < new Date()) {
@@ -85,7 +135,7 @@ export async function checkIdempotencyKey(
             id: randomUUID(),
             idempotencyKey,
             operationName,
-            payload: payloadHash,
+            payload: storedHash,
             status: "pending",
             expiresAt,
           },
@@ -142,7 +192,7 @@ export async function checkIdempotencyKey(
         id: randomUUID(),
         idempotencyKey,
         operationName,
-        payload: payloadHash,
+        payload: storedHash,
         status: "pending",
         expiresAt,
       },
@@ -155,19 +205,8 @@ export async function checkIdempotencyKey(
         where: { idempotencyKey },
       });
       if (concurrent) {
-        // Verify operation name matches
-        if (concurrent.operationName !== operationName) {
-          throw new ValidationError(
-            `Idempotency key reused for different operation. Original: ${concurrent.operationName}, Current: ${operationName}`
-          );
-        }
-
-        // Verify payload matches
-        if (concurrent.payload && concurrent.payload !== payloadHash) {
-          throw new ValidationError(
-            `Idempotency key reused with different payload. Cannot retry request with different parameters.`
-          );
-        }
+        // Verify caller, operation name and payload match
+        assertRecordMatches(concurrent, operationName, scopeHash, payloadHash);
 
         // If in flight, reject duplicate
         if (concurrent.status === "pending") {
@@ -211,8 +250,9 @@ export async function recordIdempotencyResponse(
   // IdempotencyRecord schema does not have workspaceId field
   // Clients must ensure idempotencyKey is globally unique
 
+  // Only the claimed (pending) record is completed: a finished record, possibly another caller's, is final.
   await db.idempotencyRecord.updateMany({
-    where: { idempotencyKey },
+    where: { idempotencyKey, status: "pending" },
     data: {
       status: "completed",
       responseCode: statusCode,
@@ -240,8 +280,9 @@ export async function recordIdempotencyError(
   }
 
   const recorded = toRecordedError(error);
+  // Only the claimed (pending) record is failed: a finished record, possibly another caller's, is final.
   await db.idempotencyRecord.updateMany({
-    where: { idempotencyKey },
+    where: { idempotencyKey, status: "pending" },
     data: {
       status: "failed",
       responseCode: recorded.statusCode,
