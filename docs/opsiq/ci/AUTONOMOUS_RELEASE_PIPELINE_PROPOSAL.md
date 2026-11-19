@@ -1,37 +1,50 @@
-# Autonomous release pipeline: design and the one reviewed change it needs
+# Autonomous release pipeline: trust model and status
 
-Status: PROPOSED, not active. The draft workflow is `docs/opsiq/ci/proposed/production-release.yml.draft`
-(deliberately outside `.github/workflows/` so it cannot run).
+Status (session 6): **Phase 1 IMPLEMENTED_NOT_VERIFIED, INERT**. The workflow is shipped as
+`docs/opsiq/ci/proposed/production-release-reconcile.yml.draft` (outside `.github/workflows`, so it cannot run); the supporting scripts and
+tests are live code. It has never executed. Phase 2 (automatic migration execution) is NOT implemented and NOT started.
 
-## Why it is not simply committed
+## Activation (a human-reviewed change; not done by the implementing agent)
+`src/__tests__/governance/prisma-mutation-governance.test.ts` states that a fourth workflow carrying production authorization
+`must not be added here without the same review this one received`. The activation change is therefore exactly: (1) move the draft to
+`.github/workflows/production-release-reconcile.yml`, (2) add that filename to that test's allowlist and its comment, (3) point
+`production-release-reconcile.test.ts`'s `DRAFT` constant at the new path and delete its inertness test. An independent human reviewer must
+approve that diff; the implementing agent must not make or merge it.
 
-`src/__tests__/ci-cd/production-secret-isolation.test.ts` and the exact-host/exact-pending safety tests are
-independent governance controls. They reject, by design:
-- a reusable (`workflow_call`) workflow that references `OPERATOR_DATABASE_URL`;
-- an origin guard that is not the verbatim `workflow_dispatch|schedule` guard;
-- changes to the shape of the `migration_name` / `expected_database_host` inputs.
+## Why a scheduled workflow and not a push-triggered one
+`src/__tests__/ci-cd/production-secret-isolation.test.ts` pins the production-grade jobs behind a verbatim origin guard that allows
+only `workflow_dispatch|schedule`, forbids reusable workflows from referencing production secrets, and requires `production-operator`.
+A `push`-triggered or reusable release broke 6 of those tests, and editing them in the same PR would let a change approve itself.
+A `schedule` trigger is already inside the trust model, needs no external dispatch, runs only from the default branch, and gives
+durable recovery: a missed, superseded or cancelled release is simply picked up by the next run, because every run reconciles
+production with `main`'s current state rather than reacting to one event. No existing governance test is edited by this change.
 
-Trying it (session 3) failed 6 of those tests. Editing those tests in the same PR that needs the change would let a
-change approve itself, which the remediation directive forbids. So the change must be made and reviewed as its own
-privileged-CI PR by someone other than the author, then merged through the normal gates.
+## What one run does (all in `production-operator`, shared concurrency group `migrate-production`)
+1. Origin guard (verbatim) -> checkout `main` -> release SHA = main HEAD, which must equal `GITHUB_SHA` (else stop before any DB step).
+2. Required CI (`branch-protection`) must already be green at that exact SHA, else the run is a no-op.
+3. Production identity: repository variable `PRODUCTION_DATABASE_HOST` (bare direct host; unset = fail closed) against the operator
+   URL's host, plus the database's own identity (same reviewed checks as the role tool).
+4. Release plan from the REAL ledger (`release-plan-cli.ts`, explicit `BEGIN READ ONLY`, always rolled back): NOOP / MIGRATE / BLOCK. A
+   non-NOOP plan fails the run before any write. The plan uses the fail-closed allowlist classifier; it is a policy filter, not a
+   compatibility proof.
+5. Runtime-role reconcile and strict least-privilege gate in drift mode: a fully conforming role causes no write and no lock.
+6. Exact-SHA deployment: GitHub Deployments API for THIS sha. No successful production build -> the deploy hook is triggered once;
+   the run then waits for THIS sha to reach success. At most one trigger per run (hourly cron); BLOCK after 5 failed builds of the
+   same SHA.
 
-## Proposed design (native, no external dispatch)
+## New privileged execution paths (everything a reviewer must check)
+- Scheduled trigger of a job in `production-operator` (new) using only `OPERATOR_DATABASE_URL` and the optional deploy hook.
+- It can run `opsiq-role-cutover.ts apply --only-if-present` (reconcile-only, existing tool) through the gate when drift exists.
+- It can POST the deploy hook. A forged hook call is impossible without the secret; a wrong-SHA deploy is detected because success is
+  accepted only for the exact release SHA.
+- `GITHUB_TOKEN` with `checks: read` and `deployments: read` only.
 
-`push` to main -> `plan` job (no secrets: SHA is still main HEAD, `PRODUCTION_DATABASE_HOST` repo variable set,
-`ci.yml` green at that exact SHA, 0 or 1 new migration) -> privileged migrate + `runtime-role-reconcile-gate.mjs` +
-Vercel redeploy hook. Emergency manual workflows stay.
-
-Required reviewed changes, in one PR:
-1. Add the privileged release job as its own non-reusable workflow (so no secret is referenced from a reusable
-   workflow) with the verbatim origin guard extended to permit `push` only on `refs/heads/main`.
-2. Update the isolation test's allow-list for that one workflow, and keep every mutation test.
-3. Keep `environment: production-operator` until the owner replaces its approval rule with an equivalent reviewed
-   control. A main-only branch rule is not an equivalent replacement for independent approval.
-
-One-time repository settings (owner, not automatable by this session):
-- Variables: `PRODUCTION_DATABASE_HOST` (bare direct Neon hostname; confirm it matches the production `DATABASE_URL` host).
-- Required status check on `main` for the CI workflow, and CODEOWNERS covering `.github/workflows/**`,
-  `scripts/release/**`, `scripts/db/**` and the governance tests.
-
-Known limits: more than one new migration per push fails closed (manual workflow); the Vercel deploy hook is not
-SHA-pinned (the Vercel build gate re-verifies migrations and grants for whatever it builds).
+## Known limits (stated, not hidden)
+- Migrations are still applied only by `migrate-production.yml` (manual). Phase 1 detects and alerts; Phase 2 would add ordered
+  automatic apply under the allowlist classifier and still needs its own independent review.
+- Whether `production-operator` requires a reviewer for scheduled runs is unknown from this session. If it does, each hourly run
+  waits for approval and the pipeline is NOT autonomous until the owner replaces that rule with an independently reviewed equivalent.
+- Needs the repository variable `PRODUCTION_DATABASE_HOST` (non-secret) and, for redeploy, `VERCEL_PRODUCTION_DEPLOY_HOOK_URL`.
+- Deployment state relies on Vercel's GitHub integration recording Production deployments; if it records none, every run falls back
+  to REDEPLOY (bounded to one hook trigger per run).
+- The workflow has not run; first execution must be supervised (manual dispatch) before relying on the schedule.

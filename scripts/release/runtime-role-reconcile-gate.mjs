@@ -66,11 +66,13 @@ export function strictVerifyProblems({ exitCode, output }, { target, phase = "po
 }
 
 /**
- * @param {{ target?: string, expectedSha: string, actualSha: string,
+ * @param {{ target?: string, expectedSha: string, actualSha: string, onlyIfDrift?: boolean,
  *           run: (stage: "pre"|"apply"|"post") => { exitCode: number|null, output: string } }} p
+ * onlyIfDrift (scheduled reconciliation): when the read-only PRE verify already proves a fully conforming role, return
+ * RUNTIME_ROLE_ALREADY_CONFORMING and perform NO write at all, so a periodic run neither mutates nor takes locks without cause.
  * @returns {{ ok: boolean, code: string, problems: string[] }}
  */
-export function runReconcileGate({ target = "production", expectedSha, actualSha, run }) {
+export function runReconcileGate({ target = "production", expectedSha, actualSha, onlyIfDrift = false, run }) {
   const block = (code, problems) => ({ ok: false, code, problems });
   if (!ALLOWED_TARGETS.includes(target)) return block("BAD_TARGET", [`target '${target}' not allowed`]);
   if (!/^[0-9a-f]{40}$/.test(expectedSha ?? "") || expectedSha !== actualSha) return block("STALE_OR_UNPINNED_RELEASE_SHA", ["checked-out HEAD does not equal the authorized release SHA"]);
@@ -82,6 +84,9 @@ export function runReconcileGate({ target = "production", expectedSha, actualSha
   if (pv.runtimeRoleState === "ABSENT") return block("RUNTIME_ROLE_ABSENT", ["production requires opsiq_app; the gate never creates it"]);
   const preProblems = strictVerifyProblems(pre, { target, phase: "post", requireConforming: false });
   if (preProblems.length) return block("PRE_VERIFY_INVALID", preProblems);
+  if (onlyIfDrift && strictVerifyProblems(pre, { target, phase: "post", requireConforming: true }).length === 0) {
+    return { ok: true, code: "RUNTIME_ROLE_ALREADY_CONFORMING", problems: [] };
+  }
 
   const ap = run("apply");
   if (ap.exitCode !== 0) return block("APPLY_FAILED", [`apply exit status ${ap.exitCode}`]);
@@ -124,7 +129,7 @@ function cli() {
     // Parse stdout ONLY: a stderr line must never be able to supply or override a result line.
     return { exitCode: r.status, output: r.stdout ?? "" };
   };
-  const result = runReconcileGate({ target, expectedSha: env.EXPECTED_RELEASE_SHA, actualSha: (git.stdout ?? "").trim(), run: exec });
+  const result = runReconcileGate({ target, expectedSha: env.EXPECTED_RELEASE_SHA, actualSha: (git.stdout ?? "").trim(), onlyIfDrift: env.RECONCILE_ONLY_IF_DRIFT === "1", run: exec });
   console.log(`RUNTIME_ROLE_GATE=${result.ok ? "PASS" : "BLOCKED"}`);
   console.log(`RUNTIME_ROLE_GATE_CODE=${result.code}`);
   for (const p of result.problems) console.log(`::error::${sanitizeProblem(p)}`);

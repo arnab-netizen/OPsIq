@@ -735,6 +735,16 @@ jobs:
             console.log("gate-proof tests=" + t.length + " notPassed=" + bad.length + " dbProofsPassed=" + dbRan);
             if (bad.length || dbRan !== 3) { console.log("::error::runtime-role gate proof incomplete: every test must pass and none may be skipped"); process.exit(1); }
           '
+          # Scheduled-reconcile proof (real migration ledger plan, read-only): every test must pass and none may be skipped.
+          TEST_WITH_DB=true OPSIQ_DB_TARGET=local npx vitest run src/__tests__/deployment/production-release-reconcile.test.ts --reporter=json --outputFile="$RUNNER_TEMP/reconcile-proof.json"
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.RUNNER_TEMP + "/reconcile-proof.json", "utf8"));
+            const t = r.testResults.flatMap((f) => f.assertionResults);
+            const bad = t.filter((x) => x.status !== "passed");
+            const db = t.filter((x) => /release plan against the real migration ledger/.test(x.fullName ?? "") && x.status === "passed").length;
+            console.log("reconcile-proof tests=" + t.length + " notPassed=" + bad.length + " dbProofsPassed=" + db);
+            if (bad.length || db !== 2) { console.log("::error::scheduled-reconcile proof incomplete: every test must pass and none may be skipped"); process.exit(1); }
+          '
 
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
   # single-line `run:` value containing an unquoted colon) that no existing

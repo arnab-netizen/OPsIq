@@ -1,0 +1,210 @@
+name: Production Release Reconcile
+
+# Scheduled (and emergency manually dispatchable) reconciliation of production against `main`. It needs NO external workflow
+# dispatch, and it runs from the workflow definition on refs/heads/main only (GitHub runs `schedule` only from the default branch;
+# the verbatim origin guard below additionally refuses any other trigger/ref/definition).
+#
+# One run, in order, all in the protected `production-operator` environment (its approval/branch rules are NOT changed here):
+#   1. exact release SHA = main HEAD at run start; CI (`branch-protection`) must already be green at that exact SHA, else no-op
+#   2. production identity: exact pinned direct host (repository variable PRODUCTION_DATABASE_HOST) AND the database's own identity
+#   3. REAL migration ledger vs the complete committed chain (read-only transaction): NOOP / MIGRATE / BLOCK. This workflow NEVER applies
+#      migrations. MIGRATE or BLOCK fails the run (visible alert) and stops before any write; migrations are applied by migrate-production.yml.
+#   4. runtime-role reconcile + strict least-privilege gate ONLY IF drift (a conforming role causes no write and no lock)
+#   5. exact-SHA deployment: GitHub Deployments API for THIS sha; if no successful production build, trigger the deploy hook ONCE
+#      (bounded: one trigger per run, runs are hourly, BLOCK after 5 failed builds of the same SHA), then verify THIS sha reached success
+#
+# It does not introduce a push/workflow_run/pull_request trigger and uses no `secrets: inherit`; only OPERATOR_DATABASE_URL and the
+# optional deploy hook are referenced. Documented in docs/opsiq/ci/AUTONOMOUS_RELEASE_PIPELINE_PROPOSAL.md.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Reconcile production with main
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production-operator
+    permissions:
+      contents: read
+      checks: read
+      deployments: read
+
+    steps:
+      - name: Assert workflow origin is main (fail-closed)
+        run: |
+          set -euo pipefail
+          case "${GITHUB_EVENT_NAME}" in
+            workflow_dispatch|schedule) ;;
+            *) echo "::error::refusing to run: unexpected trigger '${GITHUB_EVENT_NAME}'"; exit 1 ;;
+          esac
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::refusing to run: ref is '${GITHUB_REF}', must be refs/heads/main"
+            exit 1
+          fi
+          case "${GITHUB_WORKFLOW_REF}" in
+            *"@refs/heads/main") ;;
+            *) echo "::error::refusing to run: the workflow definition is not from refs/heads/main"; exit 1 ;;
+          esac
+          echo "Workflow origin verified: ${GITHUB_WORKFLOW_REF}"
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve the exact release SHA (main HEAD must equal the SHA this run started on)
+        run: |
+          set -euo pipefail
+          HEAD_SHA=$(git rev-parse HEAD)
+          if [ "$HEAD_SHA" != "${GITHUB_SHA}" ]; then
+            echo "::error::main advanced after this run started ($HEAD_SHA vs ${GITHUB_SHA}); the next scheduled run owns the newer SHA. No database step has run."
+            exit 1
+          fi
+          echo "RELEASE_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+
+      - name: Require required CI green at this exact SHA (otherwise do nothing)
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          C=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/check-runs?per_page=100" --jq '[.check_runs[] | select(.name=="branch-protection")] | sort_by(.completed_at) | last | .conclusion // "none"')
+          echo "branch-protection conclusion at $RELEASE_SHA: $C"
+          if [ "$C" = "success" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "ready=false" >> "$GITHUB_OUTPUT"; echo "::notice::CI is not green at this SHA yet; nothing to release this run."; fi
+
+      - name: Validate the pinned production host variable (bare hostname)
+        if: steps.ci.outputs.ready == 'true'
+        env:
+          EXPECTED_DATABASE_HOST: ${{ vars.PRODUCTION_DATABASE_HOST }}
+        run: |
+          set -euo pipefail
+          if [ -z "$EXPECTED_DATABASE_HOST" ]; then echo "::error::repository variable PRODUCTION_DATABASE_HOST is not set (fail closed)"; exit 1; fi
+          node --input-type=module -e "
+            const { isValidExpectedHost } = await import(process.cwd() + '/scripts/validate-expected-db-host.mjs');
+            const r = isValidExpectedHost(process.env.EXPECTED_DATABASE_HOST);
+            if (!r.ok) { console.error('::error::' + r.reason); process.exit(1); }
+          "
+
+      - name: Setup Node.js 22
+        if: steps.ci.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.ci.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Preflight check - OPERATOR_DATABASE_URL secret exists
+        if: steps.ci.outputs.ready == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::OPERATOR_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "✓ OPERATOR_DATABASE_URL secret is configured"
+
+      - name: Remove local environment files
+        if: steps.ci.outputs.ready == 'true'
+        run: rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+
+      - name: Verify exact production database host (workflow-level gate)
+        if: steps.ci.outputs.ready == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ vars.PRODUCTION_DATABASE_HOST }}
+        run: node scripts/validate-expected-db-host.mjs
+
+      - name: Release plan from the REAL migration ledger (read-only; never applies)
+        if: steps.ci.outputs.ready == 'true'
+        env:
+          OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ vars.PRODUCTION_DATABASE_HOST }}
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+        run: |
+          set -euo pipefail
+          set +e
+          npx tsx scripts/release/release-plan-cli.ts --target production | tee "$RUNNER_TEMP/plan.txt"
+          RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$RC" -eq 0 ] && grep -q '^RELEASE_PLAN=NOOP$' "$RUNNER_TEMP/plan.txt"; then exit 0; fi
+          echo "::error::Release plan is not NOOP (exit $RC). Migrations are applied only by the Migrate Production workflow; this run stops before any write."
+          exit 1
+
+      - name: Runtime-role reconcile and strict least-privilege gate (only if drift)
+        if: steps.ci.outputs.ready == 'true'
+        env:
+          OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          EXPECTED_DATABASE_HOST: ${{ vars.PRODUCTION_DATABASE_HOST }}
+          EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          RECONCILE_ONLY_IF_DRIFT: '1'
+          OPSIQ_RECONCILE_TARGET: production
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+        run: |
+          set -euo pipefail
+          node scripts/release/runtime-role-reconcile-gate.mjs | tee "$RUNNER_TEMP/rr-gate.txt"
+          grep -q '^RUNTIME_ROLE_GATE=PASS$' "$RUNNER_TEMP/rr-gate.txt"
+
+      - name: Exact-SHA production deployment decision
+        id: decide
+        if: steps.ci.outputs.ready == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/release/redeploy-decision.mjs decide | tee "$RUNNER_TEMP/decision.txt"
+          D=$(grep -m1 '^DEPLOY_DECISION=' "$RUNNER_TEMP/decision.txt" | cut -d= -f2 | tr -cd 'A-Z_')
+          echo "decision=$D" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger the production deploy hook ONCE (only when this exact SHA has no successful build)
+        if: steps.decide.outputs.decision == 'REDEPLOY'
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "::error::VERCEL_PRODUCTION_DEPLOY_HOOK_URL is not configured; redeploy main in Vercel manually. This run cannot deploy."
+            exit 1
+          fi
+          curl -fsS --max-redirs 0 -X POST --max-time 30 -o /dev/null "$DEPLOY_HOOK_URL"
+          echo "hook triggered"
+
+      - name: Verify THIS exact SHA reached a successful production deployment
+        if: steps.decide.outputs.decision == 'REDEPLOY' || steps.decide.outputs.decision == 'WAIT'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 40); do
+            if node scripts/release/redeploy-decision.mjs verify > "$RUNNER_TEMP/verify.txt" 2>&1; then echo "production deployment verified for $RELEASE_SHA"; exit 0; fi
+            sleep 20
+          done
+          echo "::error::no successful production deployment recorded for $RELEASE_SHA within the verification window"
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Production release reconcile"
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Release SHA | \`${RELEASE_SHA:-unknown}\` |"
+            echo "| CI green at SHA | ${{ steps.ci.outputs.ready }} |"
+            echo "| Deploy decision | ${{ steps.decide.outputs.decision }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
