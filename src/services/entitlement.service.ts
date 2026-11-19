@@ -506,13 +506,16 @@ export interface CapabilityQuotaOptions<T> extends CapabilityUsageMode {
   keptFromResult?: (result: T) => number;
 }
 
-/** Lock the reservation's own row: serializes settle, completion and sweep of ONE reservation. */
-async function lockReservation(tx: Prisma.TransactionClient, reservationId: string, workspaceId: string): Promise<boolean> {
-  const rows = await tx.$queryRaw<Array<{ id: string }>>`
-    SELECT id FROM usage_events
+/**
+ * Lock the reservation's own row: serializes settle, completion and sweep of ONE reservation. Returns the
+ * reserve row's timestamp (the billing moment of the reservation), or null when there is no such row.
+ */
+async function lockReservation(tx: Prisma.TransactionClient, reservationId: string, workspaceId: string): Promise<Date | null> {
+  const rows = await tx.$queryRaw<Array<{ id: string; timestamp: Date }>>`
+    SELECT id, timestamp FROM usage_events
     WHERE id = ${reservationId}::uuid AND workspace_id = ${workspaceId}::uuid AND reservation_entry = 'reserve'
     FOR UPDATE`;
-  return rows.length === 1;
+  return rows.length === 1 ? rows[0].timestamp : null;
 }
 
 async function isReservationFinalized(tx: Prisma.TransactionClient, reservationId: string): Promise<boolean> {
@@ -574,7 +577,8 @@ async function finalizeReservationInTransaction(
   reservation: { id: string; workspaceId: string; key: string; amount: number },
   extraKept: number
 ): Promise<ReservationFinalization | null> {
-  if (!(await lockReservation(tx, reservation.id, reservation.workspaceId))) return null;
+  const reservedAt = await lockReservation(tx, reservation.id, reservation.workspaceId);
+  if (!reservedAt) return null;
   if (await isReservationFinalized(tx, reservation.id)) return null;
   const settled = await countSettledUnits(tx, reservation.id);
   const kept = Math.min(reservation.amount, settled + Math.max(0, Math.trunc(extraKept)));
@@ -585,7 +589,10 @@ async function finalizeReservationInTransaction(
       workspaceId: reservation.workspaceId,
       key: reservation.key,
       value: -returned,
-      timestamp: new Date(),
+      // Stamped with the RESERVE row's time, not now: usage is summed per billing period
+      // (timestamp >= currentPeriodStart), so a unit reserved in one period and returned after the period
+      // boundary (expiry sweep, or a slow completion) must be returned in the period it was counted in.
+      timestamp: reservedAt,
       reservationId: reservation.id,
       reservationEntry: RESERVATION_ENTRY.RELEASE,
     },
