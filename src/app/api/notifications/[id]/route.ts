@@ -6,7 +6,7 @@
 
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
+import { NotFoundError } from "@/infra/errors";
 import {
   getNotification,
   markAsRead,
@@ -31,13 +31,9 @@ export const GET = withCanonicalEnforcement(async (
 
   const notification = await getNotification(id);
 
-  if (!notification) {
-    throw new Error("Notification not found");
-  }
-
-  // Verify notification belongs to requesting workspace
-  if (notification.workspaceId !== workspaceId) {
-    throw new UnauthorizedError("Access denied");
+  // Another workspace's notification is the same 404 as an unknown id (tenant non-disclosure).
+  if (!notification || notification.workspaceId !== workspaceId) {
+    throw new NotFoundError("Notification", id);
   }
 
   return {
@@ -64,13 +60,9 @@ export const PATCH = withCanonicalEnforcement(async (
 
   const notification = await getNotification(id);
 
-  if (!notification) {
-    throw new Error("Notification not found");
-  }
-
-  // Verify notification belongs to requesting workspace
-  if (notification.workspaceId !== workspaceId) {
-    throw new UnauthorizedError("Access denied");
+  // Another workspace's notification is the same 404 as an unknown id (tenant non-disclosure).
+  if (!notification || notification.workspaceId !== workspaceId) {
+    throw new NotFoundError("Notification", id);
   }
 
   markAsRead(id);
