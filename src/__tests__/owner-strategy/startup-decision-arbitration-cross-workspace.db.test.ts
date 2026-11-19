@@ -100,7 +100,7 @@ let sysRecA = "";
 let sessB2 = "";
 let ideaB2a = "";
 let ideaB2b = "";
-const bLinks = { sysRec: "", profile: "", econ: "", readiness: "", businessModel: "", marketSizing: "", validationPlan: "" };
+const bLinks = { sysRec: "", sysRecSession: "", profile: "", econ: "", readiness: "", businessModel: "", marketSizing: "", validationPlan: "" };
 
 const readinessInputs: ReadinessInputs = {
   capitalAvailableCents: 1000000n,
@@ -145,6 +145,7 @@ beforeAll(async () => {
   ideaB2a = bIdeas[0].id;
   ideaB2b = bIdeas[1].id;
   bLinks.sysRec = await createSystemRecommendation(wsB, sessB2, actor, { ideaId: ideaB2a, recommendation: "HOLD", rationale: "r", confidence: 40, inputSnapshot: {} });
+  bLinks.sysRecSession = await createSystemRecommendation(wsB, sessB2, actor, { ideaId: null, recommendation: "MORE_VALIDATION_REQUIRED", rationale: "session-level", confidence: 30, inputSnapshot: {} });
   bLinks.profile = (await updateContextProfile(wsB, sessB2, actor, { step: "b" }, "b profile")).versionId;
   bLinks.econ = await buildAndPersistEconomicModel(wsB, sessB2, ideaB2a, actor, economicInputs);
   await assessAndPersistReadiness(wsB, sessB2, ideaB2a, actor, readinessInputs);
@@ -241,15 +242,33 @@ describe("recordOwnerDecision — idea and linked artifacts must belong to the c
         recordOwnerDecision(wsB, sessB2, actor, {
           decisionType: "GO",
           ideaId: ideaB2b,
-          linkedSystemRecId: bLinks.sysRec,
+          linkedSystemRecId: bLinks.sysRecSession,
           linkedProfileVersionId: bLinks.profile,
-          linkedEconomicModelId: bLinks.econ,
-          linkedReadinessId: bLinks.readiness,
           ...link,
         }).then(() => "recorded", (e: unknown) => (e instanceof NotFoundError ? "not-found" : `error: ${String(e)}`))
       ).resolves.toBe("not-found");
     }
     expect(await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } })).toBe(before);
+  });
+
+  it("[db] linkedIdeaVersionId must be the decision's own idea record", async () => {
+    const before = await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } });
+    await expect(
+      recordOwnerDecision(wsB, sessB2, actor, { decisionType: "GO", ideaId: ideaB2b, linkedSystemRecId: bLinks.sysRecSession, linkedProfileVersionId: bLinks.profile, linkedIdeaVersionId: ideaB2a })
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } })).toBe(before);
+    const ok = await recordOwnerDecision(wsB, sessB2, actor, { decisionType: "HOLD", ideaId: ideaB2b, linkedSystemRecId: bLinks.sysRecSession, linkedProfileVersionId: bLinks.profile, linkedIdeaVersionId: ideaB2b });
+    expect((await db.startupOwnerDecision.findUniqueOrThrow({ where: { id: ok } })).linkedIdeaVersionId).toBe(ideaB2b);
+  });
+
+  it("[db] a system recommendation for another idea is refused; a session-level (null-idea) one is allowed", async () => {
+    const before = await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } });
+    await expect(
+      recordOwnerDecision(wsB, sessB2, actor, { decisionType: "GO", ideaId: ideaB2b, linkedSystemRecId: bLinks.sysRec, linkedProfileVersionId: bLinks.profile })
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(await db.startupOwnerDecision.count({ where: { sessionId: sessB2 } })).toBe(before);
+    const ok = await recordOwnerDecision(wsB, sessB2, actor, { decisionType: "HOLD", ideaId: ideaB2b, linkedSystemRecId: bLinks.sysRecSession, linkedProfileVersionId: bLinks.profile });
+    expect((await db.startupOwnerDecision.findUniqueOrThrow({ where: { id: ok } })).linkedSystemRecId).toBe(bLinks.sysRecSession);
   });
 
   it("[db] N2: the matching idea with its own full artifact set records", async () => {
