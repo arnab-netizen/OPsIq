@@ -27,8 +27,9 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 /**
  * Mock authentication facts to allow wrapped route handler to execute.
- * The canonical wrapper validates session and policy before calling the handler.
- * These mocks provide valid facts so the wrapper allows execution.
+ * The canonical wrapper validates session and policy before calling the handler; only the two fact readers it
+ * uses are mocked (getSessionFact, getPolicyContextFact). Because @/services/auth is mocked, this file does NOT
+ * exercise real session resolution or the shadow-read enforcer — operator-route.real.db.test.ts does.
  */
 let testActorIdForMock = randomUUID();
 let testWorkspaceIdForMock = randomUUID();
@@ -48,20 +49,11 @@ vi.mock("@/services/auth", () => ({
     },
     invalidReason: undefined,
   })),
-  getSession: vi.fn(async () => ({
-    user: {
-      id: testActorIdForMock,
-      email: "test@example.com",
-      name: "Test User",
-      isActive: true,
-    },
-    sessionId: "test-session",
-    expiresAt: new Date(Date.now() + 86400000),
-  })),
   // PR #287 added requireCapabilities:[ACTION_UPDATE] to the operator POST wrapper.
   // "admin" is not a canonical RoleName; ROLE_CAPABILITIES["admin"] is undefined,
   // so hasCapability() returns false → evaluateAuthState Check 4 → 403.
-  // Use the real RoleName that carries ACTION_UPDATE (same as getPolicyContext below).
+  // Use the real RoleName that carries ACTION_UPDATE. The route derives its legacy role from this same
+  // verified policy (deriveServerRole(ctx.policy)); it performs no auth read of its own.
   getPolicyContextFact: vi.fn(async () => ({
     valid: true,
     policy: {
@@ -76,21 +68,6 @@ vi.mock("@/services/auth", () => ({
       engagementMemberships: [],
     },
     invalidReason: undefined,
-  })),
-  // resolveServerRole() imports getPolicyContext() (the raw PolicyContext, not the
-  // fact wrapper) and derives the legacy role from capabilities. Use a real RoleName
-  // ("admin" is not one) so admin_or_portfolio_manager's APPROVAL_DECIDE/ACTION_UPDATE
-  // resolve to an edit-capable role and the operator route is authorized.
-  getPolicyContext: vi.fn(async () => ({
-    userId: testActorIdForMock,
-    roles: [
-      {
-        role: "admin_or_portfolio_manager",
-        scope: "workspace",
-        scopeId: testWorkspaceIdForMock,
-      },
-    ],
-    engagementMemberships: [],
   })),
 }));
 

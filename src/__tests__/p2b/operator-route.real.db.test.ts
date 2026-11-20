@@ -4,7 +4,8 @@
  * What this file proves: each request is a real NextRequest handed to the REAL exported `POST` of
  * src/app/api/operator/route.ts, wrapped by the REAL `withCanonicalEnforcement`. The caller is a seeded User +
  * active WorkspaceMembership + workspace-scoped UserRoleAssignment + live Session row; the real getSession /
- * getPolicyContext / resolveServerRole resolve it. The plan gate (assertCapability "decision_engine") reads a
+ * getPolicyContext resolve it in the wrapper, and the route derives the legacy role from the wrapper's verified
+ * policy (deriveServerRole(ctx.policy)). The plan gate (assertCapability "decision_engine") reads a
  * seeded Plan / BillingAccount / Subscription. The route then runs the real outcome classifier
  * (services/operator/outcome-classifier), the real verification capture (services/outcome/verification), the
  * real idempotency service and the real store write. Only the Next.js cookie jar is stubbed, to carry the
@@ -48,7 +49,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import { db, getDbInstance } from "@/lib/db";
-import { ROLES } from "@/domain/constants/roles";
+import { ROLES, type RoleName } from "@/domain/constants/roles";
 import { POST as operatorPost } from "@/app/api/operator/route";
 
 const COMPLETED = "operator_item.completed";
@@ -56,7 +57,7 @@ const UPDATED = "operator_item.updated";
 
 type Fixture = { workspaceId: string; userId: string; token: string };
 
-async function seedCaller(): Promise<Fixture> {
+async function seedCaller(role: RoleName = ROLES.ADMIN_OR_PORTFOLIO_MANAGER): Promise<Fixture> {
   const workspaceId = randomUUID();
   const userId = randomUUID();
   const token = `p2b-op-${randomUUID()}`;
@@ -64,7 +65,7 @@ async function seedCaller(): Promise<Fixture> {
   await db.user.create({ data: { id: userId, email: `p2b-op-${userId}@example.com`, name: "P2B operator", isActive: true, updatedAt: new Date() } });
   await db.workspaceMembership.create({ data: { workspaceId, userId, role: "admin" } });
   await db.userRoleAssignment.create({
-    data: { id: randomUUID(), userId, role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER, scope: "workspace", scopeId: workspaceId, isActive: true },
+    data: { id: randomUUID(), userId, role, scope: "workspace", scopeId: workspaceId, isActive: true },
   });
   await db.session.create({ data: { id: randomUUID(), userId, token, expiresAt: new Date(Date.now() + 3_600_000) } });
 
@@ -198,6 +199,25 @@ describe("[db] P2B: POST /api/operator through the real route and canonical wrap
       expect(record.status).toBe("completed");
       expect(record.responseCode).toBe(200);
       expect(record.responseBody).toEqual({ success: true });
+    });
+  });
+
+  describe("ROLE: the legacy role is derived from the caller's verified policy", () => {
+    it("[db] a beginner_consultant (action:update, no approval authority) completes the item as 'operator', recorded in the audit event", async () => {
+      const beginner = await seedCaller(ROLES.BEGINNER_CONSULTANT);
+      const id = await seedItem(beginner);
+
+      const res = await post(beginner.token, { id, status: "done", actualOutcome: 50000 }, `p2b-op-${randomUUID()}`);
+
+      expect(res.status, res.text).toBe(200);
+      expect(res.body).toEqual({ success: true });
+      const row = await db.operatorItem.findUniqueOrThrow({ where: { id } });
+      expect(row.status).toBe("done");
+      expect(row.completedBy).toBe(beginner.userId);
+      const completed = await audits(beginner.workspaceId, COMPLETED, id);
+      expect(completed).toHaveLength(1);
+      expect(completed[0].actorId).toBe(beginner.userId);
+      expect((completed[0].payload as { role: string }).role).toBe("operator");
     });
   });
 
