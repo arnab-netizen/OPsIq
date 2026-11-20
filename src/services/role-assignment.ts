@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -53,6 +54,37 @@ function assertHierarchyAuthority(
   }
 }
 
+/**
+ * Tenant isolation for role management: an actor manages assignments only inside its own verified workspace.
+ * A workspace-scoped assignment (the default) must target that workspace; an engagement-scoped one must name an
+ * engagement of that workspace. Any other scope is refused. Without this, a caller-supplied scopeId let an admin of
+ * one workspace grant or revoke roles that authorize access to ANOTHER workspace (auth resolves workspace-scoped
+ * assignments by scopeId).
+ */
+async function assertScopeWithinWorkspace(
+  input: { scope?: string; scopeId?: string },
+  workspaceId: string
+): Promise<void> {
+  const scope = input.scope ?? "workspace";
+  if (scope === "workspace") {
+    if (input.scopeId !== undefined && input.scopeId !== workspaceId) {
+      throw new ForbiddenError("Role assignments can only be managed within your own workspace");
+    }
+    return;
+  }
+  if (scope === "engagement") {
+    if (!input.scopeId) {
+      throw new ValidationError("scopeId is required for an engagement-scoped role");
+    }
+    const engagement = await db.engagement.findFirst({ where: { id: input.scopeId, workspaceId }, select: { id: true } });
+    if (!engagement) {
+      throw new NotFoundError("Engagement", input.scopeId);
+    }
+    return;
+  }
+  throw new ValidationError(`Unsupported role scope: ${scope}`);
+}
+
 // ─── Service ───────────────────────────────────────────────────────────────
 
 export async function assignRole(
@@ -63,6 +95,7 @@ export async function assignRole(
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
+  await assertScopeWithinWorkspace(input, workspaceId);
 
   // Prevent self-assignment (privilege escalation vector)
   if (input.userId === actorId) {
@@ -132,6 +165,7 @@ export async function assignRole(
 
       const assignment = await db.userRoleAssignment.create({
         data: {
+          id: randomUUID(),
           userId: input.userId,
           role: input.role,
           scope: input.scope ?? "workspace",
@@ -195,6 +229,7 @@ export async function revokeRole(
 ): Promise<void> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
+  await assertScopeWithinWorkspace(input, workspaceId);
 
   // Prevent self-revocation
   if (input.userId === actorId) {
