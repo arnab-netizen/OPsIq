@@ -1,5 +1,8 @@
 # OpsIQ Acquisition Ledger
 
+> **CORRECTION 2026-11-20 (owner directive):** all user accounts and beta requests that existed before 2026-11-20 were created by the owner for testing. Any count in this ledger of registrations, beta requests, invitations, activations or retention before that date is INTERNAL TESTING activity and is not commercial or market-validation evidence. Genuine customers: 0. See `COMMERCIAL_BASELINE.md`.
+
+
 Evidence-only record of the owned-content acquisition loop. Every row cites how
 it was verified. Nothing is recorded as done without current evidence; anything
 not verifiable is marked **BLOCKED** or **NOT YET OBSERVED**, never assumed.

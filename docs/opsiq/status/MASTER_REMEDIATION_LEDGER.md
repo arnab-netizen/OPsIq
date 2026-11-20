@@ -297,3 +297,6 @@ Serving production build `dpl_FoU8…` (`37370e28`) contains all funnel code (ma
 - **Mandatory runtime-proof gate:** ACTIVE in CI (33 files, 474 tests, fail-closed on skip, missing test or count mismatch). Quarantine list: empty.
 - **Integrated regression:** 0 failed tests. One environment-limited suite needs the `age` binary and is not run in this container. Known not-in-CI: gsc-role proof (16 tests), pgbouncer proofs (8 tests).
 - **Not achieved (owner steps outstanding, see the FINAL OWNER PROCEDURE in OWNER_SETUP_CONSOLIDATED.md):** production recovery, encrypted backup acceptance, autonomous release acceptance. Development freeze readiness is therefore NO, and the operating-mode transition has not been performed.
+
+## Correction 2026-11-20 (owner directive)
+All user accounts and beta requests that existed before 2026-11-20 were created by the owner for testing. Funnel, registration, activation or beta figures recorded in this ledger before that date are internal testing activity, not commercial evidence. Baseline reset: genuine customers 0, activations 0, retention 0, market validation and product-market fit NOT_ESTABLISHED. See `docs/opsiq/acquisition/COMMERCIAL_BASELINE.md`.
