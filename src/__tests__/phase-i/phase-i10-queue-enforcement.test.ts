@@ -299,15 +299,29 @@ describe("PHASE I10.4: Queue Worker Enforcement", () => {
         throw new Error("Final attempt failed");
       };
 
+      let caught: unknown;
       try {
         await withEnforcedQueueWorker(processor, jobFailingFinal);
-      } catch {
-        // Expected
+        expect.fail("Should have thrown error");
+      } catch (error) {
+        caught = error;
       }
 
-      // Verify error was logged with poison context
-      // (In real implementation, would check log entries)
-      expect(true).toBe(true); // Placeholder for log inspection
+      // The exhausted job is refused as a governed RuntimeError and leaves exactly one structured
+      // dead-letter log carrying the poison context (job, queue, retry count, retry limit).
+      expect(caught).toBeInstanceOf(RuntimeError);
+      expect((caught as RuntimeError).metadata.requires_escalation).toBe(true);
+      const dlqLogs = runtimeLogger
+        .getLogs()
+        .filter((log) => log.tags.includes("queue_dead_letter"));
+      expect(dlqLogs).toHaveLength(1);
+      expect(dlqLogs[0].level).toBe("ERROR");
+      expect(dlqLogs[0].context).toMatchObject({
+        job_id: jobFailingFinal.job_id,
+        queue_name: jobFailingFinal.queue_name,
+        retry_count: 3,
+        max_retries: 3,
+      });
     });
   });
 
