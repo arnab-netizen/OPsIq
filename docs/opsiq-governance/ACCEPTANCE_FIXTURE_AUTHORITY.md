@@ -88,9 +88,10 @@ Blanket `SYSTEM_ADMIN` was rejected for the privilege excess listed in finding 3
 | 14 | Audited? | Service audit + `acceptance_fixture.created`; role grants audited by the provisioning script |
 | 15 | Becomes a backdoor? | Residual: see below |
 
-**Residual risks.** (1) `POST /api/users/[userId]/roles` validates against `Object.values(ROLES)`, so a holder of
-`USER_ASSIGN_ROLE` with hierarchy level > 5 could assign the new role, exactly as for the two existing operator
-roles. Impact is limited to the capability's own bounds. (2) A holder can create unbounded fixture rows in its own
+**Residual risks.** (1) Closed (2026-11-20, PR #713): `POST`/`DELETE /api/users/[userId]/roles` refuse every
+platform role, for every actor including `system_admin` (403 "provisioned out of band"). A platform role is any role
+carrying a `PLATFORM_CAPABILITIES` entry (`isPlatformRole` in `src/policies/capability-check.ts`), which covers this
+role and the two other operator roles; they are granted only by the provisioning scripts. (2) A holder can create unbounded fixture rows in its own
 workspace (storage noise, no data exposure). Both are covered by the rollback below.
 
 ## 5. Privilege delta
