@@ -6,19 +6,11 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 1,
-  "total_failing_tests": 1,
+  "total_files": 0,
+  "total_failing_tests": 0,
   "nondeterministic_files": 0,
-  "files": [
-    {
-      "path": "src/__tests__/signup-schema-contract.test.ts",
-      "failed": 1,
-      "cluster": "db-contract",
-      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
-      "reason": "UserRoleAssignment owner OWNER_VIEW capability contract assertion fails.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    }
-  ],
+  "files": [],
   "_remediation_note": "TEST-02: route-scanner + phase-i10-enforcement-scanner un-quarantined into the blocking lane after fixing the exemption registry (reassessment-scan token-auth exemption; scanners now consult the canonical PUBLIC_ROUTE_EXEMPTIONS). 0 unprotected/unwrapped routes remain.",
-  "_remediation_note_session7": "2026-11-19: 22 of 23 entries released after the fixes merged (#688 #690 #692 #697 #699 #700 #701 #689 ... see ledger session 7). Evidence: all 23 files passed on the integrated main with a DB in two consecutive runs (562 tests), and the 14 that the non-DB lane runs pass with TEST_WITH_DB=false. Config-excluded runtime proofs and phase-* tests are now run by the MANDATORY manifest step in db-verify. Remaining entry (signup-schema-contract) is fixed by PR #693; remove it there or in the next change. Released: src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts, src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts, src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts, src/__tests__/phase-3-event-emitter-integration.test.ts, src/__tests__/phase-i/phase-i10-error-normalization.test.ts, src/__tests__/phase-i/phase-i-runtime-discipline.test.ts, src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts, src/__tests__/p2b/path-convergence.test.ts, src/__tests__/demo-engagement-proof-backfill.test.ts, src/__tests__/demo-permission-proof-backfill.test.ts, src/__tests__/first-value.test.ts, src/__tests__/security/diagnostic-key-validation.test.ts, src/__tests__/security/ops-endpoints-auth.test.ts, src/__tests__/p2a/p2a-production-path.test.ts, src/infra/__tests__/critical-readiness.test.ts, src/__tests__/ci-cd/workflow-validation.test.ts, src/__tests__/phase-3-serialization-hardening.test.ts, src/__tests__/phase-3-concurrency-proofs.test.ts, src/__tests__/phase-e/e2-replay-determinism-proof.test.ts, src/__tests__/services/diagnosis-legal-governance-textual.test.ts, src/__tests__/workflows/ci-cd-foundations.test.ts, src/services/__tests__/recommendation.reranking.test.ts"
+  "_remediation_note_session7": "2026-11-19: 22 of 23 entries released after the fixes merged (#688 #690 #692 #697 #699 #700 #701 #689 ... see ledger session 7). Evidence: all 23 files passed on the integrated main with a DB in two consecutive runs (562 tests), and the 14 that the non-DB lane runs pass with TEST_WITH_DB=false. Config-excluded runtime proofs and phase-* tests are now run by the MANDATORY manifest step in db-verify. Remaining entry (signup-schema-contract) is fixed by PR #693; remove it there or in the next change. Released: src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts, src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts, src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts, src/__tests__/phase-3-event-emitter-integration.test.ts, src/__tests__/phase-i/phase-i10-error-normalization.test.ts, src/__tests__/phase-i/phase-i-runtime-discipline.test.ts, src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts, src/__tests__/p2b/path-convergence.test.ts, src/__tests__/demo-engagement-proof-backfill.test.ts, src/__tests__/demo-permission-proof-backfill.test.ts, src/__tests__/first-value.test.ts, src/__tests__/security/diagnostic-key-validation.test.ts, src/__tests__/security/ops-endpoints-auth.test.ts, src/__tests__/p2a/p2a-production-path.test.ts, src/infra/__tests__/critical-readiness.test.ts, src/__tests__/ci-cd/workflow-validation.test.ts, src/__tests__/phase-3-serialization-hardening.test.ts, src/__tests__/phase-3-concurrency-proofs.test.ts, src/__tests__/phase-e/e2-replay-determinism-proof.test.ts, src/__tests__/services/diagnosis-legal-governance-textual.test.ts, src/__tests__/workflows/ci-cd-foundations.test.ts, src/services/__tests__/recommendation.reranking.test.ts",
+  "_remediation_note_session7_final": "2026-11-20: quarantine empty. signup-schema-contract passes with a DB (20/20, 3 runs) after this PR's cleanup-order fix; every other entry was released in the runtime-proof phase 2 change."
 }
