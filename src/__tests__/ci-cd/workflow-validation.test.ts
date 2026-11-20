@@ -197,6 +197,7 @@ describe("CI/CD Workflow Validation", () => {
         "Prisma validate",
         "Prisma migrate deploy (throwaway container)",
         "Run DB test suite (*.db.test.ts only)",
+        "Mandatory runtime-proof suite (manifest-driven; fail-closed on any skip, missing test or count mismatch)",
       ]) {
         expect(stepNamed(ciWorkflow.jobs["db-verify"], name)["if"], `${name} must run unconditionally`).toBeUndefined();
       }
@@ -260,6 +261,24 @@ describe("CI/CD Workflow Validation", () => {
       expect(step.run).toContain(".claude/test-quarantine.json");
       expect(step.env?.TEST_WITH_DB).toBe("false");
       expect(step["continue-on-error"]).toBe(false);
+    });
+
+    it("db-verify runs the MANDATORY runtime-proof manifest blocking, through the checker, after the DB suite", () => {
+      const dbJob = ciWorkflow.jobs["db-verify"];
+      const name = "Mandatory runtime-proof suite (manifest-driven; fail-closed on any skip, missing test or count mismatch)";
+      const step = stepNamed(dbJob, name);
+      expect(step["continue-on-error"]).toBe(false);
+      expect(step["if"]).toBeUndefined();
+      expect(step.run).toContain(".claude/runtime-proof-manifest.json");
+      expect(step.run).toContain("--reporter=json");
+      expect(step.run).toContain("node scripts/ci/check-runtime-proof.mjs report");
+      // Both the vitest exit code and the checker verdict must fail the step.
+      expect(step.run).toContain("VITEST_EXIT");
+      expect(step.run).toContain("CHECK_EXIT");
+      const idx = (n: string) => dbJob.steps.findIndex((x) => x.name === n);
+      expect(idx(name)).toBeGreaterThan(idx("Run DB test suite (*.db.test.ts only)"));
+      // The job env gates the DB-only proofs on.
+      expect(dbJob.env?.TEST_WITH_DB).toBe("true");
     });
 
     it("db-verify should run the DB tests with DATABASE_URL (blocking)", () => {

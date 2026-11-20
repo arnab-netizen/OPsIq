@@ -18,7 +18,7 @@ import { calculateOutcomeDelta } from "@/services/operator/outcome";
 import { calculateDecisionAccuracy } from "@/services/operator/accuracy";
 import { validateCompletion } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { sendWebhook } from "@/services/integration/webhook";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -64,7 +64,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const { status, actualOutcome, approvalRequired } = body;
 
   // Resolve role from server-side session/database (never from request body)
-  const role = await resolveServerRole();
+  const role = deriveServerRole(ctx.policy);
 
   if (!role) {
     throw new UnauthorizedError("Unauthorized");

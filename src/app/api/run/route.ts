@@ -5,7 +5,7 @@ import { generateOperatorItems } from "@/services/operator/generate";
 import { addBlockedDecision } from "@/services/operator/store";
 import { addDecisionItemsWithinQuota } from "@/services/decisions/decision-creation-service";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { canEdit, resolveApprovalGrant } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -78,7 +78,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     userId = ctx.verifiedActorId;
 
     // Enforce server-side auth
-    const role = await resolveServerRole();
+    const role = deriveServerRole(ctx.policy);
     if (!role) {
       // Log AUTH_FAILED audit event
       await emitAuditEvent({

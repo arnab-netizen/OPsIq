@@ -628,6 +628,25 @@ jobs:
           OPSIQ_REQUIRE_RESTORE_PORTABILITY: '1'
         continue-on-error: false
 
+      # MANDATORY runtime proofs (owner decision 2026-11-19). `npm test -- '.db.test.ts'` above only selects *.db.test.ts, and
+      # vitest.config.ts excludes src/__tests__/runtime-proof/** and **/phase-*.test.ts unless TEST_WITH_DB is set, so without this
+      # step those proofs would not run in any blocking lane. The list comes from .claude/runtime-proof-manifest.json; the checker
+      # fails on any missing, skipped, pending, todo or failed test, on a test-count mismatch, and on a proof file that exists on
+      # disk but is not in the manifest. The non-DB lane enforces the manifest's static vacuity ratchet (runtime-proof-manifest.test.ts).
+      - name: Mandatory runtime-proof suite (manifest-driven; fail-closed on any skip, missing test or count mismatch)
+        run: |
+          set -uo pipefail
+          FILES=$(node -e 'process.stdout.write(Object.keys(JSON.parse(require("fs").readFileSync(".claude/runtime-proof-manifest.json","utf8")).files).join(" "))')
+          VITEST_EXIT=0
+          npx vitest run $FILES --maxWorkers=1 --reporter=json --outputFile="$RUNNER_TEMP/runtime-proof.json" || VITEST_EXIT=$?
+          node scripts/ci/check-runtime-proof.mjs report "$RUNNER_TEMP/runtime-proof.json"
+          CHECK_EXIT=$?
+          if [ "$VITEST_EXIT" -ne 0 ] || [ "$CHECK_EXIT" -ne 0 ]; then
+            echo "::error::runtime proofs failed (vitest exit $VITEST_EXIT, manifest check exit $CHECK_EXIT)"
+            exit 1
+          fi
+        continue-on-error: false
+
       # Evidence + fail-closed assertion for the restore proof: re-runs ONLY the proof file (a few
       # seconds) with the JSON reporter and publishes the per-test outcome as annotations (readable
       # without the raw log). Fails unless EVERY test passed, none skipped, and BOTH identity-alone

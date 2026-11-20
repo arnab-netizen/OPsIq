@@ -4,7 +4,7 @@
  *
  * Every test here drives the REAL production module and asserts an exact
  * observable outcome. The previous revision of this file was false green
- * (22 `expect(true).toBe(true)` placeholders, conditional early returns that
+ * (22 always-true placeholder assertions, conditional early returns that
  * skipped every assertion when no HTTP server was listening, a probe of a
  * `/api/metrics` route that does not exist, and a STRIPE_WEBHOOK_SECRET read
  * whose value was ignored).

@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => ({
   buildIntakeOperatorItemData: vi.fn(),
   enforceWorkspaceScoping: vi.fn(),
   // operator deps
-  resolveServerRole: vi.fn(),
+  deriveServerRole: vi.fn(),
   canEdit: vi.fn(),
   assertCapability: vi.fn(),
   checkIdempotencyKey: vi.fn(),
@@ -76,7 +76,7 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
   withCanonicalEnforcement: (handler: (ctx: unknown) => unknown) => handler,
 }));
 vi.mock("@/services/auth/server-role", () => ({
-  resolveServerRole: mocks.resolveServerRole,
+  deriveServerRole: mocks.deriveServerRole,
 }));
 vi.mock("@/services/auth/access", () => ({
   canEdit: mocks.canEdit,
@@ -199,7 +199,7 @@ beforeEach(() => {
   mocks.buildIntakeOperatorItemData.mockReturnValue({ id: "item-1" });
 
   // operator defaults
-  mocks.resolveServerRole.mockResolvedValue("ADMIN");
+  mocks.deriveServerRole.mockReturnValue("ADMIN");
   mocks.canEdit.mockReturnValue(true);
   mocks.assertCapability.mockResolvedValue({ allowed: true });
   mocks.checkIdempotencyKey.mockResolvedValue({ isNew: true, cachedResponse: null });
