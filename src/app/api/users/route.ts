@@ -56,7 +56,7 @@ export const POST = withCanonicalEnforcement(
       "user.create",
       async () => createUser(body, ctx, workspaceId),
       body,
-      ctx.verifiedActorId
+      { actorId: ctx.verifiedActorId, workspaceId: ctx.verifiedWorkspaceId }
     );
 
     return result;

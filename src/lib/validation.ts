@@ -53,6 +53,15 @@ export async function parseRequestBody<T>(
 
 export const uuidSchema = z.string().uuid();
 
+/**
+ * A date/time string the server will turn into a Date (`new Date(value)`). Rejects values that
+ * parse to an Invalid Date (which otherwise throw "Invalid time value" or a Prisma validation
+ * error -> 500) while still accepting everything `Date` accepts today (date-only, ISO datetime).
+ */
+export const parseableDateStringSchema = z
+  .string()
+  .refine((value) => !Number.isNaN(Date.parse(value)), { message: "must be a valid date" });
+
 // Canonical identity-email schema. `User.email` carries only a plain,
 // case-sensitive `@unique` constraint in the schema (no functional
 // `lower(email)` index) — Postgres therefore treats "Test@Example.com" and

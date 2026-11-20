@@ -41,6 +41,7 @@ const enqueueDueEmailRetryTasks = vi.fn();
 const enqueueDueFinanceLearningBridgeTasks = vi.fn();
 const enqueueDueReassessmentScanTasks = vi.fn();
 const enqueueDueRiskReviewScanTasks = vi.fn();
+const enqueueDueQuotaReservationSweepTasks = vi.fn();
 
 vi.mock("@/infra/scheduler", () => ({
   DatabaseSchedulerProvider: class {
@@ -57,6 +58,7 @@ vi.mock("@/services/scheduler/scheduler-producers", () => ({
   enqueueDueFinanceLearningBridgeTasks,
   enqueueDueReassessmentScanTasks,
   enqueueDueRiskReviewScanTasks,
+  enqueueDueQuotaReservationSweepTasks,
 }));
 
 vi.mock("@/services/quickbooks/qbo-sync-scheduling", () => ({
@@ -112,6 +114,7 @@ beforeEach(() => {
   enqueueDueFinanceLearningBridgeTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   enqueueDueReassessmentScanTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   enqueueDueRiskReviewScanTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
+  enqueueDueQuotaReservationSweepTasks.mockResolvedValue({ candidatesFound: 0, enqueued: 0 });
   vi.stubEnv("CRON_SECRET", SECRET);
 });
 

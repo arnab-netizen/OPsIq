@@ -660,8 +660,17 @@ export class FeatureDisabledError extends AppError {
   }
 }
 
+/**
+ * Optional classification of a refusal that may clear on its own (a retry with the same request can
+ * succeed): `retryable: true` sets telemetry.retryable, which also keeps the refusal out of the
+ * idempotency cache (services/idempotency.ts releases the key instead of replaying it).
+ */
+export interface RefusalOptions {
+  retryable?: boolean;
+}
+
 export class ConflictError extends AppError {
-  constructor(message: string, details?: Record<string, unknown>, correlationId?: string) {
+  constructor(message: string, details?: Record<string, unknown>, correlationId?: string, options: RefusalOptions = {}) {
     super(
       "CONFLICT",
       message,
@@ -670,7 +679,7 @@ export class ConflictError extends AppError {
         telemetryClass: "CONFLICT",
         auditClass: "CLIENT_ERROR",
         severity: "LOW",
-        retryable: false,
+        retryable: options.retryable ?? false,
         securityRelevant: false,
         infrastructureRelevant: false,
         abuseRelevant: false,
@@ -781,7 +790,14 @@ export class PolicyViolationError extends AppError {
 }
 
 export class PlanLimitError extends AppError {
-  constructor(capability: string, message: string, correlationId?: string) {
+  /**
+   * `entitlementUnverifiable: true` marks a refusal because the entitlement could not be READ (no
+   * subscription, a lock-wait timeout, a database failure), as opposed to a verified over-limit or
+   * not-in-plan denial. It is the same 402 to the client, but retryable (details.reason
+   * "entitlement_unverifiable", telemetry.retryable), so it is never cached as the key's final answer.
+   */
+  constructor(capability: string, message: string, correlationId?: string, options: { entitlementUnverifiable?: boolean } = {}) {
+    const unverifiable = options.entitlementUnverifiable === true;
     super(
       "PLAN_LIMIT_EXCEEDED",
       message,
@@ -790,14 +806,14 @@ export class PlanLimitError extends AppError {
         telemetryClass: "CAPABILITY_DENIED",
         auditClass: "CAPABILITY_DENIED",
         severity: "LOW",
-        retryable: false,
+        retryable: unverifiable,
         securityRelevant: false,
-        infrastructureRelevant: false,
+        infrastructureRelevant: unverifiable,
         abuseRelevant: false,
         handlerAllowed: false,
         mutationAllowed: false,
       },
-      { capability },
+      unverifiable ? { capability, reason: "entitlement_unverifiable" } : { capability },
       correlationId
     );
     this.name = "PlanLimitError";

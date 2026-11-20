@@ -52,10 +52,11 @@ export const POST = withCanonicalEnforcement(
     }
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const validated = createShockEventSchema.parse(body);
+    const validated = parseOrThrow(createShockEventSchema, body);
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
+      workspaceId: ctx.verifiedWorkspaceId,
       operationName: "createShockEvent",
       actorId,
       payload: { engagementId, ...validated },

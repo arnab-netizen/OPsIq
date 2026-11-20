@@ -8,7 +8,6 @@ import {
   NotFoundError,
   ConflictError,
   ValidationError,
-  PlanLimitError,
 } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
@@ -17,13 +16,12 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { Prisma } from "@/generated/prisma/client";
+import { withCapabilityQuota, type CapabilityReservation } from "@/services/entitlement.service";
 import { validateRecommendationTransition, type RecommendationStoredStatus } from "@/policies/state-transition";
 import type { RecommendationStatus } from "@/domain/constants/statuses";
-import { assertCapability } from "@/services/entitlement.service";
-import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
+import type { Prisma } from "@/generated/prisma/client";
 import { listEvidence } from "@/services/evidence";
 import { getKPIsForEngagement } from "@/services/kpi";
 
@@ -390,18 +388,26 @@ export async function createRecommendation(
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  const capabilityCheck = await assertCapability(
+  // Plan quota: generate_recommendation is reserved atomically before the write (PlanLimitError 402 at the
+  // limit) and kept only by settling it inside the recommendation insert's transaction. A failed write or
+  // an idempotent replay settles nothing, so the unit is returned.
+  // Enforced: createRecommendation asserted generate_recommendation before usage was recorded here.
+  const outcome = await withCapabilityQuota(
     workspaceId,
-    "generate_recommendation"
+    "generate_recommendation",
+    (reservation) => persistRecommendation(input, authContext, workspaceId, reservation, idempotencyKey),
+    { enforce: true }
   );
+  return outcome.recommendation;
+}
 
-  if (!capabilityCheck.allowed) {
-    throw new PlanLimitError(
-      "generate_recommendation",
-      capabilityCheck.reason || "Plan limit exceeded"
-    );
-  }
-
+async function persistRecommendation(
+  input: CreateRecommendationInput,
+  authContext: CanonicalAuthContext,
+  workspaceId: string,
+  reservation: CapabilityReservation,
+  idempotencyKey?: string
+) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
     authContext,
     workspaceId
@@ -539,6 +545,8 @@ export async function createRecommendation(
             sensitivityClassification: "standard",
           });
 
+          // Keep the reserved generate_recommendation unit atomically with the insert (last statement).
+          await reservation.settle(tx);
           return recommendation;
         });
       },
@@ -556,37 +564,37 @@ export async function createRecommendation(
         recommendationId: result.result.id,
         engagementId: input.engagementId,
       });
-
-      await recordRecommendationUsage(validatedWorkspaceId, 1, {
-        recommendationId: result.result.id,
-        engagementId: input.engagementId,
-      });
     }
 
-    return result.result;
+    return { recommendation: result.result, isNew: result.isNew };
   }
 
   const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
-  const recommendation = await db.recommendation.create({
-    data: {
-      engagementId: input.engagementId,
-      findingId: input.findingId,
-      priority: derivedPriority,
-      title: input.title,
-      description: input.description,
-      estimatedImpact: input.expectedImpact,
-      workspaceId: validatedWorkspaceId,
-      createdBy: userId,
-      evidenceValidationScore: Math.round(
-        evidenceAssessment.validationScore * 100
-      ),
-      reliabilityLevel: evidenceAssessment.reliabilityLevel,
-      kpiHealthScore:
-        kpiAssessment.healthScore === null ? null : Math.round(kpiAssessment.healthScore * 100),
-      kpiRiskLevel: kpiAssessment.riskLevel,
-      ...(constraintsConsidered && { constraintsConsidered }),
-    },
+  // The insert and the kept generate_recommendation unit commit together.
+  const recommendation = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.recommendation.create({
+      data: {
+        engagementId: input.engagementId,
+        findingId: input.findingId,
+        priority: derivedPriority,
+        title: input.title,
+        description: input.description,
+        estimatedImpact: input.expectedImpact,
+        workspaceId: validatedWorkspaceId,
+        createdBy: userId,
+        evidenceValidationScore: Math.round(
+          evidenceAssessment.validationScore * 100
+        ),
+        reliabilityLevel: evidenceAssessment.reliabilityLevel,
+        kpiHealthScore:
+          kpiAssessment.healthScore === null ? null : Math.round(kpiAssessment.healthScore * 100),
+        kpiRiskLevel: kpiAssessment.riskLevel,
+        ...(constraintsConsidered && { constraintsConsidered }),
+      },
+    });
+    await reservation.settle(tx);
+    return created;
   });
 
   await emitAuditEvent({
@@ -625,17 +633,12 @@ export async function createRecommendation(
     sensitivityClassification: "standard",
   });
 
-  await recordRecommendationUsage(validatedWorkspaceId, 1, {
-    recommendationId: recommendation.id,
-    engagementId: input.engagementId,
-  });
-
   logger.info("Recommendation created", {
     recommendationId: recommendation.id,
     engagementId: input.engagementId,
   });
 
-  return recommendation;
+  return { recommendation, isNew: true };
 }
 
 export async function verifyRecommendationState(
@@ -1226,6 +1229,52 @@ export async function reRankRecommendationsInEngagement(
   return { updated: updateCount, recommendations: updated };
 }
 
+/**
+ * The single-recommendation detail shape (GET /api/recommendations/[id] and the PATCH response).
+ */
+const RECOMMENDATION_DETAIL_SELECT = {
+  id: true,
+  engagementId: true,
+  findingId: true,
+  title: true,
+  description: true,
+  priority: true,
+  status: true,
+  // `estimatedImpact` is the real Recommendation column. The previous select requested
+  // `expectedImpact`, `implementationPhase`, `executionCertaintyScore`, and `scoreBreakdown` —
+  // none of which exist on the Recommendation model — so `prisma.recommendation.findUnique`
+  // threw PrismaClientValidationError on EVERY call, i.e. the owner-facing single-recommendation
+  // API route (GET /api/recommendations/[id] and the PATCH re-read) 500'd on every request.
+  // This is the identical defect fixed for the listing path in Phase 2 G2
+  // (`getRecommendationsForEngagement`). Select only real columns.
+  estimatedImpact: true,
+  version: true,
+  createdAt: true,
+  constraintsConsidered: true,
+  engagement: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+    },
+  },
+  finding: {
+    select: {
+      id: true,
+      title: true,
+      severity: true,
+    },
+  },
+} as const;
+
+/** Project a recommendation (with its engagement/finding relations) onto the detail shape. */
+export function toRecommendationDetail<T extends Record<string, unknown>>(rec: T) {
+  const keys = Object.keys(RECOMMENDATION_DETAIL_SELECT) as (keyof typeof RECOMMENDATION_DETAIL_SELECT)[];
+  return Object.fromEntries(keys.map((k) => [k, rec[k as string] ?? null])) as {
+    [K in keyof typeof RECOMMENDATION_DETAIL_SELECT]: unknown;
+  };
+}
+
 export async function getRecommendation(
   recommendationId: string,
   workspaceId: string
@@ -1234,40 +1283,7 @@ export async function getRecommendation(
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId },
-    select: {
-      id: true,
-      engagementId: true,
-      findingId: true,
-      title: true,
-      description: true,
-      priority: true,
-      status: true,
-      // `estimatedImpact` is the real Recommendation column. The previous select requested
-      // `expectedImpact`, `implementationPhase`, `executionCertaintyScore`, and `scoreBreakdown` —
-      // none of which exist on the Recommendation model — so `prisma.recommendation.findUnique`
-      // threw PrismaClientValidationError on EVERY call, i.e. the owner-facing single-recommendation
-      // API route (GET /api/recommendations/[id] and the PATCH re-read) 500'd on every request.
-      // This is the identical defect fixed for the listing path in Phase 2 G2
-      // (`getRecommendationsForEngagement`). Select only real columns.
-      estimatedImpact: true,
-      version: true,
-      createdAt: true,
-      constraintsConsidered: true,
-      engagement: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-        },
-      },
-      finding: {
-        select: {
-          id: true,
-          title: true,
-          severity: true,
-        },
-      },
-    },
+    select: RECOMMENDATION_DETAIL_SELECT,
   });
 
   if (!rec) {
@@ -1290,6 +1306,10 @@ export async function updateRecommendation(
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId: validatedWorkspaceId },
+    include: {
+      engagement: { select: RECOMMENDATION_DETAIL_SELECT.engagement.select },
+      finding: { select: RECOMMENDATION_DETAIL_SELECT.finding.select },
+    },
   });
 
   if (!rec) {
@@ -1362,13 +1382,16 @@ export async function updateRecommendation(
     );
   }
 
-  const updated = await db.recommendation.findUnique({
-    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
-  });
-
-  if (!updated) {
-    throw new NotFoundError("Recommendation", recommendationId);
-  }
+  // Exactly the row this call committed (a re-read could observe a later writer's state).
+  const updated = {
+    ...rec,
+    status: statusChanged ? (updates.status as string) : rec.status,
+    priority: input.priority ?? rec.priority,
+    constraintsConsidered: hasExpectationField
+      ? (updates.constraintsConsidered as typeof rec.constraintsConsidered)
+      : rec.constraintsConsidered,
+    version: rec.version + 1,
+  };
 
   await emitAuditEvent({
     eventName: "recommendation.updated",

@@ -174,8 +174,8 @@ export interface ServiceAuthEnvelope {
  */
 export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<unknown>;
 
-/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood. */
-const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
+/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood (429: rate limited). */
+const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422, 429]);
 
 /** Caught-error text for ClassifiedApiError messages, trace stages and log context: scrubbed by the governed log scrubber and length-capped. */
 function describeThrown(thrown: unknown, maxLength = 500): string {
@@ -207,7 +207,7 @@ function readOwnerSafeMessage(thrown: unknown): string {
 
 /**
  * True when a handler rejected the request on purpose with an owner-safe domain AppError
- * (validation 400, not-found 404, conflict 409, invalid transition 422) that is not flagged
+ * (validation 400, not-found 404, conflict 409, invalid transition 422, rate limit 429) not flagged
  * security-relevant. Such rejections are expected outcomes and are logged below ERROR.
  */
 export function isExpectedClientRejection(error: unknown, isKnownSafeClientError: boolean, statusCode: number): boolean {
@@ -688,7 +688,7 @@ export function withCanonicalEnforcement(
         },
         correlationId,
         requestId,
-        request: req,
+        request: withClientSafeJsonBody(req),
         session,
         policy,
       };
@@ -858,8 +858,8 @@ export function withCanonicalEnforcement(
       }
 
       // An expected domain rejection (e.g. a duplicate-period 409 ConflictError, a 400 validation
-      // error, a 404) is the request being answered correctly, not a server failure: it is logged
-      // at WARN. Security-relevant rejections, auth/permission/rate-limit 4xx and every 5xx or
+      // error, a 404, a rate-limit 429) is the request being answered correctly, not a server failure:
+      // logged at WARN. Security-relevant rejections, auth/permission 4xx and every 5xx or
       // unclassified error keep ERROR.
       const expectedClientRejection = isExpectedClientRejection(error, isKnownSafeClientError, classifiedError.statusCode);
 
@@ -976,6 +976,7 @@ export function withCanonicalEnforcement(
         headers: {
           "x-correlation-id": finalCorrelationId,
           "content-type": "application/json",
+          ...retryAfterHeaderFor(error, classifiedError.statusCode),
         },
       });
     }
@@ -1090,4 +1091,45 @@ async function enforceCommercialRequirement(
   if (!capability) return;
   const { assertCommercialCapability } = await import("@/services/billing/commercial-policy.service");
   await assertCommercialCapability(workspaceId, capability);
+}
+
+/**
+ * Retry-After for a rate-limited (429) error response, when the thrown AppError knows its window
+ * (TooManyRequestsError/RateLimitError carry details.retryAfterSeconds). Any other status, or a 429 without a
+ * known window, gets no header. Structural check (not instanceof) so it works across module boundaries.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+function retryAfterHeaderFor(error: unknown, statusCode: number): Record<string, string> {
+  if (statusCode !== 429 || !error || typeof error !== "object") return {};
+  const details = (error as { details?: unknown }).details;
+  const seconds = details && typeof details === "object" ? (details as { retryAfterSeconds?: unknown }).retryAfterSeconds : undefined;
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) return {};
+  return { "retry-after": String(Math.ceil(seconds)) };
+}
+
+/**
+ * The request handed to handlers: identical to `req`, except that `json()` maps a body-parse failure (malformed or
+ * empty JSON — the platform parser's SyntaxError) to the canonical ValidationError (400) with a generic message,
+ * the same one parseRequestBody uses. Many handlers read `ctx.request.json()` directly; without this a client's
+ * malformed body surfaced as an unknown 500. Only a SyntaxError from the parser is mapped — every other failure
+ * (e.g. a body read twice) propagates unchanged — and no parser detail reaches the client.
+ * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
+ */
+function withClientSafeJsonBody(req: NextRequest): NextRequest {
+  if (!req || typeof req.json !== "function") return req;
+  const parseJson = req.json.bind(req);
+  Object.defineProperty(req, "json", {
+    configurable: true,
+    writable: true,
+    value: async () => {
+      try {
+        return await parseJson();
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+        const { ValidationError } = await import("@/infra/errors");
+        throw new ValidationError("Invalid JSON in request body");
+      }
+    },
+  });
+  return req;
 }
