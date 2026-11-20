@@ -2,6 +2,10 @@
 
 Established 2026-11-20 from evidence (repository history, the sandbox and production databases read-only, Vercel configuration, the live public pages, and a regression run on main `3f0d32d67`). This file supersedes the Paddle status lines elsewhere (COMMERCIAL_MINIMUM.md, SANDBOX_E2E_RUNBOOK.md, OWNER_SETUP_CONSOLIDATED.md, PAYWALL_RELEASE_RUNBOOK.md); they link here.
 
+## Workstream status (owner decision 2026-11-20)
+
+The Paddle verification workstream is CLOSED. The existing implementation, activation tooling, rollback tooling and this record are retained. Every unproven payment-lifecycle requirement below (the full sandbox lifecycle, Preview enforcement-ON acceptance, real payload shapes, live merchant/domain/payout approval, G1-G4) is classified as a DEFERRED MONETIZATION PREREQUISITE, not a free-beta launch blocker. No payment development, provider onboarding, commercial activation or payment collection is undertaken until the owner explicitly authorizes it; the free-beta customer acquisition phase does not depend on any of it.
+
 ## 0. Current state
 
 | State | Value | Evidence |
