@@ -95,7 +95,8 @@ afterAll(async () => {
 }, 60_000);
 
 const PAYLOADS = ['DROP TABLE "victim"', 'TRUNCATE "victim"', 'DELETE FROM "victim"', `UPDATE "victim" SET v = 'x'`, 'DROP TABLE "subscriptions"',
-  'CREATE TABLE "z1" ("a") AS VALUES (ev.evil())', 'CREATE TABLE IF NOT EXISTS "z2" ("a" int)', 'CREATE TABLE "z3" ("a" int) PARTITION BY RANGE ("a")', 'ALTER TABLE "t" ADD COLUMN "s" bigserial', 'CREATE TABLE "z4" ("s" serial)'];
+  'CREATE TABLE "z1" ("a") AS VALUES (ev.evil())', 'CREATE TABLE IF NOT EXISTS "z2" ("a" int)', 'CREATE TABLE "z3" ("a" int) PARTITION BY RANGE ("a")', 'ALTER TABLE "t" ADD COLUMN "s" bigserial', 'CREATE TABLE "z4" ("s" serial)',
+  'ALTER TABLE "t" ADD COLUMN "g" "serial"', 'CREATE TABLE "z5" ("a" "bigserial")', 'ALTER TABLE "t" ADD COLUMN "g" "public"."smallserial"'];
 
 /** Hand-written disagreement attempts. Every one hides or exposes a payload differently in PostgreSQL than a naive lexer would. */
 const HAND: string[] = [
@@ -134,6 +135,16 @@ const HAND: string[] = [
   `ALTER TABLE "t" ADD COLUMN "s" serial`,
   `ALTER TABLE "t" ADD COLUMN "s" smallserial`,
   `CREATE TABLE "t1" ("s" serial NOT NULL)`,
+  // R2b: a quoted lowercase type name resolves to the serial pseudo-types on PostgreSQL (CREATE SEQUENCE + volatile default): must be REJECTED
+  `ALTER TABLE "t" ADD COLUMN "g" "serial"`,
+  `CREATE TABLE "t1" ("a" "serial" NOT NULL)`,
+  `CREATE TABLE "t1" ("a" "bigserial")`,
+  `ALTER TABLE "t" ADD COLUMN "g" "smallserial"`,
+  `ALTER TABLE "t" ADD COLUMN "g" "serial"[]`,
+  `ALTER TABLE "t" ADD COLUMN "g" "public"."serial"`,
+  `ALTER TABLE "t" ADD COLUMN "g" "pg_catalog"."serial"`,
+  `ALTER TABLE "t" ADD COLUMN "g" "SERIAL"`,
+  `ALTER TABLE "t" ADD COLUMN "g" Serial`,
   // inputs that must be ACCEPTED (non-vacuity): the payload is genuinely inert in both lexers
   `CREATE TABLE "t1" ("id" TEXT NOT NULL, "n" INTEGER NOT NULL DEFAULT 0, CONSTRAINT "t1_pkey" PRIMARY KEY ("id")); CREATE INDEX "t1_n_idx" ON "t1"("n");`,
   `${HEAD}; -- DROP TABLE "victim"`,

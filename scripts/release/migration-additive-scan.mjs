@@ -328,15 +328,27 @@ const BUILTIN_TYPE = new RegExp(
     "(?:\\s*\\[\\s*\\d*\\s*\\])*$",
   "i"
 );
-// A user enum type exactly as Prisma writes it: "Name" or "public"."Name", optional array suffix.
-const QUOTED_TYPE = /^(?:"public"\.)?"(?:[^"]|"")+"(?:\s*\[\s*\d*\s*\])*$/;
+// A user enum type exactly as Prisma writes it: "Name" or "public"."Name", optional array suffix. A quoted type name is accepted only if it can
+// never collide with a built-in or pseudo type (serial, bigserial, ... are resolved from a quoted lowercase name too): it must contain at least one
+// ASCII uppercase letter (every built-in type name is lowercase; Prisma enum names are PascalCase), and be unqualified or qualified with "public" only.
+const QUOTED_TYPE_SHAPE = /^(?:"public"\.)?"((?:[^"]|"")+)"((?:\s*\[\s*\d*\s*\])*)$/;
 const SERIAL_TYPE = /^(?:small|big)?serial(?:2|4|8)?$/i;
 
 /** Returns null when the type text is allowed, else the reason. */
 function typeViolation(typeText) {
   const t = typeText.trim().replace(/\s+/g, " ");
+  const q = t.match(QUOTED_TYPE_SHAPE);
+  if (q) {
+    const name = q[1].replace(/""/g, '"');
+    const folded = name.toLowerCase();
+    if (SERIAL_TYPE.test(folded)) return `column type '${t.slice(0, 40)}' is a serial-family type (creates a sequence and a volatile default and rewrites the table): not a plain type on the allow-list`;
+    if (!/[A-Z]/.test(name)) return `quoted column type '${t.slice(0, 40)}' has no uppercase letter, so it could name a built-in or pseudo type: not a plain type on the allow-list`;
+    if (BUILTIN_TYPE.test(folded)) return `quoted column type '${t.slice(0, 40)}' folds to a built-in type name: not a plain type on the allow-list`;
+    return null;
+  }
+  if (/^"[^"]+"\./.test(t) || /^[A-Za-z_][A-Za-z0-9_]*\./.test(t)) return `schema-qualified column type '${t.slice(0, 40)}' is not a plain type on the allow-list (only "public"."Name" with an uppercase letter is allowed)`;
   if (SERIAL_TYPE.test(t.replace(/\s*\[.*$/, ""))) return `column type '${t.slice(0, 40)}' is a serial-family type (creates a sequence and a volatile default and rewrites the table): not a plain type on the allow-list`;
-  if (BUILTIN_TYPE.test(t) || QUOTED_TYPE.test(t)) return null;
+  if (BUILTIN_TYPE.test(t)) return null;
   return `column type '${t.slice(0, 50)}' is not a plain type on the allow-list`;
 }
 

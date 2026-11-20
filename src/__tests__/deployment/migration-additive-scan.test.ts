@@ -324,3 +324,35 @@ describe("additive-only scan — delta review R2: column type allow-list", () =>
     for (const n of REAL) expect(scan(read(n)).ok).toBe(true);
   });
 });
+
+describe("additive-only scan — R2b: a quoted type name must not be able to collide with a built-in or pseudo type", () => {
+  const reject = (label: string, sql: string, why: RegExp) =>
+    it(`rejects ${label}`, () => {
+      const r = scan(sql);
+      expect(r.ok, sql).toBe(false);
+      expect(r.violations.map((v) => v.reason).join(" | ")).toMatch(why);
+    });
+  const accept = (label: string, sql: string) => it(`accepts ${label}`, () => expect(scan(sql).violations).toEqual([]));
+
+  // reviewer repros (each emits CREATE SEQUENCE on PostgreSQL)
+  reject('R2b repro: ADD COLUMN "serial"', 'ALTER TABLE "canary_big" ADD COLUMN "g" "serial"', /serial-family/);
+  reject('R2b repro: CREATE TABLE column "serial"', 'CREATE TABLE "t1" ("a" "serial" NOT NULL)', /serial-family/);
+  reject('R2b repro: CREATE TABLE column "bigserial"', 'CREATE TABLE "t1" ("a" "bigserial")', /serial-family/);
+  reject('"smallserial"', 'ALTER TABLE "t" ADD COLUMN "c" "smallserial"', /serial-family/);
+  reject('"serial4" / "serial8" / "serial2"', 'ALTER TABLE "t" ADD COLUMN "a" "serial4", ADD COLUMN "b" "serial8", ADD COLUMN "c" "serial2"', /serial-family/);
+  reject('"serial"[]', 'ALTER TABLE "t" ADD COLUMN "c" "serial"[]', /serial-family/);
+  reject('"public"."serial"', 'ALTER TABLE "t" ADD COLUMN "c" "public"."serial"', /serial-family/);
+  reject('"pg_catalog"."serial"', 'ALTER TABLE "t" ADD COLUMN "c" "pg_catalog"."serial"', /allow-list|plain type/);
+  reject('"pg_catalog"."int4"', 'ALTER TABLE "t" ADD COLUMN "c" "pg_catalog"."int4"', /allow-list|plain type/);
+  reject('"SERIAL" (case-folds to the serial family; a different, nonexistent type on PostgreSQL)', 'ALTER TABLE "t" ADD COLUMN "c" "SERIAL"', /serial-family/);
+  reject('"BigSerial" and "Serial"', 'ALTER TABLE "t" ADD COLUMN "a" "BigSerial", ADD COLUMN "b" "Serial"', /serial-family/);
+  reject("unquoted Serial / BIGSERIAL case variants", 'ALTER TABLE "t" ADD COLUMN "a" Serial, ADD COLUMN "b" BIGSERIAL', /serial-family/);
+  reject('an all-lowercase quoted built-in name "int4"', 'ALTER TABLE "t" ADD COLUMN "c" "int4"', /no uppercase letter/);
+  reject('an all-lowercase quoted name "text"', 'ALTER TABLE "t" ADD COLUMN "c" "text"', /no uppercase letter/);
+  reject('an all-lowercase quoted name that is not built in "my_enum"', 'ALTER TABLE "t" ADD COLUMN "c" "my_enum"', /no uppercase letter/);
+  reject('a quoted name that folds to a built-in ("TEXT")', 'ALTER TABLE "t" ADD COLUMN "c" "TEXT"', /folds to a built-in/);
+  reject('a quoted other-schema type "other"."Status"', 'ALTER TABLE "t" ADD COLUMN "c" "other"."Status"', /allow-list|plain type/);
+  reject("an unquoted schema-qualified type", 'ALTER TABLE "t" ADD COLUMN "c" public.Status', /allow-list|plain type/);
+  accept('PascalCase quoted enum types, unqualified, "public"-qualified and arrays', 'ALTER TABLE "t" ADD COLUMN "a" "Status", ADD COLUMN "b" "public"."Status", ADD COLUMN "c" "Status"[], ADD COLUMN "d" "OrderStatus"[][], ADD COLUMN "e" "aB";');
+  accept("a quoted type with an uppercase letter that is not built in ('Status' default cast)", `ALTER TABLE "t" ADD COLUMN "a" "Status" NOT NULL DEFAULT 'A'::"Status";`);
+});
