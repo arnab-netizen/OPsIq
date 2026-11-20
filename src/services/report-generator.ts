@@ -193,9 +193,18 @@ function calculateRiskLevel(
 
 // ─── Report Generation ─────────────────────────────────────────────────────
 
+export interface GenerateEngagementReportOptions {
+  /**
+   * Client-visible rendering: recommendations classified "internal" are excluded from the report and from every figure
+   * derived from them, so nothing an internal-only record carries reaches a client-visible reader.
+   */
+  clientVisibleOnly?: boolean;
+}
+
 export async function generateEngagementReport(
   engagementId: string,
-  workspaceId: string
+  workspaceId: string,
+  options: GenerateEngagementReportOptions = {}
 ): Promise<EngagementReport> {
   // Fetch engagement with all required data in one transaction-like operation
   const engagement = await db.engagement.findUnique({
@@ -210,7 +219,7 @@ export async function generateEngagementReport(
   }
 
   // Fetch all required data in parallel to ensure consistency
-  const [currentCondition, findingRows, recommendations, actions, kpis] =
+  const [currentCondition, findingRows, recommendations, actionRows, kpis] =
     await Promise.all([
       db.businessConditionProfile.findFirst({
         where: { engagementId, workspaceId, isCurrent: true },
@@ -224,18 +233,22 @@ export async function generateEngagementReport(
         orderBy: { createdAt: "desc" },
       }),
       db.recommendation.findMany({
-        where: { engagementId, workspaceId },
+        where: { engagementId, workspaceId, ...(options.clientVisibleOnly ? { visibility: "client_visible" } : {}) },
         orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       }),
+      // The Action table has no workspace_id, due_date or priority column: it is workspace-scoped through its
+      // engagement and its due date column is dueAt. Querying the phantom columns made Prisma reject the call, so
+      // this report returned 500 for every engagement.
       db.action.findMany({
-        where: { engagementId, workspaceId },
-        orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
+        where: { engagementId, engagement: { workspaceId } },
+        orderBy: [{ dueAt: "asc" }],
       }),
       db.kPI.findMany({
         where: { engagementId, engagement: { workspaceId } },
         orderBy: { createdAt: "asc" },
       }),
     ]);
+  const actions = actionRows.map((a: (typeof actionRows)[0]) => ({ ...a, dueDate: a.dueAt ?? undefined }));
   const findings = [...findingRows].sort(
     (a: { severity: string }, b: { severity: string }) => ownerSeverityRank(b.severity) - ownerSeverityRank(a.severity)
   );
@@ -517,7 +530,9 @@ export async function generateAndStoreReport(
   }
 
   // Generate the report
-  const report = await generateEngagementReport(engagementId, workspaceId);
+  const report = await generateEngagementReport(engagementId, workspaceId, {
+    clientVisibleOnly: visibility === "client_visible",
+  });
 
   // Use engagement ID as the deliverable ID for now
   const deliverableId = `report-${engagementId}-${Date.now()}`;
