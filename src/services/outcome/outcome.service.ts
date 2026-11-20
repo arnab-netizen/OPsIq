@@ -7,6 +7,7 @@ import { logger } from "@/infra/logger";
 import { computeDecisionConfidence } from "../decision-confidence/decision-confidence.service";
 import { generateBusinessImpact } from "../business-impact/business-impact.service";
 import { getFinancialDelta } from "../financial/financial-mapping.service";
+import { mergeActionMetadata } from "@/services/action-store";
 
 export interface OutcomeSnapshot {
   predictedImpactLevel: string;
@@ -189,13 +190,18 @@ export async function recordOutcome(
   };
 
     // Store outcome snapshot in the action's metadata JSON (Action has no dedicated
-    // outcomeSnapshot column). Preserve any existing metadata keys.
-    await db.action.update({
-      where: { id: actionId },
-      data: {
-        metadata: { ...actionMetadata, outcomeSnapshot } as object,
-      },
+    // outcomeSnapshot column). Only the outcomeSnapshot key is merged, atomically in SQL, so a
+    // concurrent writer of another key (e.g. metadata.blockerReason) is never overwritten.
+    const stored = await mergeActionMetadata(db, {
+      actionId,
+      workspaceId,
+      metadata: { set: { outcomeSnapshot } },
     });
+    if (!stored) {
+      // The action disappeared (or left the workspace) after the pre-read: nothing was recorded,
+      // so no OUTCOME_RECORDED event and no re-evaluation may be emitted for it.
+      throw new NotFoundError("Action", actionId);
+    }
 
     // Emit audit event for outcome recording
     const auditWorkspaceId = workspaceId || engagement?.workspaceId || "unknown";

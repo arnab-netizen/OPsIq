@@ -112,6 +112,53 @@ const RULES = [
       p === 'src/services/owner-mode/process-execution-bridge.service.ts' ||
       p === 'src/services/owner-mode/reassessment-event.service.ts' },
 
+  // ---- Runtime-proof coverage (owner decision 2026-11-19: risk-based MANDATORY runtime-proof verification) ----
+  // A change to a runtime-proof test, to its manifest/checker, or to the product capability it protects must run the DB-risk path
+  // (which now includes the runtime-proof step), while docs/cosmetic changes stay cheap. Named exactly (never a broad directory rule outside
+  // the proof directory itself), in the same style as the owner's earlier named-service rules.
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      /^src\/__tests__\/runtime-proof\//.test(p) ||
+      p === 'src/__tests__/phase-3-http-runtime-proofs.test.ts' ||
+      p === 'src/__tests__/phase-3-live-runtime-integration.test.ts' ||
+      p === '.claude/runtime-proof-manifest.json' ||
+      p === 'scripts/ci/check-runtime-proof.mjs' ||
+      p === 'src/__tests__/ci-cd/runtime-proof-manifest.test.ts' },
+  // Production release path: the migration/role-reconcile gate, planner, release evidence, the role-cutover tool and the
+  // topology verifier are proven only by DB-lane steps inside db-verify, so changing any of them must run db-verify
+  // (otherwise a green aggregate can release unproven code against production).
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      /^scripts\/(release|db)\//.test(p) ||
+      p === 'src/services/privacy-erasure/role-topology.ts' ||
+      p === '.github/workflows/migrate-production.yml' ||
+      p === '.github/workflows/reconcile-runtime-role.yml' ||
+      p === 'src/__tests__/deployment/production-release-reconcile.test.ts' ||
+      p === 'src/__tests__/deployment/release-plan.test.ts' },
+  // Canonical event store: append-only events, numbering, idempotency, replay, snapshots, projections (rp1, rp3-isolation, rp6-rp10, phase-3-*).
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      /^src\/services\/(event-emitter|event-replay-engine|projection-engine|projection-rebuild-engine|snapshot-engine|snapshot-optimization-engine|replay-failure-handler|idempotency)\.ts$/.test(p) ||
+      p === 'src/infra/idempotency.ts' },
+  // Tenant isolation and capability/RBAC enforcement (rp3-isolation, rp4, rp2).
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      p === 'src/lib/prisma-workspace-enforcement.ts' ||
+      p === 'src/lib/db.ts' ||
+      p === 'src/lib/enforced-route.ts' ||
+      p === 'src/lib/canonical-route-enforcement.ts' ||
+      p === 'src/lib/execution-reentry-detector.ts' ||
+      p === 'src/infra/telemetry-sanitizer.ts' ||
+      p === 'src/lib/canonical-capability-resolver.ts' ||
+      p === 'src/domain/constants/capabilities.ts' },
+  // Quota / entitlement / billing webhooks (rp5, rp2). Exact names: broader entitlement*/billing* file-name rules keep their tier-4 treatment.
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      p === 'src/services/entitlement.service.ts' ||
+      p === 'src/middleware/tier-enforcement.ts' ||
+      p === 'src/services/webhook.service.ts' || p === 'src/services/webhooks.service.ts' || p === 'src/services/billing/paddle-webhook.service.ts' ||
+      /^src\/app\/api\/(entitlement|webhooks)\//.test(p) },
+  // Operational survivability: health/readiness/liveness handlers and rate limiting (rp3-survivability).
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      /^src\/app\/api\/(health|readiness|liveness)\//.test(p) ||
+      p === 'src/runtime/resilience/circuit-breaker.ts' ||
+      p === 'src/infra/rate-limit.ts' || p === 'src/middleware/rate-limit.ts' || p === 'src/services/rate-limit.ts' },
+
   // ---- Tier 4: security / auth / tenancy / entitlement ----
   { tier: TIERS.SECURITY_AUTH_TENANCY_ENTITLEMENT, test: (p) =>
       /^src\/(lib\/)?auth\//.test(p) ||

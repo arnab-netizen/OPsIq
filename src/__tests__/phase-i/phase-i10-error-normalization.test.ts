@@ -25,6 +25,7 @@ import {
   createInfrastructureError,
 } from "@/runtime/runtime-errors";
 import { requestContext } from "@/runtime/request-context";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 describe("PHASE I10.5: Error Normalization Enforcement", () => {
   describe("normalizeError() function", () => {
@@ -34,14 +35,34 @@ describe("PHASE I10.5: Error Normalization Enforcement", () => {
 
       expect(normalized).toBeInstanceOf(RuntimeError);
       expect(normalized.metadata.classification).toBe("INFRASTRUCTURE");
-      expect(normalized.message).toContain("test_operation");
+      // Contract (R30 operator-safe errors, commit 32ccd4768): the technical
+      // text "<operation>: <raw message>" is preserved verbatim in the
+      // ops-only internal diagnostic ...
+      expect(normalized.toInternalDiagnostic().internal_diagnostic.original_message).toBe(
+        "test_operation: Something went wrong",
+      );
+      // ... and never reaches the user-visible message or operator JSON.
+      expect(normalized.message).toBe(
+        classifyOperatorError(new Error(normalized.message), { context: "load" }).operatorMessage,
+      );
+      expect(normalized.message.length).toBeGreaterThan(0);
+      expect(normalized.message).not.toContain("test_operation");
+      expect(normalized.message).not.toContain("Something went wrong");
+      expect(JSON.stringify(normalized.toOperatorSafeJSON())).not.toContain("test_operation");
+      expect(JSON.stringify(normalized.toOperatorSafeJSON())).not.toContain("Something went wrong");
     });
 
     it("should convert string to RuntimeError", () => {
       const normalized = normalizeError("Error message", "test_op");
 
       expect(normalized).toBeInstanceOf(RuntimeError);
-      expect(normalized.message).toContain("Error message");
+      expect(normalized.toInternalDiagnostic().internal_diagnostic.original_message).toBe(
+        "test_op: Error message",
+      );
+      expect(normalized.message.length).toBeGreaterThan(0);
+      expect(normalized.message).not.toContain("Error message");
+      expect(normalized.message).not.toContain("test_op");
+      expect(JSON.stringify(normalized.toOperatorSafeJSON())).not.toContain("Error message");
     });
 
     it("should preserve RuntimeError as-is", () => {
@@ -59,8 +80,21 @@ describe("PHASE I10.5: Error Normalization Enforcement", () => {
       const error = new Error("DB connection lost");
       const normalized = normalizeError(error, "database_query");
 
-      expect(normalized.message).toContain("database_query");
-      expect(normalized.message).toContain("DB connection lost");
+      // Operation name and raw cause are retained for ops in the internal
+      // diagnostic (and stack trace) ...
+      const internal = normalized.toInternalDiagnostic();
+      expect(internal.internal_diagnostic.original_message).toContain("database_query");
+      expect(internal.internal_diagnostic.original_message).toContain("DB connection lost");
+      expect(internal.internal_diagnostic.original_message).toBe("database_query: DB connection lost");
+      // ... but the user-visible message is the governed operator-safe copy.
+      expect(normalized.message).not.toContain("database_query");
+      expect(normalized.message).not.toContain("DB connection lost");
+      const operatorJson = JSON.stringify(normalized.toOperatorSafeJSON());
+      expect(operatorJson).not.toContain("database_query");
+      expect(operatorJson).not.toContain("DB connection lost");
+      expect(normalized.toOperatorSafeJSON().message).toBe(
+        "Infrastructure error. Operations team notified.",
+      );
     });
 
     it("should handle null/undefined errors", () => {
@@ -298,5 +332,20 @@ describe("PHASE I10.5: Error Normalization Enforcement", () => {
       expect(transientError.metadata.recovery_suggestion).toBeTruthy();
       expect(transientError.metadata.recovery_suggestion).toContain("60");
     });
+  });
+});
+
+describe("internal diagnostics keep the raw message but never a credential (governed log scrub)", () => {
+  it("createDBError keeps ordinary text and masks a connection string and a token", () => {
+    const err = createDBError(
+      "connect failed postgresql://svc:hunter2@db.internal:5432/app token=abc123def456 for owner@example.com",
+      requestContext.createErrorContext(),
+      false,
+    );
+    const original = String((err.metadata.internal_diagnostic as { original_message: string }).original_message);
+    expect(original).toContain("connect failed");
+    expect(original).not.toContain("hunter2");
+    expect(original).not.toContain("abc123def456");
+    expect(original).not.toContain("owner@example.com");
   });
 });

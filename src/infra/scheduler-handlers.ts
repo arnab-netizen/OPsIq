@@ -19,11 +19,14 @@ import { SCHEDULER_SYSTEM_ACTOR } from "@/domain/owner-budget/system-actor";
 import { scanOverdueRiskAlertsForWorkspace } from "@/services/owner-mode/business-risk.service";
 import { TASK_NAME_QBO_SYNC, createQboSyncTaskHandler } from "@/services/quickbooks/qbo-sync-scheduling";
 import { TASK_NAME_FIRST_DIAGNOSIS, firstDiagnosisTaskHandler } from "@/services/owner-first-run/first-diagnosis-scheduling";
+import { reconcileExpiredCapabilityReservations } from "@/services/entitlement.service";
+import { TASK_NAME_ACTION_BLOCKER_REEVALUATION, actionBlockerReEvaluationHandler } from "@/services/action-reevaluation-scheduling";
 
 export const TASK_NAME_ALERT_EMAIL_RETRY = "alert-email-retry";
 export const TASK_NAME_FINANCE_LEARNING_BRIDGE = "finance-learning-bridge";
 export const TASK_NAME_REASSESSMENT_SCAN = "reassessment-scan";
 export const TASK_NAME_RISK_REVIEW_SCAN = "risk-review-scan";
+export const TASK_NAME_QUOTA_RESERVATION_SWEEP = "quota-reservation-sweep";
 
 /**
  * retryEmailAlert() never throws for a normal delivery outcome (it returns
@@ -161,6 +164,25 @@ const riskReviewScanHandler: TaskHandler = async (_payload, context): Promise<Ha
   return { status: "SUCCESS", summary: scanCounts(result) };
 };
 
+/**
+ * Plan-quota crash recovery: return the unsettled units of this workspace's quota reservations that
+ * expired without being finalized (see reconcileExpiredCapabilityReservations). Settled units are kept;
+ * idempotent, so a retried or duplicated task returns nothing twice. A full batch means more may remain;
+ * the next producer scan enqueues them again.
+ */
+const quotaReservationSweepHandler: TaskHandler = async (_payload, context): Promise<HandlerResult> => {
+  if (!context.workspaceId) {
+    throw new Error("quota-reservation-sweep task missing workspaceId — cannot enforce workspace isolation");
+  }
+  const result = await reconcileExpiredCapabilityReservations(context.workspaceId, new Date());
+  if (result.examined === 0) return { status: "NO_WORK" };
+  return {
+    status: "SUCCESS",
+    summary: `${result.finalized} abandoned plan-quota reservation(s) finalized; ${result.unitsReturned} unit(s) returned.`,
+    counts: { examined: result.examined, finalized: result.finalized, unitsReturned: result.unitsReturned },
+  };
+};
+
 /** The one production handler registry — pass to processDue() unmodified. */
 export function getProductionTaskHandlers(): Map<string, TaskHandler> {
   return new Map<string, TaskHandler>([
@@ -168,9 +190,12 @@ export function getProductionTaskHandlers(): Map<string, TaskHandler> {
     [TASK_NAME_FINANCE_LEARNING_BRIDGE, financeLearningBridgeHandler],
     [TASK_NAME_REASSESSMENT_SCAN, reassessmentScanHandler],
     [TASK_NAME_RISK_REVIEW_SCAN, riskReviewScanHandler],
+    [TASK_NAME_QUOTA_RESERVATION_SWEEP, quotaReservationSweepHandler],
     // QuickBooks Online V1 read-only synchronisation (see src/services/quickbooks/qbo-sync-scheduling.ts).
     [TASK_NAME_QBO_SYNC, createQboSyncTaskHandler(() => ({ env: process.env }))],
     // Unattended first read once canonical evidence is sufficient (see src/services/owner-first-run/first-diagnosis-scheduling.ts).
     [TASK_NAME_FIRST_DIAGNOSIS, firstDiagnosisTaskHandler],
+    // Deferred governed re-evaluation of a newly blocked action (see src/services/action-reevaluation-scheduling.ts).
+    [TASK_NAME_ACTION_BLOCKER_REEVALUATION, actionBlockerReEvaluationHandler],
   ]);
 }

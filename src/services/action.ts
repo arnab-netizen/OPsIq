@@ -5,16 +5,21 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { triggerReEvaluation } from "@/services/re-evaluation";
+import { triggerReEvaluation, ReEvaluationInProgressError } from "@/services/re-evaluation";
+import { blockerReEvaluationEvent, enqueueActionBlockerReEvaluation } from "@/services/action-reevaluation-scheduling";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
-import { enforceActionRules } from "@/services/action-lifecycle";
+import { enforceActionRules, UNSATISFIABLE_ACTION_RULE_IDS } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { recordActionUsage } from "@/services/usage.service";
+import { withCapabilityQuota, type CapabilityReservation, type CapabilityUsageMode } from "@/services/entitlement.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import { randomUUID } from "crypto";
+import type { Prisma } from "@/generated/prisma/client";
+import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
+import { readActionBlockerReason, blockerReasonPatch, type ActionMetadataPatch } from "@/domain/execution/action-metadata";
+import { compareAndSetAction, type ActionColumnChanges } from "@/services/action-store";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -74,6 +79,30 @@ export async function createAction(
   input: CreateActionInput,
   authContext: CanonicalAuthContext,
   workspaceId: string,
+  idempotencyKey?: string,
+  quotaMode: CapabilityUsageMode = { enforce: false }
+) {
+  // Plan quota: action_create usage is reserved atomically before the write and kept only by settling it
+  // inside the action insert's transaction; a failed write or an idempotent replay settles nothing, so the
+  // unit is returned. The action_create LIMIT (PlanLimitError 402) applies only when the caller enforces
+  // it: POST /api/actions, the one path that was plan-gated before usage was recorded here. The execute
+  // workflow and the consulting pipeline were never gated, so by default usage is recorded, never refused.
+  // Auth and workspace context are verified first, before any database access.
+  requireServiceContext(authContext, workspaceId);
+  const outcome = await withCapabilityQuota(
+    workspaceId,
+    "action_create",
+    (reservation) => persistAction(input, authContext, workspaceId, reservation, idempotencyKey),
+    { enforce: quotaMode.enforce ?? false }
+  );
+  return outcome.action;
+}
+
+async function persistAction(
+  input: CreateActionInput,
+  authContext: CanonicalAuthContext,
+  workspaceId: string,
+  reservation: CapabilityReservation,
   idempotencyKey?: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -88,7 +117,7 @@ export async function createAction(
       idempotencyKey,
       "action.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: Prisma.TransactionClient) => {
           const action = await tx.action.create({
             data: {
               id: randomUUID(),
@@ -138,6 +167,8 @@ export async function createAction(
             visibility: "internal",
           }, tx);
 
+          // Keep the reserved action_create unit atomically with the insert (last statement).
+          await reservation.settle(tx);
           return action;
         }, { timeout: 30000 });
       },
@@ -165,33 +196,32 @@ export async function createAction(
         });
       }
 
-      // Record usage for action creation (only on new creation)
-      await recordActionUsage(validatedWorkspaceId, 1, {
-        actionId: result.result.id,
-        engagementId: input.engagementId,
-      });
-
       logger.info("Action created", {
         actionId: result.result.id,
         engagementId: input.engagementId,
       });
     }
 
-    return result.result;
+    return { action: result.result, isNew: result.isNew };
   }
 
-  const action = await db.action.create({
-    data: {
-      id: randomUUID(),
-      engagementId: input.engagementId,
-      recommendationId: input.recommendationId,
-      title: input.title,
-      description: input.description || null,
-      assignedTo: input.assignedTo || null,
-      dueAt: input.dueDate ? new Date(input.dueDate) : null,
-      status: "draft",
-      updatedAt: new Date(),
-    },
+  // The insert and the kept action_create unit commit together.
+  const action = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.action.create({
+      data: {
+        id: randomUUID(),
+        engagementId: input.engagementId,
+        recommendationId: input.recommendationId,
+        title: input.title,
+        description: input.description || null,
+        assignedTo: input.assignedTo || null,
+        dueAt: input.dueDate ? new Date(input.dueDate) : null,
+        status: "draft",
+        updatedAt: new Date(),
+      },
+    });
+    await reservation.settle(tx);
+    return created;
   });
 
   // Emit event sourcing event (non-blocking)
@@ -243,18 +273,12 @@ export async function createAction(
     });
   }
 
-  // Record usage for action creation
-  await recordActionUsage(validatedWorkspaceId, 1, {
-    actionId: action.id,
-    engagementId: input.engagementId,
-  });
-
   logger.info("Action created", {
     actionId: action.id,
     engagementId: input.engagementId,
   });
 
-  return action;
+  return { action, isNew: true };
 }
 
 export async function getActionsForEngagement(engagementId: string, userId: string, workspaceId: string) {
@@ -269,6 +293,63 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
   });
 }
 
+/**
+ * Shared status-change rules for every Action writer that changes status (updateActionStatus,
+ * updateAction): status vocabulary + transition map, the lifecycle enforcement rules (a blocked
+ * action must carry a reason), and the blocker-reason metadata patch (kept while blocked,
+ * cleared on leaving blocked). Pure — performs no write.
+ */
+async function prepareActionStatusChange(
+  action: { status: string; metadata: unknown } & Record<string, unknown>,
+  requested: { status?: string; blockerReason?: string | null },
+  options?: { skipRuleIds?: readonly string[] }
+): Promise<{ previousStatus: ActionStatus; newStatus: ActionStatus; blockerReason: string | null; metadataPatch: ActionMetadataPatch }> {
+  const previousStatus = action.status as ActionStatus;
+  const newStatus = (requested.status ?? action.status) as ActionStatus;
+  validateActionStatus(newStatus);
+  if (newStatus !== previousStatus) {
+    validateActionTransition(previousStatus, newStatus);
+  }
+  const blockerReason =
+    requested.blockerReason ?? (newStatus === previousStatus ? readActionBlockerReason(action.metadata) : null);
+  const violations = await enforceActionRules({ ...action, status: newStatus, blockerReason }, options);
+  if (violations.length > 0) {
+    throw new ValidationError(`Action enforcement rules violated:\n${violations.join("\n")}`);
+  }
+  return { previousStatus, newStatus, blockerReason, metadataPatch: blockerReasonPatch(newStatus, blockerReason) };
+}
+
+/**
+ * A newly blocked action is an unresolved blocker: route it into governed re-evaluation. Runs AFTER
+ * the write committed, so a re-evaluation of the same engagement already in progress must not fail
+ * the request (the row is written; the client must get its new version). That running evaluation
+ * may already have read the pre-block state, so the event is deferred through the scheduler
+ * instead of being dropped (services/action-reevaluation-scheduling.ts).
+ */
+async function reEvaluateIfNewlyBlocked(args: {
+  actionId: string;
+  engagementId: string;
+  workspaceId: string;
+  actorId: string;
+  title: string;
+  previousStatus: string;
+  newStatus: string;
+  committedVersion: number;
+}): Promise<void> {
+  if (args.newStatus !== "blocked" || args.previousStatus === "blocked") return;
+  try {
+    await triggerReEvaluation(blockerReEvaluationEvent(args));
+  } catch (error) {
+    if (!(error instanceof ReEvaluationInProgressError)) throw error;
+    await enqueueActionBlockerReEvaluation({
+      actionId: args.actionId,
+      workspaceId: args.workspaceId,
+      actorId: args.actorId,
+      version: args.committedVersion,
+    });
+  }
+}
+
 export async function updateActionStatus(
   actionId: string,
   input: UpdateActionInput,
@@ -277,8 +358,10 @@ export async function updateActionStatus(
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const action = await db.action.findUnique({
-    where: { id: actionId },
+  // Scope the pre-read to the caller's workspace (owned via the engagement) so the version and
+  // transition checks below never run against — and never describe — another workspace's row.
+  const action = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -290,57 +373,25 @@ export async function updateActionStatus(
     );
   }
 
-  const newStatus = (input.status ?? action.status) as ActionStatus;
-  const previousStatus = action.status as ActionStatus;
-
-  // Validate new status value
-  if (newStatus) {
-    validateActionStatus(newStatus);
-    // Only validate transition if status is actually changing
-    if (newStatus !== previousStatus) {
-      validateActionTransition(previousStatus, newStatus);
-    }
-  }
-
-  // Enforce action lifecycle rules
-  const updatedActionData = {
-    ...action,
-    status: newStatus,
-    blockerReason: input.blockerReason ?? input.blockageReason ?? action.blockerReason,
-  };
-  const violations = await enforceActionRules(updatedActionData);
-  if (violations.length > 0) {
-    throw new ValidationError(
-      `Action enforcement rules violated:\n${violations.join("\n")}`
-    );
-  }
-
-  // Optimistic locking: update only if version matches
-  const blockerReason = input.blockerReason ?? input.blockageReason ?? action.blockerReason;
-  const updateResult = await db.action.updateMany({
-    where: {
-      id: actionId,
-      engagement: { workspaceId: validatedWorkspaceId },
-      version: input.version,
-    },
-    data: {
-      status: newStatus,
-      blockerReason: blockerReason ?? null,
-      version: { increment: 1 },
-    },
+  const { previousStatus, newStatus, metadataPatch } = await prepareActionStatusChange(action, {
+    status: input.status,
+    blockerReason: input.blockerReason ?? input.blockageReason,
   });
 
-  if (updateResult.count === 0) {
+  // One statement: status + blocker-reason metadata key + version, conditional on the version.
+  const updated = await compareAndSetAction(db, {
+    actionId,
+    workspaceId: validatedWorkspaceId,
+    expectedVersion: input.version,
+    columns: { status: newStatus },
+    metadata: metadataPatch,
+  });
+  if (!updated) {
     throw new ConflictError(
       "Action has been modified by another process",
       { code: "OPTIMISTIC_LOCK_FAILED" }
     );
   }
-
-  const updated = await db.action.findFirst({
-    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
-  });
-  if (!updated) throw new NotFoundError("Action", actionId);
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ACTION_UPDATED,
@@ -351,24 +402,21 @@ export async function updateActionStatus(
     payload: {
       previousStatus,
       newStatus,
-      blockageReason: input.blockageReason,
+      blockerReason: readActionBlockerReason(updated.metadata),
     },
     visibility: "internal",
   });
 
-  // Trigger re-evaluation due to action status change if blocked
-  if (newStatus !== previousStatus && newStatus === "blocked") {
-    await triggerReEvaluation({
-      changeType: "unresolved_critical_blocker",
-      entityType: "action",
-      entityId: actionId,
-      engagementId: action.engagementId,
-      workspaceId: validatedWorkspaceId,
-      severity: "high",
-      description: `Action blocked: ${input.title || "action"}`,
-      triggeredBy: actorId,
-    });
-  }
+  await reEvaluateIfNewlyBlocked({
+    actionId,
+    engagementId: action.engagementId,
+    workspaceId: validatedWorkspaceId,
+    actorId,
+    title: action.title,
+    previousStatus,
+    newStatus,
+    committedVersion: updated.version,
+  });
 
   logger.info("Action status updated", {
     actionId,
@@ -377,7 +425,7 @@ export async function updateActionStatus(
     updatedBy: actorId,
   });
 
-  return updated;
+  return { ...updated, blockerReason: readActionBlockerReason(updated.metadata) };
 }
 
 export async function detectOverdueActions(engagementId: string, authContext: CanonicalAuthContext, workspaceId: string) {
@@ -454,8 +502,11 @@ export async function updateAction(
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const action = await db.action.findUnique({
-    where: { id: actionId },
+  // Scope the pre-read to the caller's workspace (Action has no workspaceId column; it is owned via
+  // its engagement). The version and transition checks below must never run against a foreign row,
+  // or their distinct errors disclose that row's existence, version and status.
+  const action = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -463,25 +514,54 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  // A status change (or a new blocker reason) goes through the same rules as updateActionStatus.
+  const statusChange =
+    input.status !== undefined || input.blockerReason !== undefined
+      ? await prepareActionStatusChange(
+          action,
+          { status: input.status, blockerReason: input.blockerReason },
+          // The Action Center path never enforced the evidence rule, which reads a non-existent
+          // column and would make every completion fail; keep completion working here. The
+          // blocked-needs-reason rule, status vocabulary and transition map still apply.
+          { skipRuleIds: UNSATISFIABLE_ACTION_RULE_IDS }
+        )
+      : null;
 
-  if (input.status) {
-    validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
-    updates.status = input.status;
-  }
-  if (input.title !== undefined) updates.title = input.title;
-  if (input.description !== undefined) updates.description = input.description;
-  if (input.dueDate !== undefined) updates.dueAt = input.dueDate ? new Date(input.dueDate) : null;
-  if (input.assignedTo !== undefined) updates.assignedTo = input.assignedTo;
-  if (input.completedAt !== undefined) updates.completedAt = input.completedAt ? new Date(input.completedAt) : null;
-  if (input.verifiedAt !== undefined) updates.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
+  // The exact column values this call writes (also what it audits).
+  const applied: ActionColumnChanges = {};
+  if (statusChange && statusChange.newStatus !== statusChange.previousStatus) applied.status = statusChange.newStatus;
+  if (input.title !== undefined) applied.title = input.title;
+  if (input.description !== undefined) applied.description = input.description;
+  if (input.dueDate !== undefined) applied.dueAt = input.dueDate ? new Date(input.dueDate) : null;
+  if (input.assignedTo !== undefined) applied.assignedTo = input.assignedTo;
+  if (input.completedAt !== undefined) applied.completedAt = input.completedAt ? new Date(input.completedAt) : null;
+  if (input.verifiedAt !== undefined) applied.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
 
-  const updated = await db.action.update({
-    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
-    data: updates,
+  // One statement: columns + blocker-reason metadata key + version, conditional on the version the
+  // checks above ran against; RETURNING is exactly the row this call committed.
+  const updated = await compareAndSetAction(db, {
+    actionId,
+    workspaceId: validatedWorkspaceId,
+    expectedVersion: input.version,
+    columns: applied,
+    metadata: statusChange?.metadataPatch,
   });
+  if (!updated) {
+    throw new ConflictError("Action has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
+  }
 
-  if (input.status) {
+  // Every meaningful edit is audited, with each changed field's previous and new value.
+  const previous = action as unknown as Record<string, unknown>;
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  for (const [field, to] of Object.entries(applied)) {
+    const from = previous[field] ?? null;
+    const same = from instanceof Date && to instanceof Date ? from.getTime() === to.getTime() : from === to;
+    if (!same) changes[field] = { from, to };
+  }
+  const previousReason = readActionBlockerReason(action.metadata);
+  const nextReason = readActionBlockerReason(updated.metadata);
+  if (previousReason !== nextReason) changes.blockerReason = { from: previousReason, to: nextReason };
+  if (Object.keys(changes).length > 0) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ACTION_UPDATED,
       actorId,
@@ -489,20 +569,43 @@ export async function updateAction(
       entityId: actionId,
       workspaceId: validatedWorkspaceId,
       payload: {
-        fromStatus: action.status,
-        toStatus: input.status,
+        ...(changes.status ? { fromStatus: action.status, toStatus: updated.status } : {}),
+        changes,
+        previousVersion: action.version,
+        version: updated.version,
       },
       visibility: "internal",
+    });
+  }
+
+  if (statusChange) {
+    await reEvaluateIfNewlyBlocked({
+      actionId,
+      engagementId: action.engagementId,
+      workspaceId: validatedWorkspaceId,
+      actorId,
+      title: updated.title,
+      previousStatus: statusChange.previousStatus,
+      newStatus: statusChange.newStatus,
+      committedVersion: updated.version,
     });
   }
 
   return updated;
 }
 
-export async function listActions(workspaceId: string, params: any) {
+export interface ListActionsParams {
+  engagementId?: string;
+  status?: string;
+  assignedTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listActions(workspaceId: string, params: ListActionsParams) {
   enforceWorkspaceId(workspaceId, "listActions", "action");
 
-  const where: any = {};
+  const where: Prisma.ActionWhereInput = {};
   if (params.engagementId) {
     where.engagementId = params.engagementId;
     where.engagement = { workspaceId };
@@ -535,7 +638,7 @@ export async function listActions(workspaceId: string, params: any) {
 
 export async function createActionsFromInterventions(
   engagementId: string,
-  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  interventions: PrioritizedIntervention[],
   authContext: CanonicalAuthContext,
   workspaceId: string
 ) {

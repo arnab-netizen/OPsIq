@@ -7,6 +7,7 @@ import {
   type ErrorGovernanceContext,
 } from "@/lib/operator-error-governance";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
+import { versionAfterPatch } from "@/lib/patch-version";
 
 interface Recommendation {
   id: string;
@@ -92,7 +93,7 @@ export function RecommendationsManager({
                 ...r,
                 priority: updated.priority || r.priority,
                 status: updated.status || r.status,
-                version: (updated.version || version) + 1,
+                version: versionAfterPatch(updated, version),
               }
             : r
         )

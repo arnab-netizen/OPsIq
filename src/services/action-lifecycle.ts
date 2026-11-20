@@ -1,9 +1,13 @@
 import { db } from "@/lib/db";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { blockerReasonPatch } from "@/domain/execution/action-metadata";
+import { compareAndSetAction } from "@/services/action-store";
+import type { Action } from "@/generated/prisma/client";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // ─── Action Lifecycle States ──────────────────────────────────────────────────
 
@@ -12,15 +16,25 @@ export type ActionLifecycleState = "draft" | "created" | "in_progress" | "blocke
 export interface ActionStateTransition {
   from: ActionLifecycleState;
   to: ActionLifecycleState;
-  requiredContext?: Record<string, any>;
+  requiredContext?: Record<string, unknown>;
   requiresEvidence?: boolean;
   requiresReviewer?: boolean;
+}
+
+/** The fields the enforcement rules inspect; any Action row (plus derived fields) satisfies it. */
+export interface ActionRuleSubject {
+  status?: string | null;
+  blockerReason?: string | null;
+  evidence?: readonly unknown[] | string | null;
+  originalPriority?: string | null;
+  priority?: string | null;
+  [key: string]: unknown;
 }
 
 export interface EnforcementRule {
   ruleId: string;
   name: string;
-  check: (action: any) => boolean;
+  check: (action: ActionRuleSubject) => boolean;
   error: string;
 }
 
@@ -43,7 +57,7 @@ export const ENFORCEMENT_RULES: EnforcementRule[] = [
     ruleId: "action.evidence.required.completed",
     name: "Completion requires evidence",
     check: (action) => {
-      if (action.status === "completed" && action.status !== "in_progress") {
+      if (action.status === "completed") {
         return !!action.evidence && action.evidence.length > 0;
       }
       return true;
@@ -75,7 +89,7 @@ export const ENFORCEMENT_RULES: EnforcementRule[] = [
   {
     ruleId: "action.version.conflict",
     name: "Optimistic locking prevents concurrent modifications",
-    check: (action) => true,
+    check: () => true,
     error: "Action was modified by another process",
   },
 ];
@@ -100,10 +114,22 @@ export async function validateStateTransition(
   }
 }
 
-export async function enforceActionRules(action: any): Promise<string[]> {
+/**
+ * Rule ids that read state the Action model does not persist. "action.evidence.required.completed"
+ * reads `action.evidence`, but Action has no evidence column or relation, so the rule can never be
+ * satisfied server-side (deferred defect: where action evidence lives is an open owner decision).
+ */
+export const UNSATISFIABLE_ACTION_RULE_IDS = ["action.evidence.required.completed"] as const;
+
+export async function enforceActionRules(
+  action: ActionRuleSubject,
+  options?: { skipRuleIds?: readonly string[] }
+): Promise<string[]> {
   const violations: string[] = [];
+  const skip = new Set(options?.skipRuleIds ?? []);
 
   for (const rule of ENFORCEMENT_RULES) {
+    if (skip.has(rule.ruleId)) continue;
     try {
       if (!rule.check(action)) {
         violations.push(`[${rule.ruleId}] ${rule.error}`);
@@ -120,14 +146,14 @@ export async function transitionActionState(
   actionId: string,
   nextState: ActionLifecycleState,
   context: {
-    authContext?: any;
+    authContext?: Pick<CanonicalAuthContext, "session">;
     actorId?: string;
     reason?: string;
     evidence?: string;
     reviewerId?: string;
     workspaceId: string;
   }
-): Promise<any> {
+): Promise<Action> {
   const resolvedActorId = context.authContext?.session?.user?.id || context.actorId;
   if (!resolvedActorId) {
     throw new Error("Either authContext or actorId must be provided");
@@ -171,18 +197,23 @@ export async function transitionActionState(
     }
   }
 
-  // Update action state
-  const updatedAction = await db.action.update({
-    where: { id: actionId, engagement: { workspaceId: context.workspaceId } },
-    data: {
+  // Update action state: one compare-and-set statement on the version read above. Action has no
+  // blocker-reason / verified-by columns: only the metadata.blockerReason key is patched (kept while
+  // blocked, cleared otherwise) and the reviewer is recorded on the audit event below.
+  const updatedAction = await compareAndSetAction(db, {
+    actionId,
+    workspaceId: context.workspaceId,
+    expectedVersion: action.version,
+    columns: {
       status: nextState,
-      blockerReason: nextState === "blocked" ? context.reason : action.blockerReason,
-      completedAt: nextState === "completed" ? new Date() : action.completedAt,
-      verifiedAt: nextState === "verified" ? new Date() : action.verifiedAt,
-      verifiedBy: nextState === "verified" ? context.reviewerId : action.verifiedBy,
-      version: { increment: 1 },
+      ...(nextState === "completed" ? { completedAt: new Date() } : {}),
+      ...(nextState === "verified" ? { verifiedAt: new Date() } : {}),
     },
+    metadata: blockerReasonPatch(nextState, nextState === "blocked" ? context.reason ?? null : null),
   });
+  if (!updatedAction) {
+    throw new ConflictError("Action has been modified by another process", { code: "OPTIMISTIC_LOCK_FAILED" });
+  }
 
   // Emit audit event for state transition
   await emitAuditEvent({
@@ -229,7 +260,7 @@ export async function getActionsByEngagementAndState(
   engagementId: string,
   state: ActionLifecycleState,
   workspaceId: string
-): Promise<any[]> {
+): Promise<Action[]> {
   return db.action.findMany({
     where: {
       engagementId,
@@ -240,7 +271,7 @@ export async function getActionsByEngagementAndState(
   });
 }
 
-export async function getActionsByState(state: ActionLifecycleState, workspaceId: string): Promise<any[]> {
+export async function getActionsByState(state: ActionLifecycleState, workspaceId: string): Promise<Action[]> {
   return db.action.findMany({
     where: {
       status: state,
