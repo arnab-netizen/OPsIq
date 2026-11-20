@@ -1,7 +1,6 @@
 import type { UserRole } from "@/domain/auth/types";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { hasCapability, type PolicyContext } from "@/policies/capability-check";
-export { getSession } from "@/services/auth";
 
 /**
  * Derive the caller's EFFECTIVE legacy UserRole (admin | operator | viewer) for
@@ -25,10 +24,11 @@ export { getSession } from "@/services/auth";
  * heuristics) so it can never drift from the real policy layer that the canonical
  * routes enforce.
  *
- * Inside a `withCanonicalEnforcement` handler pass `ctx.policy`: the wrapper's verified
- * policy is the request's only auth source once the session snapshot is finalized, and a
- * fresh getPolicyContext() there is refused by the shadow-read enforcer
- * (SHADOW_AUTH_READ_DETECTED → 500).
+ * Callers pass the wrapper's verified `ctx.policy`. There is deliberately no variant that
+ * fetches the policy itself: inside a `withCanonicalEnforcement` handler the verified policy
+ * is the request's only auth source once the session snapshot is finalized, and a fresh
+ * getPolicyContext() there is refused by the shadow-read enforcer
+ * (SHADOW_AUTH_READ_DETECTED → 500 on every authenticated request).
  */
 export function deriveServerRole(policy: PolicyContext | null | undefined): UserRole | null {
   if (!policy) {
@@ -51,15 +51,4 @@ export function deriveServerRole(policy: PolicyContext | null | undefined): User
   }
 
   return "viewer";
-}
-
-/**
- * Resolve the legacy UserRole by fetching the caller's PolicyContext from the session.
- * For code OUTSIDE a canonical handler only; canonical handlers use
- * `deriveServerRole(ctx.policy)` (see above).
- */
-export async function resolveServerRole(): Promise<UserRole | null> {
-  // Dynamic import keeps this module free of a static cycle with @/services/auth.
-  const { getPolicyContext } = await import("@/services/auth");
-  return deriveServerRole(await getPolicyContext());
 }
