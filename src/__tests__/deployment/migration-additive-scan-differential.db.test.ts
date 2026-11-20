@@ -21,10 +21,16 @@ let dbName = "";
 
 const HEAD = 'ALTER TABLE "subscriptions" ADD COLUMN "x" TEXT';
 
+let audit = false; // DDL/drop audit via event triggers (needs a superuser connection; the canary + sequence checks apply regardless)
+
 async function reset() {
-  await c.query(`DROP TABLE IF EXISTS "victim"; DROP TABLE IF EXISTS "subscriptions"; DROP TABLE IF EXISTS "t";
+  await c.query(`DO $x$ DECLARE r record; BEGIN
+      FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'audit_cmds' LOOP EXECUTE format('DROP TABLE IF EXISTS %I CASCADE', r.tablename); END LOOP;
+      FOR r IN SELECT typname FROM pg_type WHERE typnamespace = 'public'::regnamespace AND typtype = 'e' LOOP EXECUTE format('DROP TYPE IF EXISTS %I CASCADE', r.typname); END LOOP;
+    END $x$;
     CREATE TABLE "victim" ("id" int PRIMARY KEY, "v" text); INSERT INTO "victim" VALUES (1, 'keep');
-    CREATE TABLE "subscriptions" ("id" int PRIMARY KEY); CREATE TABLE "t" ("id" int PRIMARY KEY);`);
+    CREATE TABLE "subscriptions" ("id" int PRIMARY KEY); CREATE TABLE "t" ("id" int PRIMARY KEY);
+    TRUNCATE audit_cmds;`);
 }
 
 /** Execute exactly as a migration file would run (one simple-protocol multi-statement string); PostgreSQL errors are fine, side effects are not. */
@@ -37,10 +43,20 @@ async function execute(sql: string): Promise<string | null> {
   }
 }
 
+const ALLOWED_TAGS = new Set(["CREATE TABLE", "CREATE INDEX", "CREATE TYPE", "ALTER TABLE"]);
+
+/** True only when nothing outside the allow-list happened: the canary row is intact, no sequence exists, and (with audit) every DDL tag is allow-listed and nothing was dropped. */
 async function victimIntact(): Promise<boolean> {
   try {
-    const r = await c.query(`SELECT (SELECT count(*)::int FROM "victim") AS n, (SELECT v FROM "victim" WHERE id = 1) AS v`);
-    return r.rows[0].n === 1 && r.rows[0].v === "keep";
+    const r = await c.query(`SELECT (SELECT count(*)::int FROM "victim") AS n, (SELECT v FROM "victim" WHERE id = 1) AS v,
+      (SELECT count(*)::int FROM pg_class WHERE relkind = 'S' AND relnamespace = 'public'::regnamespace) AS seq`);
+    if (!(r.rows[0].n === 1 && r.rows[0].v === "keep")) return false;
+    if (r.rows[0].seq !== 0) return false; // R2: a serial column creates a sequence the manifest cannot see
+    if (audit) {
+      const a = await c.query(`SELECT tag, ev FROM audit_cmds`);
+      for (const x of a.rows) if (x.ev === "drop" || !ALLOWED_TAGS.has(x.tag)) return false; // R1: CREATE TABLE AS, partitions, ...
+    }
+    return true;
   } catch {
     return false; // the table is gone
   }
@@ -57,6 +73,18 @@ beforeAll(async () => {
   u.search = "";
   c = new Client({ connectionString: u.toString() });
   await c.connect();
+  await c.query(`CREATE TABLE audit_cmds (tag text, obj text, ev text); CREATE SCHEMA ev;
+    CREATE FUNCTION ev.evil() RETURNS int LANGUAGE plpgsql AS $f$ BEGIN DELETE FROM public.victim; RETURN 1; END $f$;`);
+  try {
+    await c.query(`CREATE FUNCTION public.log_ddl() RETURNS event_trigger LANGUAGE plpgsql SECURITY DEFINER AS $f$ DECLARE r record; BEGIN
+        IF tg_event = 'sql_drop' THEN FOR r IN SELECT * FROM pg_event_trigger_dropped_objects() LOOP INSERT INTO audit_cmds VALUES (tg_tag, r.object_identity, 'drop'); END LOOP;
+        ELSE FOR r IN SELECT * FROM pg_event_trigger_ddl_commands() LOOP INSERT INTO audit_cmds VALUES (r.command_tag, r.object_identity, 'ddl'); END LOOP; END IF; END $f$;
+      CREATE EVENT TRIGGER log_ddl_end ON ddl_command_end EXECUTE FUNCTION public.log_ddl();
+      CREATE EVENT TRIGGER log_ddl_drop ON sql_drop EXECUTE FUNCTION public.log_ddl();`);
+    audit = true;
+  } catch {
+    audit = false; // not a superuser: the canary and sequence checks still apply
+  }
   await reset();
 }, 60_000);
 
@@ -66,7 +94,8 @@ afterAll(async () => {
   await admin?.end().catch(() => {});
 }, 60_000);
 
-const PAYLOADS = ['DROP TABLE "victim"', 'TRUNCATE "victim"', 'DELETE FROM "victim"', `UPDATE "victim" SET v = 'x'`, 'DROP TABLE "subscriptions"'];
+const PAYLOADS = ['DROP TABLE "victim"', 'TRUNCATE "victim"', 'DELETE FROM "victim"', `UPDATE "victim" SET v = 'x'`, 'DROP TABLE "subscriptions"',
+  'CREATE TABLE "z1" ("a") AS VALUES (ev.evil())', 'CREATE TABLE IF NOT EXISTS "z2" ("a" int)', 'CREATE TABLE "z3" ("a" int) PARTITION BY RANGE ("a")', 'ALTER TABLE "t" ADD COLUMN "s" bigserial', 'CREATE TABLE "z4" ("s" serial)'];
 
 /** Hand-written disagreement attempts. Every one hides or exposes a payload differently in PostgreSQL than a naive lexer would. */
 const HAND: string[] = [
@@ -90,7 +119,23 @@ const HAND: string[] = [
   `${HEAD} DEFAULT E'a\\'; DROP TABLE "victim"; --';`,
   `${HEAD}; SELECT U&'\\0044ROP'; DROP TABLE "victim";`,
   `${HEAD}; ALTER TABLE "t"\fADD COLUMN "y" TEXT; DROP TABLE "victim";`,
+  // delta review R1 / R2: statements that run existing functions, create sequences or non-structural tables (must be REJECTED by the scan)
+  `CREATE TABLE "t1" ("a") AS VALUES (ev.evil())`,
+  `CREATE TABLE "t1" ("a") AS (VALUES (ev.evil()))`,
+  `CREATE TABLE "t1" ("a") AS VALUES (set_config('x.y', '1', false))`,
+  `CREATE TABLE "t1" ("a") AS VALUES (pg_sleep(0)::text)`,
+  `CREATE TABLE IF NOT EXISTS "t1" ("a" int)`,
+  `CREATE TABLE "t1" ("a" int) PARTITION BY RANGE ("a")`,
+  `CREATE TABLE "t1" ("a" int) INHERITS ("t")`,
+  `CREATE TABLE "t1" (LIKE "t")`,
+  `CREATE TABLE "t1" ("a" int) WITH (fillfactor = 50)`,
+  `CREATE TABLE "t1" ("a" int) ON COMMIT DROP`,
+  `ALTER TABLE "t" ADD COLUMN "s" bigserial`,
+  `ALTER TABLE "t" ADD COLUMN "s" serial`,
+  `ALTER TABLE "t" ADD COLUMN "s" smallserial`,
+  `CREATE TABLE "t1" ("s" serial NOT NULL)`,
   // inputs that must be ACCEPTED (non-vacuity): the payload is genuinely inert in both lexers
+  `CREATE TABLE "t1" ("id" TEXT NOT NULL, "n" INTEGER NOT NULL DEFAULT 0, CONSTRAINT "t1_pkey" PRIMARY KEY ("id")); CREATE INDEX "t1_n_idx" ON "t1"("n");`,
   `${HEAD}; -- DROP TABLE "victim"`,
   `${HEAD}; /* DROP TABLE "victim"; */`,
   `${HEAD} DEFAULT 'DROP TABLE "victim"';`,

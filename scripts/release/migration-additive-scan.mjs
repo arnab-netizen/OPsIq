@@ -312,17 +312,48 @@ function checkBodies(view) {
 
 // ─── ADD COLUMN definition ───────────────────────────────────────────────────
 
-const TYPE_PART =
-  /^(?:ID|[A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:ID|[A-Za-z_][A-Za-z0-9_]*)){0,3}\s*(?:\(\s*\d+\s*(?:,\s*\d+\s*)?\))?(?:\s*\[\s*\])*(?:\s+WITH(?:OUT)?\s+TIME\s+ZONE)?$/i;
-const TYPE_FORBIDDEN_WORD = /\b(REFERENCES|CHECK|PRIMARY|UNIQUE|GENERATED|COLLATE|CONSTRAINT|EXCLUDE|IDENTITY|DEFAULT)\b/i;
+// R2: a column type must be on this allow-list (case-insensitive, optional [] array suffix). A bare identifier that is not listed is refused:
+// the serial family creates a sequence plus a volatile default and rewrites the table, and the sequence is invisible to the manifest "creates".
+const BUILTIN_TYPE = new RegExp(
+  "^(?:text" +
+    "|(?:varchar|character\\s+varying|char|character|bpchar)(?:\\(\\s*\\d+\\s*\\))?" +
+    "|integer|int|int4|bigint|int8|smallint|int2|boolean|bool|uuid" +
+    "|timestamptz(?:\\(\\s*\\d\\s*\\))?" +
+    "|timestamp(?:\\(\\s*\\d\\s*\\))?(?:\\s+with(?:out)?\\s+time\\s+zone)?" +
+    "|date|timetz" +
+    "|time(?:\\(\\s*\\d\\s*\\))?(?:\\s+with(?:out)?\\s+time\\s+zone)?" +
+    "|jsonb|json" +
+    "|(?:numeric|decimal)(?:\\(\\s*\\d+\\s*(?:,\\s*\\d+\\s*)?\\))?" +
+    "|double\\s+precision|real|float4|float8|bytea)" +
+    "(?:\\s*\\[\\s*\\d*\\s*\\])*$",
+  "i"
+);
+// A user enum type exactly as Prisma writes it: "Name" or "public"."Name", optional array suffix.
+const QUOTED_TYPE = /^(?:"public"\.)?"(?:[^"]|"")+"(?:\s*\[\s*\d*\s*\])*$/;
+const SERIAL_TYPE = /^(?:small|big)?serial(?:2|4|8)?$/i;
 
-/** Parse an ADD COLUMN definition (after the column name): <type> followed only by NOT NULL / NULL / DEFAULT <literal>. */
+/** Returns null when the type text is allowed, else the reason. */
+function typeViolation(typeText) {
+  const t = typeText.trim().replace(/\s+/g, " ");
+  if (SERIAL_TYPE.test(t.replace(/\s*\[.*$/, ""))) return `column type '${t.slice(0, 40)}' is a serial-family type (creates a sequence and a volatile default and rewrites the table): not a plain type on the allow-list`;
+  if (BUILTIN_TYPE.test(t) || QUOTED_TYPE.test(t)) return null;
+  return `column type '${t.slice(0, 50)}' is not a plain type on the allow-list`;
+}
+
+/** Same length as the input, with the inside of every quoted identifier blanked, so keyword searches can use the original offsets. */
+function maskQuoted(s) {
+  return s.replace(/"(?:[^"]|"")+"/g, (q) => `"${"_".repeat(q.length - 2)}"`);
+}
+
+/** Parse an ADD COLUMN / CREATE TABLE column definition (after the column name): <type> then only NOT NULL / NULL / DEFAULT <literal>. */
 function parseColumnDefinition(def) {
+  const masked = maskQuoted(def);
+  const split = masked.search(/\b(?:NOT\s+NULL|NULL|DEFAULT)\b/i);
+  const typePart = (split < 0 ? def : def.slice(0, split)).trim();
+  const bad = typeViolation(typePart);
+  if (bad) return { ok: false, reason: bad };
   const view = withoutQuotedIdents(def);
-  const split = view.search(/\b(?:NOT\s+NULL|NULL|DEFAULT)\b/i);
-  const typePart = (split < 0 ? view : view.slice(0, split)).trim();
-  if (!TYPE_PART.test(typePart) || TYPE_FORBIDDEN_WORD.test(typePart)) return { ok: false, reason: `column type '${typePart.slice(0, 50)}' is not a plain type` };
-  let rest = split < 0 ? "" : view.slice(split);
+  let rest = split < 0 ? "" : view.slice(view.search(/\b(?:NOT\s+NULL|NULL|DEFAULT)\b/i));
   let notNull = false;
   let hasDefault = false;
   while (rest.trim().length > 0) {
@@ -351,6 +382,72 @@ function parseColumnDefinition(def) {
   return { ok: true, notNull, hasDefault };
 }
 
+
+// ─── CREATE TABLE, strictly structural (R1) ──────────────────────────────────
+
+/** Index of the parenthesis closing the one at `open` (quoted identifiers skipped), or -1. */
+function matchingClose(text, open) {
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      let j = i + 1;
+      while (j < text.length && !(text[j] === '"' && text[j + 1] !== '"')) j += text[j] === '"' ? 2 : 1;
+      i = j;
+      continue;
+    }
+    if (c === "(") depth++;
+    else if (c === ")") {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+const COLS = "\\(\\s*(?:ID|[A-Za-z_][A-Za-z0-9_]*)(?:\\s*,\\s*(?:ID|[A-Za-z_][A-Za-z0-9_]*))*\\s*\\)";
+const IDN = "(?:ID|[A-Za-z_][A-Za-z0-9_]*)";
+
+/**
+ * CREATE TABLE <name> ( <column definitions and table constraints> ) and NOTHING after the closing parenthesis.
+ * Refused by construction: IF NOT EXISTS, AS / VALUES / SELECT, PARTITION BY, INHERITS, LIKE, WITH, TABLESPACE, USING, ON COMMIT, UNLOGGED/TEMP,
+ * inline column constraints, EXCLUDE, DEFERRABLE, MATCH ... Every element is either a column "<name> <allow-listed type> [NOT NULL|NULL|DEFAULT literal]..."
+ * or a table constraint (PRIMARY KEY / UNIQUE column list, FOREIGN KEY ... REFERENCES t(cols) [ON DELETE|UPDATE action], CHECK (call-free)).
+ */
+function parseCreateTable(stmt) {
+  const head = stmt.match(new RegExp(`^CREATE\\s+TABLE\\s+${QNAME}\\s*\\(`, "i"));
+  if (!head) return { ok: false, reason: "CREATE TABLE must be exactly `CREATE TABLE <name> ( ... )` (no IF NOT EXISTS, TEMP/UNLOGGED, AS, PARTITION, INHERITS, LIKE, WITH, TABLESPACE, USING, ON COMMIT)" };
+  const open = head[0].length - 1;
+  const close = matchingClose(stmt, open);
+  if (close < 0 || close !== stmt.length - 1) return { ok: false, reason: "CREATE TABLE: the parenthesis opened after the table name must close at the very end of the statement (nothing may follow it)" };
+  const body = stmt.slice(open + 1, close);
+  const elements = splitTopLevelCommas(body);
+  let columns = 0;
+  for (const el of elements) {
+    if (el.length === 0) return { ok: false, reason: "CREATE TABLE: empty element in the column list" };
+    const view = withoutQuotedIdents(el).replace(REFERENTIAL_ACTION, " REFACTION ").replace(/\s+/g, " ").trim();
+    const named = view.match(new RegExp(`^CONSTRAINT\\s+${IDN}\\s+(.*)$`, "i"));
+    const cons = named ? named[1] : view;
+    if (/^(?:PRIMARY\s+KEY|UNIQUE)\s*/i.test(cons) || /^(?:FOREIGN\s+KEY|CHECK)\b/i.test(cons) || named) {
+      if (new RegExp(`^(?:PRIMARY\\s+KEY|UNIQUE)\\s*${COLS}$`, "i").test(cons)) continue;
+      if (new RegExp(`^FOREIGN\\s+KEY\\s*${COLS}\\s+REFERENCES\\s+(?:ID\\.)?${IDN}\\s*${COLS}(?:\\s+REFACTION)*$`, "i").test(cons)) continue;
+      const ck = cons.match(/^CHECK\s*\(/i);
+      if (ck) {
+        const o = cons.indexOf("(");
+        if (matchingClose(cons, o) === cons.length - 1) continue; // call-free CHECK is enforced for the whole statement above
+      }
+      return { ok: false, reason: `CREATE TABLE: table constraint '${el.slice(0, 60)}' is not a plain PRIMARY KEY / UNIQUE column list, FOREIGN KEY ... REFERENCES t(cols), or CHECK` };
+    }
+    const col = el.match(new RegExp(`^(${IDENT})\\s+(.+)$`, "i"));
+    if (!col) return { ok: false, reason: `CREATE TABLE: element '${el.slice(0, 60)}' is not a column definition` };
+    const parsed = parseColumnDefinition(col[2]);
+    if (!parsed.ok) return { ok: false, reason: `CREATE TABLE column ${col[1]}: ${parsed.reason}` };
+    columns++;
+  }
+  if (columns === 0) return { ok: false, reason: "CREATE TABLE: no column definition" };
+  return { ok: true, table: unquoteIdent(head[1]) };
+}
+
 /**
  * Classify one sanitized statement. Returns { ok:true, creates:{...} } or { ok:false, reason, statement }.
  * ctx.createdTables: tables created earlier in the same file (their constraints need no NOT VALID).
@@ -366,10 +463,12 @@ export function classifyStatement(stmt, ctx = { createdTables: new Set() }) {
     if (hasFunctionCall(body)) return rejected(stmt, "function call inside a CHECK constraint");
   }
 
-  let m = stmt.match(new RegExp(`^CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?${QNAME}\\s*\\(.*\\)$`, "i"));
-  if (m) {
-    ctx.createdTables.add(unquoteIdent(m[1]));
-    return { ok: true, creates: { tables: [unquoteIdent(m[1])] } };
+  let m;
+  if (/^CREATE\s+TABLE\b/i.test(stmt)) {
+    const ct = parseCreateTable(stmt);
+    if (!ct.ok) return rejected(stmt, ct.reason);
+    ctx.createdTables.add(ct.table);
+    return { ok: true, creates: { tables: [ct.table] } };
   }
 
   m = stmt.match(

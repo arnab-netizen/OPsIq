@@ -63,7 +63,15 @@ Then approve the `production-operator` environment gate. That is the one human a
 
 ## Static additive-only scan
 
-`scripts/release/migration-additive-scan.mjs`. Allowed: `CREATE TABLE`, `CREATE [UNIQUE] INDEX` (never `CONCURRENTLY`; an index
+`scripts/release/migration-additive-scan.mjs`. `CREATE TABLE` is strictly structural: exactly `CREATE TABLE <name> ( <columns and table constraints> )` with
+nothing after the closing parenthesis, so `AS`/`VALUES`/`SELECT`, `PARTITION`, `INHERITS`, `LIKE`, `WITH`, `TABLESPACE`, `USING`, `ON COMMIT`,
+`UNLOGGED`/`TEMP` and `IF NOT EXISTS` are refused (a table made by `IF NOT EXISTS` must not count as created in the file); columns take only an
+allow-listed type and `NOT NULL`/`NULL`/literal `DEFAULT`; constraints are only `PRIMARY KEY`/`UNIQUE` column lists, `FOREIGN KEY ... REFERENCES`, call-free
+`CHECK`. Column types (here and in `ADD COLUMN`) must be on an allow-list: text, varchar/char(n), integer/bigint/smallint (and int2/4/8), boolean, uuid,
+timestamp/timestamptz/date/time [(p)] [with/without time zone], json/jsonb, numeric/decimal [(p[,s])], double precision/real/float4/float8, bytea, and a
+quoted user enum `"Name"` / `"public"."Name"`, each with an optional `[]`; the serial family is refused (it creates a sequence and a volatile default,
+invisible to the manifest). `citext` is not on the list (no migration uses it). Informational: the scan passes 91 of the 193 historical migration folders (it is
+not meant to accept history). Allowed: `CREATE TABLE`, `CREATE [UNIQUE] INDEX` (never `CONCURRENTLY`; an index
 `WHERE` may contain no function call), `CREATE TYPE ... AS ENUM`, `ALTER TABLE ... ADD COLUMN <type> [NOT NULL | NULL | DEFAULT <literal>]`
 (a `NOT NULL` column needs a `DEFAULT`; no inline `REFERENCES`/`CHECK`/`UNIQUE`/`PRIMARY KEY`/`GENERATED`), and
 `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY | CHECK` (which must be `NOT VALID` on a table that already exists; no function call in a `CHECK`).

@@ -82,7 +82,7 @@ describe("additive-only scan — destructive and non-allow-listed fixtures are r
     ["explicit transaction control", 'BEGIN; ALTER TABLE "t" ADD COLUMN "c" TEXT; COMMIT;', /BEGIN|COMMIT|allow-list/],
     ["destructive statement after a valid one", 'ALTER TABLE "t" ADD COLUMN "c" TEXT;\nDROP TABLE "t";', /DROP/],
     ["destructive statement hidden after a comment on the same line", 'ALTER TABLE "t" ADD COLUMN "c" TEXT; -- ok\n/* x */ DELETE FROM "t";', /DELETE/],
-    ["schema other than public", 'CREATE TABLE "other"."t" ("id" TEXT)', /allow-list/],
+    ["schema other than public", 'CREATE TABLE "other"."t" ("id" TEXT)', /CREATE TABLE must be exactly|allow-list/],
     ["ADD CONSTRAINT with unsupported kind", 'ALTER TABLE "t" ADD CONSTRAINT "c" EXCLUDE USING gist (a WITH =);', /EXCLUDE is not allowed/],
   ];
   for (const [label, sql, why] of destructive) {
@@ -260,4 +260,67 @@ describe("additive-only scan — review F2: tightened allow-list", () => {
   reject("a function call inside an index WHERE", 'CREATE INDEX "i" ON "t"("a") WHERE (lower("b") = \'x\');', /function call inside an index WHERE/);
   reject("a quoted-identifier call inside an index WHERE", 'CREATE INDEX "i" ON "t"("a") WHERE ("fn"("b"));', /function call inside an index WHERE/);
   accept("an index WHERE predicate without a call", 'CREATE UNIQUE INDEX "i" ON "t"("a") WHERE (reservation_entry = \'release\'::text);');
+});
+
+describe("additive-only scan — delta review R1: CREATE TABLE is strictly structural", () => {
+  const reject = (label: string, sql: string, why: RegExp) =>
+    it(`rejects ${label}`, () => {
+      const r = scan(sql);
+      expect(r.ok, sql).toBe(false);
+      expect(r.violations.map((v) => v.reason).join(" | ")).toMatch(why);
+    });
+  const accept = (label: string, sql: string) => it(`accepts ${label}`, () => expect(scan(sql).violations).toEqual([]));
+  const TAIL = /must close at the very end|CREATE TABLE must be exactly|forbidden keyword|CREATE TABLE column/;
+
+  reject("CREATE TABLE ... AS VALUES (function call) (runs an existing function)", 'CREATE TABLE "t" ("a") AS VALUES (ev.evil())', TAIL);
+  reject("CREATE TABLE ... AS (VALUES ...)", 'CREATE TABLE "t" ("a") AS (VALUES (ev.evil()))', TAIL);
+  reject("CREATE TABLE ... AS VALUES (set_config(...))", `CREATE TABLE "t" ("a") AS VALUES (set_config('x.y','1',false))`, TAIL);
+  reject("CREATE TABLE ... AS VALUES (pg_sleep(0)::text)", 'CREATE TABLE "t" ("a") AS VALUES (pg_sleep(0)::text)', TAIL);
+  reject("CREATE TABLE ... AS SELECT", 'CREATE TABLE "t" ("a") AS SELECT 1', TAIL);
+  reject("IF NOT EXISTS (must not count as created-in-this-file)", 'CREATE TABLE IF NOT EXISTS "t" ("a" int)', /CREATE TABLE must be exactly/);
+  reject("IF NOT EXISTS then an un-NOT-VALID FK relying on the created-table exemption", 'CREATE TABLE IF NOT EXISTS "t" ("a" int);\nALTER TABLE "t" ADD CONSTRAINT "f" FOREIGN KEY ("a") REFERENCES "o"("id");', /CREATE TABLE must be exactly|must be NOT VALID/);
+  reject("PARTITION BY", 'CREATE TABLE "t" ("a" int) PARTITION BY RANGE ("a")', TAIL);
+  reject("PARTITION OF", 'CREATE TABLE "t" PARTITION OF "p" FOR VALUES FROM (1) TO (2)', /CREATE TABLE must be exactly/);
+  reject("INHERITS", 'CREATE TABLE "t" ("a" int) INHERITS ("p")', TAIL);
+  reject("LIKE", 'CREATE TABLE "t" (LIKE "p" INCLUDING ALL)', TAIL);
+  reject("WITH (storage parameters)", 'CREATE TABLE "t" ("a" int) WITH (fillfactor = 50)', TAIL);
+  reject("TABLESPACE", 'CREATE TABLE "t" ("a" int) TABLESPACE "x"', TAIL);
+  reject("USING (access method)", 'CREATE TABLE "t" ("a" int) USING heap', TAIL);
+  reject("ON COMMIT", 'CREATE TABLE "t" ("a" int) ON COMMIT DROP', TAIL);
+  reject("UNLOGGED", 'CREATE UNLOGGED TABLE "t" ("a" int)', /allow-list/);
+  reject("TEMP / TEMPORARY", 'CREATE TEMP TABLE "t" ("a" int)', /allow-list/);
+  reject("trailing parenthesised text after the column list", 'CREATE TABLE "t" ("a" int) ("b")', TAIL);
+  reject("an empty column list", 'CREATE TABLE "t" ()', /empty element|no column/);
+  reject("an inline PRIMARY KEY on a column", 'CREATE TABLE "t" ("a" int PRIMARY KEY)', /plain type/);
+  reject("an inline REFERENCES on a column", 'CREATE TABLE "t" ("a" int REFERENCES "o"("id"))', /plain type/);
+  reject("EXCLUDE as a table constraint", 'CREATE TABLE "t" ("a" int, EXCLUDE USING gist ("a" WITH =))', /plain type|table constraint/);
+  reject("DEFERRABLE foreign key", 'CREATE TABLE "t" ("a" int, CONSTRAINT "f" FOREIGN KEY ("a") REFERENCES "o"("id") DEFERRABLE)', /table constraint/);
+  reject("a column definition containing a nested select", 'CREATE TABLE "t" ("a" int DEFAULT (SELECT 1))', /SELECT|not a literal/);
+  accept("a Prisma-shaped CREATE TABLE (columns, primary key, unique, foreign key with actions, check)",
+    'CREATE TABLE "t" ("id" TEXT NOT NULL, "n" INTEGER NOT NULL DEFAULT 0, "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "o" TEXT, "s" "Status" NOT NULL DEFAULT \'A\'::"Status", "tags" TEXT[], CONSTRAINT "t_pkey" PRIMARY KEY ("id"), CONSTRAINT "t_u" UNIQUE ("n", "o"), CONSTRAINT "t_o_fkey" FOREIGN KEY ("o") REFERENCES "o"("id") ON DELETE RESTRICT ON UPDATE CASCADE, CONSTRAINT "t_c" CHECK ("n" >= 0));');
+  it("only a plain CREATE TABLE counts as created in this file (the NOT VALID exemption)", () => {
+    expect(scan('CREATE TABLE "n" ("id" TEXT NOT NULL, "o" TEXT NOT NULL);\nALTER TABLE "n" ADD CONSTRAINT "f" FOREIGN KEY ("o") REFERENCES "o"("id");').ok).toBe(true);
+  });
+});
+
+describe("additive-only scan — delta review R2: column type allow-list", () => {
+  const reject = (label: string, sql: string, why: RegExp) =>
+    it(`rejects ${label}`, () => {
+      const r = scan(sql);
+      expect(r.ok, sql).toBe(false);
+      expect(r.violations.map((v) => v.reason).join(" | ")).toMatch(why);
+    });
+  const accept = (label: string, sql: string) => it(`accepts ${label}`, () => expect(scan(sql).violations).toEqual([]));
+
+  for (const t of ["serial", "bigserial", "smallserial", "SERIAL", "serial4", "serial8", "serial2", "serial[]"]) reject(`ADD COLUMN ${t}`, `ALTER TABLE "t" ADD COLUMN "c" ${t};`, /serial-family/);
+  reject("serial in CREATE TABLE (sequence invisible to the manifest)", 'CREATE TABLE "t" ("id" SERIAL NOT NULL, CONSTRAINT "t_pkey" PRIMARY KEY ("id"))', /serial-family/);
+  for (const t of ["money", "citext", "inet", "cidr", "macaddr", "xml", "tsvector", "point", "int4range", "oid", "name", "foo", "some_enum"]) reject(`ADD COLUMN of non-allow-listed type ${t}`, `ALTER TABLE "t" ADD COLUMN "c" ${t};`, /allow-list|plain type/);
+  reject("a schema-qualified type outside public", 'ALTER TABLE "t" ADD COLUMN "c" "other"."Status";', /allow-list|plain type/);
+  reject("a pg_catalog-qualified type", 'ALTER TABLE "t" ADD COLUMN "c" pg_catalog.serial;', /allow-list|plain type/);
+  accept("every allow-listed type, with sizes, zones and array suffixes",
+    ['text', 'varchar(255)', 'character varying(10)', 'char(2)', 'character(3)', 'integer', 'int', 'int4', 'bigint', 'int8', 'smallint', 'int2', 'boolean', 'bool', 'uuid', 'timestamp', 'timestamp(3)', 'timestamp(6) without time zone', 'timestamp with time zone', 'timestamptz', 'timestamptz(3)', 'date', 'time', 'time(3) with time zone', 'timetz', 'jsonb', 'json', 'numeric', 'numeric(10,2)', 'decimal(12)', 'double precision', 'real', 'float4', 'float8', 'bytea', 'text[]', 'integer[][]', '"Status"', '"public"."Status"', '"Status"[]']
+      .map((t, i) => `ALTER TABLE "t" ADD COLUMN "c${i}" ${t};`).join("\n"));
+  it("the 3 real pending migrations still pass", () => {
+    for (const n of REAL) expect(scan(read(n)).ok).toBe(true);
+  });
 });
