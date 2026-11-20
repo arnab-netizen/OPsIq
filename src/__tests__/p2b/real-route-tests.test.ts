@@ -408,25 +408,22 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Operator Route Integration", ()
 
       /**
        * STEP 3: Invoke route (REAL invocation)
-       * Route executes:
-       *   - classifyOutcome(0, ...) → "failure"
-       *   - Route validation check: if failure, require notes
-       *   - Wrapper catches error, returns NextResponse with status 500
+       * A 0 outcome on an item with no recorded outcome is refused by the completion policy
+       * (validateCompletion: "Cannot complete without actualOutcome") before classification, as an
+       * owner-safe ValidationError → 400 (a client mistake is never a 500).
        */
       const response = await operatorPost(req, { params: Promise.resolve({}) });
 
       /**
        * STEP 7: Assertions verify validation executed
        */
-      expect(response.status).toBe(500); // ← Route error caught by wrapper
+      expect(response.status).toBe(400);
       const responseBody = await response.json() as Record<string, unknown>;
-      // The wrapper answers an unclassified failure with a calm, non-technical body and a correlation id: the raw
-      // exception (class, message, stack) is never returned to a client — it stays in the server log. That the
-      // validation really executed is proven by the unchanged database record below.
-      expect(typeof responseBody.error).toBe("string");
+      expect(responseBody.error).toBe("Cannot complete without actualOutcome");
+      expect(responseBody.classification).toBe("handler_invocation_validation_error");
       expect(typeof responseBody.correlationId).toBe("string");
       expect(responseBody).not.toHaveProperty("errorName");
-      expect(JSON.stringify(responseBody)).not.toMatch(/actualOutcome|stack/i);
+      expect(JSON.stringify(responseBody)).not.toMatch(/stack/i);
 
       // Database should NOT be updated (validation prevents write)
       const dbRecord = await db.operatorItem.findUnique({
