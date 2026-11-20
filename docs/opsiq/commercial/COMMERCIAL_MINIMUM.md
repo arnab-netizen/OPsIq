@@ -2,7 +2,7 @@
 
 Base `e5749ffbfc496cc87b3d8952d6b40eb17747d5c4`. Objective: `MARKETPLACE_SCALE_READINESS_ASAP` → `FIRST_REAL_PAYMENT_ASAP`.
 
-**Status:** implemented on branch `claude/epic-ride-0hyyq1`; PR open, **not merged, not deployed, migration not applied to production,
+**Status (corrected 2026-11-20):** merged (PR #614 as `7aabcb94d`) and deployed; the dormant commercial gate (PR #629, `80aeb8cdd`) is in Production; the Paddle migration is applied to Production; no Paddle credentials exist in Production and checkout is intentionally unavailable. Authoritative record: `PADDLE_READINESS_AND_ACTIVATION.md`. The text below is the original implementation record and may describe the pre-merge state.
 live Paddle account NOT started/approved, real Paddle sandbox NOT yet exercised** (`SANDBOX_E2E_BLOCKED_BY_EXECUTION_ENVIRONMENT`,
 see `SANDBOX_E2E_RUNBOOK.md`). `OPEN_BETA_TECHNICALLY_READY` stays **NO** until that runbook passes.
 

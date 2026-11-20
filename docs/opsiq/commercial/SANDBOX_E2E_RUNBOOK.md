@@ -1,6 +1,6 @@
 # Paddle sandbox E2E runbook (run from a network-capable environment)
 
-Status in this repository: `SANDBOX_E2E_BLOCKED_BY_EXECUTION_ENVIRONMENT` — the build container cannot reach `*.paddle.com` and holds no sandbox
+Status (corrected 2026-11-20): a historical sandbox checkout and test payment DID occur on 2026-10-23 (sandbox database: subscription.created, subscription.activated, transaction.completed processed; one active Paddle-backed subscription). The FULL lifecycle below (steps 1-16: cancellation, failed renewal, past_due grace, payment-method update, recovery) has NOT been accepted against real Paddle; `SANDBOX_E2E_BLOCKED_BY_EXECUTION_ENVIRONMENT` applies to this repository's build container only. Authoritative record: `PADDLE_READINESS_AND_ACTIVATION.md`.
 credentials. This is **not** a product defect and is **not** a failure. Do not record `SANDBOX_PAYMENT_E2E=PASS` until every step below passes.
 **Sandbox only. Never use production keys or real cards.** Never commit secrets, tokens, or webhook secrets; paste evidence with IDs/timestamps only.
 
