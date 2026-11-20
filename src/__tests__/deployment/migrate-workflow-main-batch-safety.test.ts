@@ -12,7 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { execFileSync, spawnSync } from "child_process";
-import { mkdtempSync, readFileSync, readdirSync } from "fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import YAML from "js-yaml";
@@ -123,10 +123,24 @@ function violations(text: string): string[] {
   if (!/inputs\.mode == 'MAIN_BATCH'/.test(rd.if ?? "") || !/RUNTIME_ROLE_RECONCILED == 'true'/.test(rd.if ?? "")) v.push("redeploy must run for MAIN_BATCH only after the reconcile");
   if (/PINNED_PREDEPLOY/.test(rd.if ?? "") || /PINNED_PREDEPLOY/.test(rc.if ?? "")) v.push("PINNED_PREDEPLOY must never reconcile/redeploy");
 
+  // Review F3: no step that EXECUTES in MAIN_BATCH (including the `if: always()` summary) may interpolate a dispatch input into shell text.
+  for (const st of ss) {
+    if (!executesInBatch(st)) continue;
+    if (/\$\{\{\s*(github\.event\.)?inputs\./.test(st.run ?? "")) v.push(`step '${st.name}' executes in MAIN_BATCH and interpolates a dispatch input into shell text (use env:)`);
+  }
   if (/secrets:\s*inherit/.test(text)) v.push("secrets: inherit is forbidden");
   if (/api\.neon\.tech|console\.neon\.tech|neon\.tech\/api/i.test(text)) v.push("the workflow must not call the provider API");
   if (/psql\s+-c|sql_statement|arbitrary_sql|raw_sql/i.test(text)) v.push("no arbitrary SQL");
   return v;
+}
+
+/** Does this step run when the workflow is dispatched in MAIN_BATCH mode? Judged from its `if:` (absent, always(), success() ... run; mode-exclusive guards do not). */
+function executesInBatch(step: Step): boolean {
+  const cond = step.if ?? "";
+  if (/inputs\.mode == 'MAIN_BATCH'/.test(cond)) return true;
+  if (/inputs\.mode != 'MAIN_BATCH'/.test(cond)) return false;
+  if (/inputs\.mode == '(MAIN|PINNED_PREDEPLOY)'/.test(cond) && !/MAIN_BATCH/.test(cond)) return false;
+  return true;
 }
 
 /** The raw `run` text of a step, for confirm-phrase checks. */
@@ -166,7 +180,7 @@ describe("migrate-production.yml — MAIN_BATCH structure", () => {
 describe("migrate-production.yml — MAIN_BATCH gates are mutation-checked (remove a gate, a rule fails)", () => {
   const mutations: Array<[string, (t: string) => string, RegExp]> = [
     ["remove MAIN_BATCH from the mode choice", (t) => t.replace("          - MAIN_BATCH\n", ""), /mode input lacks MAIN_BATCH/],
-    ["drop the distinct MAIN_BATCH confirm phrase", (t) => t.replace(/ *elif \[ "\$\{\{ inputs\.mode \}\}" == "MAIN_BATCH" \]; then[\s\S]*?\n          else/, "          else"), /distinct phrase/],
+    ["drop the distinct MAIN_BATCH confirm phrase", (t) => t.replace(/ *elif \[ "\$INPUT_MODE" == "MAIN_BATCH" \]; then[\s\S]*?\n          else/, "          else"), /distinct phrase/],
     ["drop the expected-SHA assertion step", (t) => t.replace('if [ "$HEAD_SHA" != "$EXPECTED_MAIN_SHA" ]; then', 'if false; then'), /shaAssert does not refuse/],
     ["move the SHA assertion after the database host gate", (t) => t.replace("name: Assert checked-out HEAD equals the reviewed expected_main_sha (MAIN_BATCH, before any database step)", "name: Zzz moved").replace("      - name: Setup Node.js 22", "      - name: Assert checked-out HEAD equals the reviewed expected_main_sha (MAIN_BATCH, before any database step)\n        run: echo late\n\n      - name: Setup Node.js 22"), /order|shaAssert/],
     ["make the exact-host gate MAIN-only", (t) => t.replace("      - name: Verify exact production database host matches owner-pinned expectation\n", "      - name: Verify exact production database host matches owner-pinned expectation\n        if: inputs.mode == 'MAIN'\n"), /exact-host gate must stay unconditional/],
@@ -186,6 +200,10 @@ describe("migrate-production.yml — MAIN_BATCH gates are mutation-checked (remo
     ["interpolate an input into the preflight shell text", (t) => t.replace("node scripts/release/migration-batch.mjs preflight |", "echo ${{ inputs.batch_id }}; node scripts/release/migration-batch.mjs preflight |"), /interpolates an expression/],
     ["allow migration_name alongside a batch", (t) => t.replace('if [ -n "$MIGRATION_NAME$SOURCE_PR$SOURCE_SHA$MIGRATION_SHA256" ]; then', "if false; then"), /validateBatch lacks/],
     ["loosen the batch_id format", (t) => t.replaceAll("^[a-z0-9][a-z0-9-]{2,63}$", ".*"), /validateBatch lacks/],
+    ["re-interpolate an input into the always() summary step", (t) => t.replace('echo "| Mode | $INPUT_MODE |"', 'echo "| Mode | ${{ inputs.mode }} |"'), /executes in MAIN_BATCH and interpolates/],
+    ["re-interpolate batch_id into the always() summary step", (t) => t.replace("\\`$INPUT_BATCH_ID\\`", "\\`${{ inputs.batch_id }}\\`"), /executes in MAIN_BATCH and interpolates/],
+    ["re-interpolate the confirm input into the confirm step", (t) => t.replace('[ "$INPUT_CONFIRM" != "MIGRATE PRODUCTION BATCH" ]', '[ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION BATCH" ]'), /executes in MAIN_BATCH and interpolates/],
+    ["re-interpolate the mode input into the mode validator", (t) => t.replace('case "$INPUT_MODE" in', 'case "${{ inputs.mode }}" in'), /executes in MAIN_BATCH and interpolates/],
     ["add secrets: inherit", (t) => t + "\n# secrets: inherit\n", /secrets: inherit/],
     ["run arbitrary SQL via psql -c", (t) => t.replace("node scripts/release/migration-batch.mjs postverify |", "psql -c 'select 1'; node scripts/release/migration-batch.mjs postverify |"), /arbitrary SQL/],
   ];
@@ -245,8 +263,7 @@ describe("migrate-production.yml — MAIN_BATCH step scripts behave correctly ag
   });
 
   describe("the confirm step: each mode needs its own phrase", () => {
-    const run = (mode: string, phrase: string) =>
-      bash(runOf("Confirm explicit intent").replaceAll("${{ inputs.mode }}", mode).replaceAll("${{ github.event.inputs.confirm }}", phrase), {});
+    const run = (mode: string, phrase: string) => bash(runOf("Confirm explicit intent"), { INPUT_MODE: mode, INPUT_CONFIRM: phrase });
     it("MAIN_BATCH accepts only 'MIGRATE PRODUCTION BATCH'", () => {
       expect(run("MAIN_BATCH", "MIGRATE PRODUCTION BATCH").status).toBe(0);
       for (const wrong of ["MIGRATE PRODUCTION", "MIGRATE PRODUCTION PINNED PREDEPLOY", "migrate production batch", "MIGRATE PRODUCTION BATCH ", ""]) {
@@ -261,8 +278,29 @@ describe("migrate-production.yml — MAIN_BATCH step scripts behave correctly ag
     });
   });
 
+  it("a hostile confirm or mode value cannot execute: it is data in an env var, not shell text (review F3)", () => {
+    const marker = join(mkdtempSync(join(tmpdir(), "inj-")), "pwned");
+    const payload = `x"; touch ${marker}; echo "`;
+    bash(runOf("Confirm explicit intent"), { INPUT_MODE: "MAIN_BATCH", INPUT_CONFIRM: payload });
+    bash(runOf("Validate mode input"), { INPUT_MODE: payload });
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it("the Migration summary step (always() and runs in MAIN_BATCH) takes every input through env and never executes a hostile one", () => {
+    const summary = ss[idx(ss, "Migration summary")];
+    expect(summary.run).not.toMatch(/\$\{\{/);
+    for (const k of ["INPUT_MODE", "INPUT_HOST", "INPUT_MIGRATION_NAME", "INPUT_BATCH_ID", "INPUT_EXPECTED_MAIN_SHA", "INPUT_SOURCE_PR", "INPUT_SOURCE_SHA", "INPUT_MIGRATION_SHA256"]) expect(summary.env?.[k], k).toMatch(/^\$\{\{ inputs\./);
+    const marker = join(mkdtempSync(join(tmpdir(), "inj-")), "pwned2");
+    const dir = mkdtempSync(join(tmpdir(), "sum-"));
+    const hostile = `a"; touch ${marker}; echo "`;
+    const r = bash(summary.run as string, { GITHUB_STEP_SUMMARY: join(dir, "s.md"), RUNNER_TEMP: dir, INPUT_MODE: "MAIN_BATCH", INPUT_HOST: hostile, INPUT_MIGRATION_NAME: hostile, INPUT_BATCH_ID: hostile, INPUT_EXPECTED_MAIN_SHA: hostile, INPUT_SOURCE_PR: hostile, INPUT_SOURCE_SHA: hostile, INPUT_MIGRATION_SHA256: hostile }, dir);
+    expect(r.status, r.stderr).toBe(0);
+    expect(existsSync(marker)).toBe(false);
+    expect(readFileSync(join(dir, "s.md"), "utf8")).toContain("Batch id (manifest-authorized)");
+  });
+
   it("the mode validator accepts the three modes and nothing else", () => {
-    const run = (mode: string) => bash(runOf("Validate mode input").replaceAll("${{ inputs.mode }}", mode), {});
+    const run = (mode: string) => bash(runOf("Validate mode input"), { INPUT_MODE: mode });
     for (const m of ["MAIN", "MAIN_BATCH", "PINNED_PREDEPLOY"]) expect(run(m).status, m).toBe(0);
     for (const m of ["", "BATCH", "main_batch", "MAIN_BATCH2"]) expect(run(m).status, m).not.toBe(0);
   });

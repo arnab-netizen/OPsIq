@@ -180,35 +180,40 @@ jobs:
           echo "Workflow origin verified: ${GITHUB_WORKFLOW_REF}"
 
       - name: Validate mode input
+        env:
+          INPUT_MODE: ${{ inputs.mode }}
         run: |
-          case "${{ inputs.mode }}" in
+          case "$INPUT_MODE" in
             MAIN|MAIN_BATCH|PINNED_PREDEPLOY) ;;
             *)
-              echo "::error::Invalid mode '${{ inputs.mode }}'. Must be MAIN, MAIN_BATCH or PINNED_PREDEPLOY."
+              echo "::error::Invalid mode '$INPUT_MODE'. Must be MAIN, MAIN_BATCH or PINNED_PREDEPLOY."
               exit 1
               ;;
           esac
-          echo "✓ Mode: ${{ inputs.mode }}"
+          echo "✓ Mode: $INPUT_MODE"
 
       - name: Confirm explicit intent
+        env:
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_CONFIRM: ${{ github.event.inputs.confirm }}
         run: |
-          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
-            if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION PINNED PREDEPLOY" ]; then
+          if [ "$INPUT_MODE" == "PINNED_PREDEPLOY" ]; then
+            if [ "$INPUT_CONFIRM" != "MIGRATE PRODUCTION PINNED PREDEPLOY" ]; then
               echo "::error::PINNED_PREDEPLOY mode requires the confirm input to be exactly \"MIGRATE PRODUCTION PINNED PREDEPLOY\". Aborting."
               exit 1
             fi
-          elif [ "${{ inputs.mode }}" == "MAIN_BATCH" ]; then
-            if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION BATCH" ]; then
+          elif [ "$INPUT_MODE" == "MAIN_BATCH" ]; then
+            if [ "$INPUT_CONFIRM" != "MIGRATE PRODUCTION BATCH" ]; then
               echo "::error::MAIN_BATCH mode requires the confirm input to be exactly \"MIGRATE PRODUCTION BATCH\". Aborting."
               exit 1
             fi
           else
-            if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION" ]; then
+            if [ "$INPUT_CONFIRM" != "MIGRATE PRODUCTION" ]; then
               echo "::error::Confirmation phrase not matched. Aborting."
               exit 1
             fi
           fi
-          echo "✓ Explicit confirmation received for mode ${{ inputs.mode }}"
+          echo "✓ Explicit confirmation received for mode $INPUT_MODE"
 
       - name: Validate PINNED_PREDEPLOY inputs
         if: inputs.mode == 'PINNED_PREDEPLOY'
@@ -717,13 +722,22 @@ jobs:
 
       - name: Migration summary
         if: always()
+        env:
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_HOST: ${{ inputs.expected_database_host }}
+          INPUT_MIGRATION_NAME: ${{ inputs.migration_name }}
+          INPUT_BATCH_ID: ${{ inputs.batch_id }}
+          INPUT_EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+          INPUT_SOURCE_PR: ${{ inputs.source_pr }}
+          INPUT_SOURCE_SHA: ${{ inputs.source_sha }}
+          INPUT_MIGRATION_SHA256: ${{ inputs.migration_sha256 }}
         run: |
           echo "## Production Database Migration Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Environment | production |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Mode | ${{ inputs.mode }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Mode | $INPUT_MODE |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Migration SHA (checked-out, always main) | \`${MIGRATION_SHA:-unknown}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Preflight passed | ${PREFLIGHT_PASSED:-false} |" >> "$GITHUB_STEP_SUMMARY"
@@ -735,18 +749,18 @@ jobs:
             GATE_CODE=$(grep -m1 '^RUNTIME_ROLE_GATE_CODE=' "$RUNNER_TEMP/rr-gate.txt" | cut -d= -f2 | tr -cd 'A-Z_')
             echo "| Runtime role gate code | ${GATE_CODE:-none} |" >> "$GITHUB_STEP_SUMMARY"
           fi
-          echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Migration (owner-authorized, exact-one-pending enforced — both modes) | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ inputs.mode }}" == "MAIN_BATCH" ]; then
-            echo "| Batch id (manifest-authorized) | \`${{ inputs.batch_id }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Expected main SHA (exact, enforced) | \`${{ inputs.expected_main_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`$INPUT_HOST\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migration (owner-authorized, exact-one-pending enforced — both modes) | \`$INPUT_MIGRATION_NAME\` |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$INPUT_MODE" == "MAIN_BATCH" ]; then
+            echo "| Batch id (manifest-authorized) | \`$INPUT_BATCH_ID\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Expected main SHA (exact, enforced) | \`$INPUT_EXPECTED_MAIN_SHA\` |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Batch preflight passed (manifest, sha256, additive scan, ledger anchor, pending set) | ${BATCH_PREFLIGHT_PASSED:-false} |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Batch post-verification passed | ${BATCH_POSTVERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
           fi
-          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
-            echo "| Source PR | #${{ inputs.source_pr }} |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Source SHA (git-object read only, never checked out) | \`${{ inputs.source_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Migration checksum | \`${{ inputs.migration_sha256 }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$INPUT_MODE" == "PINNED_PREDEPLOY" ]; then
+            echo "| Source PR | #$INPUT_SOURCE_PR |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Source SHA (git-object read only, never checked out) | \`$INPUT_SOURCE_SHA\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Migration checksum | \`$INPUT_MIGRATION_SHA256\` |" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "| Operation | prisma migrate deploy (no seed, no reset) |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -794,8 +808,8 @@ jobs:
           # always()-run summary still unconditionally printed "Production
           # now has <migration> applied").
           if [ "${DEPLOY_SUCCEEDED:-false}" == "true" ] && [ "${POST_VERIFY_SUCCEEDED:-false}" == "true" ]; then
-            if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
-              echo "Production now has \`${{ inputs.migration_name }}\` applied." >> "$GITHUB_STEP_SUMMARY"
+            if [ "$INPUT_MODE" == "PINNED_PREDEPLOY" ]; then
+              echo "Production now has \`$INPUT_MIGRATION_NAME\` applied." >> "$GITHUB_STEP_SUMMARY"
             else
               if [ "${RUNTIME_ROLE_RECONCILED:-false}" == "true" ]; then
               echo "Production migrations applied successfully and the runtime role was reconciled and verified." >> "$GITHUB_STEP_SUMMARY"
@@ -809,13 +823,13 @@ jobs:
             echo "**MIGRATION_RESULT_UNCERTAIN_OR_FAILED** — deploy was started but did not both complete and pass post-verification. Inspect this job's logs and migration-status-after.txt (if present) before taking any action. Do not assume the migration is applied." >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ] && [ "${DEPLOY_SUCCEEDED:-false}" == "true" ] && [ "${POST_VERIFY_SUCCEEDED:-false}" == "true" ]; then
+          if [ "$INPUT_MODE" == "PINNED_PREDEPLOY" ] && [ "${DEPLOY_SUCCEEDED:-false}" == "true" ] && [ "${POST_VERIFY_SUCCEEDED:-false}" == "true" ]; then
             echo "### Transient state — expected until source PR merges" >> "$GITHUB_STEP_SUMMARY"
-            echo "Production now has \`${{ inputs.migration_name }}\` applied, but that migration folder" >> "$GITHUB_STEP_SUMMARY"
+            echo "Production now has \`$INPUT_MIGRATION_NAME\` applied, but that migration folder" >> "$GITHUB_STEP_SUMMARY"
             echo "does not yet exist in \`main\`. Anyone running \`prisma migrate status\` against" >> "$GITHUB_STEP_SUMMARY"
-            echo "production before PR #${{ inputs.source_pr }} merges will see it reported as" >> "$GITHUB_STEP_SUMMARY"
+            echo "production before PR #$INPUT_SOURCE_PR merges will see it reported as" >> "$GITHUB_STEP_SUMMARY"
             echo "\"applied but not found locally\" — this is expected and requires no action." >> "$GITHUB_STEP_SUMMARY"
-            echo "It reconciles automatically once PR #${{ inputs.source_pr }} merges into main." >> "$GITHUB_STEP_SUMMARY"
+            echo "It reconciles automatically once PR #$INPUT_SOURCE_PR merges into main." >> "$GITHUB_STEP_SUMMARY"
             echo "Do NOT run \`prisma migrate resolve\` or hand-edit \`_prisma_migrations\` in response to this." >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -83,7 +83,7 @@ describe("additive-only scan — destructive and non-allow-listed fixtures are r
     ["destructive statement after a valid one", 'ALTER TABLE "t" ADD COLUMN "c" TEXT;\nDROP TABLE "t";', /DROP/],
     ["destructive statement hidden after a comment on the same line", 'ALTER TABLE "t" ADD COLUMN "c" TEXT; -- ok\n/* x */ DELETE FROM "t";', /DELETE/],
     ["schema other than public", 'CREATE TABLE "other"."t" ("id" TEXT)', /allow-list/],
-    ["ADD CONSTRAINT with unsupported kind", 'ALTER TABLE "t" ADD CONSTRAINT "c" EXCLUDE USING gist (a WITH =);', /allow-list|ADD COLUMN \/ ADD CONSTRAINT/],
+    ["ADD CONSTRAINT with unsupported kind", 'ALTER TABLE "t" ADD CONSTRAINT "c" EXCLUDE USING gist (a WITH =);', /EXCLUDE is not allowed/],
   ];
   for (const [label, sql, why] of destructive) {
     it(`rejects ${label}`, () => {
@@ -165,4 +165,99 @@ describe("additive-only scan — repository-wide sanity", () => {
     expect(rejected.length).toBeGreaterThan(0);
     expect(names.length - rejected.length).toBeGreaterThan(0);
   });
+});
+
+describe("additive-only scan — review F1: lexer disagreement with PostgreSQL cannot hide a statement", () => {
+  const reject = (label: string, sql: string, why: RegExp) =>
+    it(`rejects ${label}`, () => {
+      const r = scan(sql);
+      expect(r.ok, JSON.stringify(sql)).toBe(false);
+      expect(r.violations.map((v) => v.reason).join(" | ")).toMatch(why);
+    });
+  // (a) PostgreSQL ends a `--` comment at a bare CR, so everything after it EXECUTES. Verified against real PostgreSQL in the db differential test.
+  reject("F1a repro: a bare CR ends the comment, a DROP follows", 'ALTER TABLE "subscriptions" ADD COLUMN "x" TEXT; -- harmless\r DROP TABLE "victim";', /BARE_CR/);
+  reject("a bare CR inside a block comment", 'ALTER TABLE "t" ADD COLUMN "c" TEXT; /* a\rb */', /BARE_CR/);
+  reject("a bare CR at the end of the file", 'ALTER TABLE "t" ADD COLUMN "c" TEXT;\r', /BARE_CR/);
+  reject("a form feed", 'ALTER TABLE "t"\f ADD COLUMN "c" TEXT;', /CONTROL_CHAR/);
+  reject("a vertical tab", 'ALTER TABLE "t"\v ADD COLUMN "c" TEXT;', /CONTROL_CHAR/);
+  reject("an ESC control character inside a comment", 'ALTER TABLE "t" ADD COLUMN "c" TEXT; -- a\u001bb', /CONTROL_CHAR/);
+  reject("DEL", 'ALTER TABLE "t" ADD COLUMN "c" TEXT;\u007f', /CONTROL_CHAR/);
+  it("a legitimate CRLF file (every CR followed by LF) is accepted, with comments", () => {
+    expect(scan('-- c1\r\nALTER TABLE "t" ADD COLUMN "c" TEXT; -- c2\r\n/* b\r\n */\r\nCREATE INDEX "i" ON "t"("c");\r\n').ok).toBe(true);
+  });
+  it("a destructive statement after a CRLF-terminated comment is still seen", () => {
+    expect(scan('ALTER TABLE "t" ADD COLUMN "c" TEXT; -- c\r\nDROP TABLE "victim";').ok).toBe(false);
+  });
+
+  // (b) dollar quoting of any tag length or alphabet.
+  reject("F1b repro: a non-ASCII dollar tag", 'ALTER TABLE "subscriptions" ADD COLUMN "x" TEXT DEFAULT $é$ -- $é$; DROP TABLE "victim";', /DOLLAR_QUOTE/);
+  reject("F1b repro: a 90-character ASCII dollar tag", `ALTER TABLE "subscriptions" ADD COLUMN "x" TEXT DEFAULT $${"a".repeat(90)}$ -- $${"a".repeat(90)}$; DROP TABLE "victim";`, /DOLLAR_QUOTE/);
+  reject("a 5000-character tag", `ALTER TABLE "t" ADD COLUMN "c" TEXT DEFAULT $${"z".repeat(5000)}$x$${"z".repeat(5000)}$;`, /DOLLAR_QUOTE/);
+  reject("an empty-tag dollar quote", 'ALTER TABLE "t" ADD COLUMN "c" TEXT DEFAULT $$a$$;', /DOLLAR_QUOTE/);
+  reject("a CJK dollar tag", 'ALTER TABLE "t" ADD COLUMN "c" TEXT DEFAULT $汉$ x $汉$;', /DOLLAR_QUOTE/);
+  reject("a `$` inside a bare identifier", 'ALTER TABLE "t" ADD COLUMN a$b TEXT;', /DOLLAR_QUOTE/);
+  reject("a `$` followed by letters", 'ALTER TABLE "t" ADD COLUMN "c" TEXT DEFAULT $a;', /DOLLAR_QUOTE/);
+  it("a `$` inside a comment, string literal or quoted identifier is inert and accepted", () => {
+    expect(scan(`-- cost is $5 $$\n/* $é$ */ ALTER TABLE "t" ADD COLUMN "p$q" TEXT DEFAULT 'a$$b';`).ok).toBe(true);
+  });
+
+  // non-ASCII / unusual whitespace and identifiers the scan cannot classify
+  reject("a no-break space between tokens", 'ALTER TABLE "t" ADD COLUMN "c" TEXT;', /NON_ASCII/);
+  reject("a line separator (U+2028) between tokens", 'ALTER TABLE "t" ADD COLUMN "c" TEXT;', /NON_ASCII/);
+  reject("an ideographic space", 'ALTER TABLE "t"　ADD COLUMN "c" TEXT;', /NON_ASCII/);
+  reject("a zero-width space", 'ALTER TABLE "t"​ADD COLUMN "c" TEXT;', /NON_ASCII/);
+  reject("a non-ASCII bare identifier", 'ALTER TABLE téble ADD COLUMN "c" TEXT;', /NON_ASCII/);
+  reject("a non-ASCII homoglyph keyword", 'ALTER TABLE "t" ADD COLUMN "c" TEXT; DRОP TABLE "victim";', /NON_ASCII/);
+  it("non-ASCII text inside a comment, a string literal and a quoted identifier is accepted", () => {
+    expect(scan(`-- em dash — and é\nALTER TABLE "té" ADD COLUMN "c" TEXT DEFAULT 'ü—';`).ok).toBe(true);
+  });
+  reject("a backslash inside a string literal (standard_conforming_strings is a server setting)", `ALTER TABLE "t" ADD COLUMN "c" TEXT DEFAULT 'a\\'; DROP TABLE "victim"; --';`, /BACKSLASH/);
+  reject("a backslash inside a quoted identifier", 'ALTER TABLE "t\\" ADD COLUMN "c" TEXT;', /BACKSLASH/);
+  reject("a unicode-escape quoted identifier U&\"...\"", 'ALTER TABLE U&"d\\0061t" ADD COLUMN "c" TEXT;', /ESCAPE_STRING|BACKSLASH/);
+});
+
+describe("additive-only scan — review F2: tightened allow-list", () => {
+  const reject = (label: string, sql: string, why: RegExp) =>
+    it(`rejects ${label}`, () => {
+      const r = scan(sql);
+      expect(r.ok, sql).toBe(false);
+      expect(r.violations.map((v) => v.reason).join(" | ")).toMatch(why);
+    });
+  const accept = (label: string, sql: string) => it(`accepts ${label}`, () => expect(scan(sql).violations).toEqual([]));
+
+  reject("DEFAULT now()", 'ALTER TABLE "t" ADD COLUMN "c" TIMESTAMP DEFAULT now();', /not a literal/);
+  reject("DEFAULT gen_random_uuid()", 'ALTER TABLE "t" ADD COLUMN "c" UUID DEFAULT gen_random_uuid();', /not a literal/);
+  reject("DEFAULT with an expression", 'ALTER TABLE "t" ADD COLUMN "c" INTEGER DEFAULT 1 + 1;', /not a literal/);
+  reject("DEFAULT with a parenthesised expression", 'ALTER TABLE "t" ADD COLUMN "c" INTEGER DEFAULT (1);', /not a literal/);
+  reject("DEFAULT with a sub-select", 'ALTER TABLE "t" ADD COLUMN "c" INTEGER DEFAULT (SELECT 1);', /SELECT|not a literal/);
+  reject("DEFAULT function in a CREATE TABLE column", 'CREATE TABLE "t" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), CONSTRAINT "t_pkey" PRIMARY KEY ("id"));', /not a literal/);
+  reject("DEFAULT nextval call", "ALTER TABLE \"t\" ADD COLUMN \"c\" TEXT DEFAULT nextval('s');", /not a literal/);
+  accept("DEFAULT integer, decimal, negative, boolean, NULL, string, cast string and CURRENT_TIMESTAMP",
+    `ALTER TABLE "t" ADD COLUMN "a" INTEGER NOT NULL DEFAULT 0, ADD COLUMN "b" DECIMAL(10,2) DEFAULT -1.5, ADD COLUMN "c" BOOLEAN NOT NULL DEFAULT true, ADD COLUMN "d" TEXT DEFAULT NULL, ADD COLUMN "e" TEXT NOT NULL DEFAULT 'x', ADD COLUMN "f" "Status" NOT NULL DEFAULT 'A'::"Status", ADD COLUMN "g" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, ADD COLUMN "h" TEXT[] DEFAULT '{}'::text[], ADD COLUMN "i" VARCHAR(255);`);
+  accept("DEFAULT CURRENT_TIMESTAMP inside CREATE TABLE", 'CREATE TABLE "t" ("id" TEXT NOT NULL, "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "t_pkey" PRIMARY KEY ("id"));');
+
+  reject("GENERATED ... STORED column", 'ALTER TABLE "t" ADD COLUMN "c" INTEGER GENERATED ALWAYS AS (1) STORED;', /GENERATED/);
+  reject("GENERATED identity column", 'ALTER TABLE "t" ADD COLUMN "c" INTEGER GENERATED ALWAYS AS IDENTITY;', /GENERATED/);
+  reject("inline REFERENCES on ADD COLUMN", 'ALTER TABLE "t" ADD COLUMN "c" TEXT REFERENCES "o"("id");', /unsupported column modifier|plain type/);
+  reject("inline CHECK on ADD COLUMN", 'ALTER TABLE "t" ADD COLUMN "c" INTEGER CHECK ("c" > 0);', /unsupported column modifier|plain type/);
+  reject("inline UNIQUE on ADD COLUMN", 'ALTER TABLE "t" ADD COLUMN "c" TEXT UNIQUE;', /unsupported column modifier|plain type/);
+  reject("inline PRIMARY KEY on ADD COLUMN", 'ALTER TABLE "t" ADD COLUMN "c" TEXT PRIMARY KEY;', /unsupported column modifier|plain type/);
+  reject("COLLATE on ADD COLUMN", 'ALTER TABLE "t" ADD COLUMN "c" TEXT COLLATE "C";', /plain type|unsupported/);
+
+  reject("ADD CONSTRAINT UNIQUE", 'ALTER TABLE "t" ADD CONSTRAINT "u" UNIQUE ("c");', /UNIQUE \/ PRIMARY KEY \/ EXCLUDE is not allowed/);
+  reject("ADD CONSTRAINT PRIMARY KEY", 'ALTER TABLE "t" ADD CONSTRAINT "p" PRIMARY KEY ("c");', /UNIQUE \/ PRIMARY KEY \/ EXCLUDE is not allowed/);
+  reject("ADD CONSTRAINT EXCLUDE", 'ALTER TABLE "t" ADD CONSTRAINT "x" EXCLUDE USING gist ("c" WITH =);', /EXCLUDE is not allowed/);
+  accept("CREATE UNIQUE INDEX (the allowed replacement for a unique constraint)", 'CREATE UNIQUE INDEX "u" ON "t"("c");');
+
+  reject("FOREIGN KEY on an existing table without NOT VALID", 'ALTER TABLE "t" ADD CONSTRAINT "f" FOREIGN KEY ("o") REFERENCES "o"("id") ON DELETE RESTRICT ON UPDATE CASCADE;', /must be NOT VALID/);
+  accept("FOREIGN KEY on an existing table with NOT VALID", 'ALTER TABLE "t" ADD CONSTRAINT "f" FOREIGN KEY ("o") REFERENCES "o"("id") ON DELETE RESTRICT ON UPDATE CASCADE NOT VALID;');
+  accept("FOREIGN KEY on a table created earlier in the same file (no existing rows)", 'CREATE TABLE "n" ("id" TEXT NOT NULL, "o" TEXT NOT NULL, CONSTRAINT "n_pkey" PRIMARY KEY ("id"));\nALTER TABLE "n" ADD CONSTRAINT "f" FOREIGN KEY ("o") REFERENCES "o"("id");');
+  reject("FOREIGN KEY on a table created LATER in the file", 'ALTER TABLE "n" ADD CONSTRAINT "f" FOREIGN KEY ("o") REFERENCES "o"("id");\nCREATE TABLE "n" ("id" TEXT NOT NULL);', /must be NOT VALID/);
+  reject("CHECK on an existing table without NOT VALID", 'ALTER TABLE "t" ADD CONSTRAINT "c" CHECK ("a" > 0);', /must be NOT VALID/);
+  accept("CHECK on an existing table with NOT VALID", 'ALTER TABLE "t" ADD CONSTRAINT "c" CHECK ("a" > 0 AND "b" IN (\'x\', \'y\')) NOT VALID;');
+  reject("a function call inside a CHECK", 'ALTER TABLE "t" ADD CONSTRAINT "c" CHECK (length("a") > 0) NOT VALID;', /function call inside a CHECK/);
+  reject("a function call inside a CHECK in CREATE TABLE", 'CREATE TABLE "t" ("a" TEXT, CONSTRAINT "c" CHECK (char_length("a") > 0));', /function call inside a CHECK/);
+  reject("a function call inside an index WHERE", 'CREATE INDEX "i" ON "t"("a") WHERE (lower("b") = \'x\');', /function call inside an index WHERE/);
+  reject("a quoted-identifier call inside an index WHERE", 'CREATE INDEX "i" ON "t"("a") WHERE ("fn"("b"));', /function call inside an index WHERE/);
+  accept("an index WHERE predicate without a call", 'CREATE UNIQUE INDEX "i" ON "t"("a") WHERE (reservation_entry = \'release\'::text);');
 });

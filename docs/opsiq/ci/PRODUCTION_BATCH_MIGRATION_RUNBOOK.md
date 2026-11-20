@@ -54,7 +54,7 @@ Then approve the `production-operator` environment gate. That is the one human a
 | Exact-host gate (unchanged, every mode) | the secret's host equals `expected_database_host` |
 | Preflight (`migration-batch.mjs preflight`) | manifest is valid, in main, at most 10 migrations; each `migration.sql` sha256 equals the manifest; each passes the additive-only scan; the objects the SQL creates equal the manifest's `creates`; the ledger has no unfinished (P3009) row; the pending set (main folders absent from the ledger) is exactly the manifest, in order, or an unapplied suffix of it (resume); an applied prefix is finished and checksum-equal; the non-batch ledger rows equal the anchor (count and hash); no object the pending migrations will create already exists |
 | Read-only guarantee | `PGOPTIONS=-c default_transaction_read_only=on` plus `BEGIN READ ONLY`; the script refuses a session that is not read-only; every statement is fixed text with bound parameters |
-| Recovery point | UTC time, `pg_current_wal_lsn()`, `current_database()` and the ledger anchor are written to the job summary and uploaded as the `batch-recovery-point` artifact BEFORE the deploy |
+| Recovery point | UTC time, `pg_current_wal_lsn()`, `current_database()` the ledger anchor and an informational activity snapshot (row estimates, long-open transaction count) are written to the job summary and uploaded as the `batch-recovery-point` artifact BEFORE the deploy |
 | `prisma migrate status` cross-check | Prisma's own pending list equals the expected pending set |
 | Deploy | the one `prisma migrate deploy` step, unchanged |
 | Post-batch verification (blocking) | ledger equals pre-batch anchor plus the batch exactly (all finished, checksums equal the manifest); every expected table/column/index/type/constraint exists with the declared nullability/uniqueness |
@@ -63,15 +63,25 @@ Then approve the `production-operator` environment gate. That is the one human a
 
 ## Static additive-only scan
 
-`scripts/release/migration-additive-scan.mjs`. Allowed: `CREATE TABLE`, `CREATE [UNIQUE] INDEX` (never `CONCURRENTLY`),
-`CREATE TYPE ... AS ENUM`, `ALTER TABLE ... ADD COLUMN` (a `NOT NULL` column needs a `DEFAULT`), `ALTER TABLE ... ADD CONSTRAINT`
-(foreign key, unique, primary key, check). Everything else is rejected: `DROP`, `TRUNCATE`, `DELETE`, `UPDATE`, `INSERT`, `RENAME`,
-`ALTER COLUMN`, `GRANT`/`REVOKE`, `DO` blocks, functions, triggers, views, extensions, `COPY`, transaction control. Comments are
-stripped correctly (a keyword inside a comment or string is not a violation; `--` inside a string is not a comment). It fails closed
-on an unterminated comment/string/identifier, dollar quoting, escape strings, a backslash, a statement matching no pattern, or a file
-with no statement. Limitation: it is a text scan of the allow-list, not a Postgres parser; it proves the migration is additive in
-shape, not that it will succeed (a migration can pass the scan and still fail at runtime, which is exactly what the failure-injection
-test exercises).
+`scripts/release/migration-additive-scan.mjs`. Allowed: `CREATE TABLE`, `CREATE [UNIQUE] INDEX` (never `CONCURRENTLY`; an index
+`WHERE` may contain no function call), `CREATE TYPE ... AS ENUM`, `ALTER TABLE ... ADD COLUMN <type> [NOT NULL | NULL | DEFAULT <literal>]`
+(a `NOT NULL` column needs a `DEFAULT`; no inline `REFERENCES`/`CHECK`/`UNIQUE`/`PRIMARY KEY`/`GENERATED`), and
+`ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY | CHECK` (which must be `NOT VALID` on a table that already exists; no function call in a `CHECK`).
+A `DEFAULT` may only be a number, a quoted string (optionally cast), `TRUE`/`FALSE`/`NULL`, `CURRENT_TIMESTAMP` or `CURRENT_DATE`. Unique and
+primary-key constraints and `EXCLUDE` are refused: use `CREATE UNIQUE INDEX`. Everything else is rejected: `DROP`, `TRUNCATE`, `DELETE`, `UPDATE`,
+`INSERT`, `RENAME`, `ALTER COLUMN`, `GRANT`/`REVOKE`, `DO` blocks, functions, triggers, views, extensions, `COPY`, `GENERATED`, transaction control.
+
+The lexer is deliberately STRICTER than PostgreSQL's so the two cannot disagree about where a comment, string or statement ends (review F1,
+reproduced against real PostgreSQL: a bare carriage return ends a `--` comment, and a non-ASCII or very long dollar-quote tag is a valid quote).
+It refuses: any control character other than tab and newline; a carriage return not followed by a line feed (CRLF files are fine); NUL;
+any `$` that is not a plain positional parameter (no dollar-quote form of any tag length or alphabet); any backslash outside a comment; `E'...'`
+and `U&` forms; any non-ASCII character outside a comment, string literal or quoted identifier; an unterminated comment/string/identifier;
+a statement matching no allow-list pattern; a file with no statement. Comments are stripped correctly (a keyword inside a comment or string is not a
+violation; `--` inside a string is not a comment). A differential test (`migration-additive-scan-differential.db.test.ts`) executes every
+scanner-accepted input of a hand-written plus 6000-input seeded fuzz corpus on real PostgreSQL and asserts a canary table survives.
+Limitation: it is a text allow-list, not a Postgres parser; it proves the migration is additive in shape and that no hidden statement exists in the
+corpus-tested lexer cases, not that the migration will succeed (a migration can pass the scan and still fail at runtime, which is exactly what the
+failure-injection test exercises).
 
 ## Recovery
 
@@ -84,6 +94,18 @@ What the job gives you, and no more:
 2. Logical recovery. The batch is additive only, so rolling the application code back is safe at any point. Each manifest migration carries a
    `rollbackSql` note (DROP of exactly what it created). These notes are documentation: neither the workflow nor any script ever runs them.
    Running one drops the column/index and any data written to it since; do it only after the code that uses it is no longer deployed.
+
+### Before you dispatch: size, open transactions, locks (informational, never gating)
+
+The recovery-point record includes, for the tables the pending migrations touch, the estimated row count (`pg_class.reltuples`; `-1` means never
+analyzed) and the number of transactions open longer than 60 s that are visible to the migration role (`pg_stat_activity`; a count only, no query text,
+no user, no address; sessions of other roles are invisible without `pg_read_all_stats`, so it is a lower bound). These never block the batch.
+Check them first and dispatch in a low-write window. Each `CREATE INDEX` (the three on `usage_events`) takes a SHARE lock for one scan of the table:
+writes to `usage_events` wait while it builds, so a large table or a long-open transaction lengthens the stall. No `lock_timeout` is applied.
+Measured: Prisma's engine does NOT honor the `PGOPTIONS` environment variable (a `PGOPTIONS=-c default_transaction_read_only=on` `migrate deploy` applied
+a migration), but it DOES honor `options` in the connection URL query (`?options=-c%20default_transaction_read_only%3Don` made `migrate deploy`
+fail with "cannot execute INSERT in a read-only transaction"). So a `lock_timeout` could be applied through the URL; this is not implemented here
+because it changes the secret-derived URL the deploy step uses. Not verified on Neon.
 
 ### Partial failure and resume
 

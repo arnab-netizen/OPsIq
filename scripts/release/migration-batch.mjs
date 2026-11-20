@@ -282,7 +282,7 @@ export function classifyPostBatchLedger({ manifest, rows }) {
   for (const r of effective) if (!r.finished_at || r.rolled_back_at) failures.push(`ledger row ${r.name} is ${r.rolled_back_at ? "rolled back" : "unfinished"}`);
   const byName = new Map();
   for (const r of effective) {
-    if (byName.has(r.name)) failures.push(`ledger records ${r.name} more than once`);
+    // A duplicated row (same name twice) is not flagged here: it is caught by the exact effective-row count below (anchor + batch).
     byName.set(r.name, r);
   }
   for (const mig of manifest.migrations) {
@@ -408,12 +408,50 @@ export async function findMissingObjects(client, migrations) {
   return missing;
 }
 
-export async function readRecoveryPoint(client, ledger) {
+/**
+ * READ-ONLY, INFORMATIONAL, NEVER GATING: the cost/lock context an operator needs to judge the dispatch window. Estimated row counts
+ * (pg_class.reltuples, -1 = never analyzed) of the tables the pending migrations touch, and how many transactions visible to this role have been
+ * open for more than 60 s (pg_stat_activity: a count only; no query text, no user, no client address). A failure of either read yields null,
+ * never an error. Sessions of other roles are invisible to a role without pg_read_all_stats, so the count is a lower bound.
+ */
+export async function readActivitySnapshot(client, tables) {
+  const out = { estimatedRows: null, longOpenTransactions: null, note: "informational only; never gates the batch" };
+  try {
+    const r = await client.query(
+      "SELECT c.relname AS t, c.reltuples::bigint::text AS est FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname = ANY($1::text[]) ORDER BY c.relname",
+      [tables]
+    );
+    out.estimatedRows = Object.fromEntries(r.rows.map((x) => [x.t, Number(x.est)]));
+  } catch {
+    /* informational */
+  }
+  try {
+    const r = await client.query(
+      "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database() AND xact_start IS NOT NULL AND now() - xact_start > interval '60 seconds' AND pid <> pg_backend_pid()"
+    );
+    out.longOpenTransactions = r.rows[0].n;
+  } catch {
+    /* informational */
+  }
+  return out;
+}
+
+/** Distinct tables the given migrations create or alter. */
+export function touchedTables(migrations) {
+  const t = new Set();
+  for (const m of migrations) {
+    for (const x of m.creates.tables ?? []) t.add(x);
+    for (const k of ["columns", "indexes", "constraints"]) for (const x of m.creates[k] ?? []) t.add(x.table);
+  }
+  return [...t].sort();
+}
+
+export async function readRecoveryPoint(client, ledger, tables = []) {
   const r = await client.query(
     "SELECT to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS utc, pg_current_wal_lsn()::text AS lsn, current_database() AS db"
   );
   const row = r.rows[0];
-  return { capturedAtUtc: row.utc, walLsn: row.lsn, database: row.db, ledgerAnchor: ledgerAnchor(ledger) };
+  return { capturedAtUtc: row.utc, walLsn: row.lsn, database: row.db, ledgerAnchor: ledgerAnchor(ledger), activity: await readActivitySnapshot(client, tables) };
 }
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
@@ -481,7 +519,7 @@ async function main() {
       const pendingMigs = manifest.migrations.filter((m) => c.pending.includes(m.name));
       const pre = await findPreexistingObjects(client, pendingMigs);
       if (pre.length) return { c: { ok: false, verdict: "OBJECT_ALREADY_EXISTS", detail: pre.join("; ") } };
-      return { c, recovery: await readRecoveryPoint(client, rows) };
+      return { c, recovery: await readRecoveryPoint(client, rows, touchedTables(pendingMigs)) };
     });
     if (!result.c.ok) die(result.c.verdict, result.c.detail);
     const { c, recovery } = result;
@@ -500,6 +538,8 @@ async function main() {
     console.log(`BATCH_RECOVERY_POINT_UTC=${recovery.capturedAtUtc}`);
     console.log(`BATCH_RECOVERY_POINT_LSN=${recovery.walLsn}`);
     console.log(`BATCH_RECOVERY_POINT_DATABASE=${recovery.database}`);
+    console.log(`BATCH_ACTIVITY_ESTIMATED_ROWS=${JSON.stringify(recovery.activity.estimatedRows)}`);
+    console.log(`BATCH_ACTIVITY_LONG_OPEN_TRANSACTIONS=${recovery.activity.longOpenTransactions}`);
     return;
   }
 

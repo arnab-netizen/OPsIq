@@ -233,6 +233,12 @@ describe("classifyPostBatchLedger — blocking post-migration ledger check", () 
     const extra = [...all(), { name: "20300101000000_unlisted", checksum: "x", finished_at: T, rolled_back_at: null }];
     expect(batch.classifyPostBatchLedger({ manifest: real, rows: extra }).ok).toBe(false);
   });
+  it("a duplicated finished row of a batch member (same name and checksum twice) is refused by the exact effective-row count", () => {
+    const rows = [...all(), applied(1)];
+    const r = batch.classifyPostBatchLedger({ manifest: real, rows });
+    expect(r.ok).toBe(false);
+    expect(r.failures.join()).toMatch(/effective rows, expected 193/);
+  });
   it("an operator-resolved rolled-back attempt of a batch member is history, not state", () => {
     const rows = [...all(), { name: batchNames[1], checksum: "x", finished_at: null, rolled_back_at: T } as Row];
     expect(batch.classifyPostBatchLedger({ manifest: real, rows })).toEqual({ ok: true, failures: [] });
@@ -266,6 +272,25 @@ describe("the single-migration MAIN gate is untouched and still refuses multiple
   });
   it("the classifier script itself was not modified by the batch work (no MAIN_BATCH knowledge leaked into it)", () => {
     expect(readFileSync(join(ROOT, "scripts/classify-migrate-status.mjs"), "utf8")).not.toMatch(/BATCH/i);
+  });
+});
+
+describe("recovery-point activity snapshot (review F5): informational, never gating, no user data", () => {
+  it("derives the touched tables from the manifest", () => {
+    expect(batch.touchedTables(real.migrations)).toEqual(["subscriptions", "usage_events"]);
+  });
+  it("a failing read yields nulls, never an error (it can never block the batch)", async () => {
+    const client = { query: async () => { throw new Error("permission denied"); } };
+    await expect(batch.readActivitySnapshot(client, ["usage_events"])).resolves.toMatchObject({ estimatedRows: null, longOpenTransactions: null });
+  });
+  it("reads only counts: fixed SQL, no query text / user / address column, parameterized table list", async () => {
+    const seen: { sql: string; params?: unknown[] }[] = [];
+    const client = { query: async (sql: string, params?: unknown[]) => { seen.push({ sql, params }); return sql.includes("pg_class") ? { rows: [{ t: "usage_events", est: "-1" }] } : { rows: [{ n: 2 }] }; } };
+    const r = await batch.readActivitySnapshot(client, ["usage_events"]);
+    expect(r).toMatchObject({ estimatedRows: { usage_events: -1 }, longOpenTransactions: 2 });
+    for (const q of seen) expect(q.sql).not.toMatch(/\b(query|usename|client_addr|application_name)\b/i);
+    expect(seen[0].params).toEqual([["usage_events"]]);
+    expect(seen.every((q) => q.sql.trim().toUpperCase().startsWith("SELECT"))).toBe(true);
   });
 });
 

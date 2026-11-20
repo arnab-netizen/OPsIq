@@ -168,6 +168,11 @@ describe("[db] MAIN_BATCH A — fresh batch on a database that is exactly the pr
     expect(rp.walLsn).toMatch(/^[0-9A-F]+\/[0-9A-F]+$/);
     expect(rp.database).toBe(db);
     expect(rp.ledgerAnchor).toEqual(REAL.ledgerAnchor);
+    // review F5: informational cost/lock context, never gating
+    expect(Object.keys(rp.activity.estimatedRows).sort()).toEqual(["subscriptions", "usage_events"]);
+    expect(Object.values(rp.activity.estimatedRows).every((v) => Number.isInteger(v))).toBe(true);
+    expect(Number.isInteger(rp.activity.longOpenTransactions)).toBe(true);
+    expect(JSON.stringify(rp.activity)).not.toMatch(/query|usename|client_addr/i);
     expect(Date.parse(rp.capturedAtUtc)).toBeGreaterThan(NOW - 1000);
     expect(Date.parse(rp.capturedAtUtc)).toBeLessThanOrEqual(Date.now() + 1000);
     const pre = JSON.parse(readFileSync(join(r.out, "batch-preflight.json"), "utf8"));
@@ -283,6 +288,34 @@ describe("[db] MAIN_BATCH A — fresh batch on a database that is exactly the pr
       await q(db, `CREATE UNIQUE INDEX "usage_events_one_release_per_reservation" ON "usage_events"("reservation_id") WHERE (reservation_entry = 'release'::text)`);
     }
     expect(gate(w, db, "postverify").status).toBe(0);
+  });
+
+  it("post-batch verification detects a unique index that was replaced by a non-unique one of the same name (review F4 i)", async () => {
+    await q(db, 'DROP INDEX "usage_events_one_release_per_reservation"');
+    await q(db, 'CREATE INDEX "usage_events_one_release_per_reservation" ON "usage_events"("reservation_id")');
+    try {
+      const post = gate(w, db, "postverify");
+      expect(post.status).toBe(1);
+      expect(post.code).toBe("POST_BATCH_VERIFICATION_FAILED");
+      expect(post.stderr + post.stdout).toMatch(/usage_events_one_release_per_reservation.*uniqueness differs/);
+    } finally {
+      await q(db, 'DROP INDEX "usage_events_one_release_per_reservation"');
+      await q(db, `CREATE UNIQUE INDEX "usage_events_one_release_per_reservation" ON "usage_events"("reservation_id") WHERE (reservation_entry = 'release'::text)`);
+    }
+    expect(gate(w, db, "postverify").status).toBe(0);
+  });
+
+  it("post-batch verification detects a duplicated batch ledger row through the exact row count (review F4 ii)", async () => {
+    const m = REAL.migrations[0];
+    await q(db, `INSERT INTO "_prisma_migrations" (id, checksum, migration_name, started_at, finished_at, applied_steps_count) VALUES ('batch-dup', $1, $2, now(), now(), 1)`, [m.sha256, m.name]);
+    try {
+      const post = gate(w, db, "postverify");
+      expect(post.status).toBe(1);
+      expect(post.code).toBe("POST_BATCH_VERIFICATION_FAILED");
+      expect(post.stderr + post.stdout).toContain("effective rows, expected 193");
+    } finally {
+      await q(db, `DELETE FROM "_prisma_migrations" WHERE id = 'batch-dup'`);
+    }
   });
 
   it("post-batch verification detects an unexpected extra ledger row", async () => {
