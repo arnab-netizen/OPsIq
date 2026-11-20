@@ -3,7 +3,7 @@ import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getItems } from "@/services/operator/store";
 import { computeCalibration, computeCalibrationBySegment } from "@/services/calibration/engine";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { canView } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -11,7 +11,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     // Resolve role from server-side session/database (never from request)
-    const role = await resolveServerRole();
+    const role = deriveServerRole(ctx.policy);
 
     if (!role) {
       throw new UnauthorizedError("Unauthorized");

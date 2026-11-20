@@ -20,7 +20,9 @@ vi.mock("@/services/auth", () => ({
   getSession: vi.fn(),
 }));
 
-import { resolveServerRole } from "@/services/auth/server-role";
+import { readFileSync, readdirSync, statSync } from "fs";
+import path from "path";
+import { resolveServerRole, deriveServerRole } from "@/services/auth/server-role";
 
 function ctx(roles: string[]) {
   return {
@@ -83,5 +85,37 @@ describe("SEC-01 resolveServerRole — real role derivation, fail-closed", () =>
   it("does NOT grant admin to a client_team_member", async () => {
     mockGetPolicyContext.mockResolvedValue(ctx([ROLES.CLIENT_TEAM_MEMBER]));
     expect(await resolveServerRole()).not.toBe("admin");
+  });
+});
+
+describe("SEC-01 deriveServerRole — canonical handlers derive the role from the wrapper's verified policy", () => {
+  beforeEach(() => mockGetPolicyContext.mockReset());
+
+  it("maps the verified policy exactly like resolveServerRole and never re-reads auth", () => {
+    expect(deriveServerRole(null)).toBeNull();
+    expect(deriveServerRole(undefined)).toBeNull();
+    expect(deriveServerRole(ctx([]))).toBe("viewer");
+    expect(deriveServerRole(ctx([ROLES.VIEWER]))).toBe("viewer");
+    expect(deriveServerRole(ctx([ROLES.ADMIN_OR_PORTFOLIO_MANAGER]))).toBe("admin");
+    expect(deriveServerRole(ctx([ROLES.SYSTEM_ADMIN]))).toBe("admin");
+    expect(deriveServerRole(ctx([ROLES.ANALYST]))).not.toBe("admin");
+    expect(mockGetPolicyContext).not.toHaveBeenCalled();
+  });
+
+  // A getPolicyContext() inside a withCanonicalEnforcement handler runs after the session snapshot is finalized and
+  // is refused by the shadow-read enforcer (SHADOW_AUTH_READ_DETECTED → 500 on every authenticated request), so no
+  // API route may call resolveServerRole(); they pass ctx.policy to deriveServerRole instead.
+  it("no API route calls resolveServerRole()", () => {
+    const root = path.resolve(__dirname, "../../app/api");
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const full = path.join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(name) && readFileSync(full, "utf8").includes("resolveServerRole")) offenders.push(path.relative(root, full));
+      }
+    };
+    walk(root);
+    expect(offenders).toEqual([]);
   });
 });

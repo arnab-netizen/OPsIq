@@ -1,7 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { getActorHierarchyLevel } from "@/policies/capability-check";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   assignRole,
@@ -54,7 +54,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
 
   const body = await parseRequestBody(ctx.request!, assignRoleSchema);
 
-  const role = await resolveServerRole();
+  const role = deriveServerRole(ctx.policy);
   const policy = {
     userId: ctx.verifiedActorId,
     roles: role ? [{ role: role as RoleName, scope: undefined, scopeId: undefined }] : [],
@@ -99,7 +99,7 @@ export const DELETE = withCanonicalEnforcement(async (ctx: CanonicalAuthContext,
 
   const body = await parseRequestBody(ctx.request!, revokeRoleSchema);
 
-  const role = await resolveServerRole();
+  const role = deriveServerRole(ctx.policy);
   const policy = {
     userId: ctx.verifiedActorId,
     roles: role ? [{ role: role as RoleName, scope: undefined, scopeId: undefined }] : [],

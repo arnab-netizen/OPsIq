@@ -2,7 +2,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { UnauthorizedError, ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { runScenario } from "@/services/scenario/engine";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -11,7 +11,7 @@ import { randomUUID } from "crypto";
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     // Enforce server-side auth (scenario analysis affects decisions)
-    const role = await resolveServerRole();
+    const role = deriveServerRole(ctx.policy);
     if (!role) {
       throw new UnauthorizedError("Unauthorized");
     }
