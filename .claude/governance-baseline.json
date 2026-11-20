@@ -1,6 +1,6 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 31,
+  "total_frozen": 26,
   "findings": [
     {
       "type": "unsafe-error-render",
@@ -176,53 +176,8 @@
     {
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
-      "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 415,
-      "severity": "error",
-      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 755,
-      "severity": "error",
-      "code": "const errorMessage = error instanceof Error ? error.message : String(error);",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 773,
-      "severity": "error",
-      "code": "error instanceof Error ? error.message : String(error),",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 846,
-      "severity": "error",
-      "code": "errorMessage: error instanceof Error ? error.message : String(error),",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 881,
-      "severity": "error",
-      "code": "error: isKnownSafeClientError ? classifiedError.message : \"Something went wrong on our side. Nothing was saved. Please try again.\",",
-      "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
       "file": "src/services/engagement.ts",
-      "line": 506,
+      "line": 517,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
@@ -231,7 +186,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/engagement.ts",
-      "line": 545,
+      "line": 556,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"
@@ -240,7 +195,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/engagement.ts",
-      "line": 594,
+      "line": 605,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "service-layer server-side log/classification string; not operator-rendered"

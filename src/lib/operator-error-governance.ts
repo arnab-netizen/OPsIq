@@ -147,6 +147,10 @@ export function scrubLogText(text: string): string {
     .replace(/[a-z][a-z0-9+.-]*:\/\/[^\s"'`]+/gi, (m) => `${m.split("://")[0]}://[redacted]`)
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi, "Bearer [redacted]")
     .replace(/\b(token|password|secret|api[_-]?key)(["']?\s*[=:]\s*["']?)[^\s"',}]+/gi, "$1$2[redacted]")
+    .replace(/\b(client[_-]?secret|access[_-]?key|private[_-]?key)(["']?\s*[=:]\s*["']?)[^\s"',}]+/gi, "$1$2[redacted]")
+    .replace(/\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]+/g, "[key-redacted]")
+    .replace(/\bBasic\s+[A-Za-z0-9+/=]{8,}/gi, "Basic [redacted]")
+    .replace(/\b[\w.-]+:[^\s@/:]+@[\w.-]+(?::\d+)?/g, "[credentials-redacted]@host")
     .replace(/\b[A-Fa-f0-9]{32,}\b/g, "[hex-redacted]");
 }
 

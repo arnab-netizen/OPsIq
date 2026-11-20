@@ -6,6 +6,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { parseOrThrow } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { z } from "zod";
 import {
@@ -46,7 +47,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   }
 
   const body = await ctx.request.json();
-  const parsed = SendNotificationSchema.parse(body);
+  const parsed = parseOrThrow(SendNotificationSchema, body);
 
   const workspaceId = ctx.verifiedWorkspaceId;
 
@@ -78,10 +79,10 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     offset: ctx.request.nextUrl.searchParams.get("offset")
       ? parseInt(ctx.request.nextUrl.searchParams.get("offset")!)
       : undefined,
-    status: (ctx.request.nextUrl.searchParams.get("status") as any) || undefined,
+    status: (ctx.request.nextUrl.searchParams.get("status") as z.infer<typeof ListNotificationsSchema>["status"]) || undefined,
   };
 
-  const parsed = ListNotificationsSchema.parse(params);
+  const parsed = parseOrThrow(ListNotificationsSchema, params);
 
   const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;

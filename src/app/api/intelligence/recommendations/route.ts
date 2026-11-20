@@ -8,6 +8,8 @@ import { evaluateGuardrails } from "@/services/control/guardrails";
 import { enforceControlLayer } from "@/services/control/enforcement";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
+import { NotFoundError, ValidationError } from "@/infra/errors";
+import type { OperatorItem as OperatorItemRow } from "@/generated/prisma/client";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -19,7 +21,7 @@ export const GET = withCanonicalEnforcement(
     // Extract decisionId from query
     const decisionId = ctx.request?.nextUrl.searchParams.get("decisionId");
   if (!decisionId) {
-    throw new Error("Missing required parameter: decisionId");
+    throw new ValidationError("Missing required parameter: decisionId");
   }
 
     // Fetch the decision (scoped by workspace at DB level)
@@ -27,8 +29,9 @@ export const GET = withCanonicalEnforcement(
       where: { id: decisionId, workspaceId },
     });
 
+    // Scoped by workspace: another workspace's decision is the same 404 as an unknown id (tenant non-disclosure).
     if (!decision) {
-      throw new Error("Decision not found");
+      throw new NotFoundError("Decision", decisionId);
     }
 
     // Fetch last 100 items from workspace for pattern detection
@@ -43,7 +46,7 @@ export const GET = withCanonicalEnforcement(
   });
 
   // Map to OperatorItem type
-  const operatorItems = items.map((r: any) => ({
+  const operatorItems = items.map((r: OperatorItemRow) => ({
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,
@@ -150,7 +153,7 @@ export const GET = withCanonicalEnforcement(
   executedValidations.push("decision_gate");
 
   // Generate primary recommendation
-  let recommendation = generateRecommendation(
+  const recommendation = generateRecommendation(
     decisionResult,
     patterns,
     operatorItems,

@@ -14,8 +14,11 @@ export function createFakeBillingDb() {
         const o = v as Row;
         if ("lte" in o) return row[k] != null && row[k] <= o.lte;
         if ("lt" in o) return row[k] != null && row[k] < o.lt;
+        if ("startsWith" in o) return typeof row[k] === "string" && row[k].startsWith(o.startsWith);
         return false;
       }
+      if (v instanceof Date) return row[k] instanceof Date && row[k].getTime() === v.getTime();
+      if (v === null) return row[k] == null;
       return row[k] === v;
     });
   const tx = {

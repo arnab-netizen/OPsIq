@@ -24,6 +24,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { createDecision } from "@/services/decisions/decision-creation-service";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+import { seedPlanEntitlement, cleanupPlanEntitlement, type PlanEntitlementFixture } from "@/__tests__/test-helpers/plan-entitlement";
 
 // The exact query GET /api/decisions/list runs (src/app/api/decisions/list/route.ts). Replicated so the
 // workspace-isolation + valid-select (no raw 500) + DTO invariants are proven against a real DB.
@@ -150,8 +151,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     const workspaceId = randomUUID();
     const otherWorkspaceId = randomUUID();
     const userId = randomUUID();
+    let plan: PlanEntitlementFixture | undefined;
 
     beforeAll(async () => {
+      // createDecision consumes the plan's decision:create quota; give both workspaces a real active plan.
+      plan = await seedPlanEntitlement([workspaceId, otherWorkspaceId], ["decision:create"]);
       // Real actor row so createDecision's createdByUserId FK (operator_items_created_by_user_id) is satisfied.
       await db.user.create({
         data: { id: userId, email: `p6c-dec-${stamp}@test.local`, isActive: true, updatedAt: new Date() },
@@ -161,6 +165,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     afterAll(async () => {
       try {
         await db.operatorItem.deleteMany({ where: { workspaceId: { in: [workspaceId, otherWorkspaceId] } } });
+        await db.usageEvent.deleteMany({ where: { workspaceId: { in: [workspaceId, otherWorkspaceId] } } });
+        await cleanupPlanEntitlement(plan);
         await db.user.deleteMany({ where: { id: userId } });
       } catch {
         // best-effort cleanup (ephemeral CI database)
