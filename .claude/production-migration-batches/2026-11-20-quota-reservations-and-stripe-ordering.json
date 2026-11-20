@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "batchId": "2026-11-20-quota-reservations-and-stripe-ordering",
+  "description": "Brings production from the 190-migration ledger (through 20261117120000_add_search_console_metrics) to main: usage_events quota reservations and two Stripe ordering columns on subscriptions. Additive only (nullable columns + indexes).",
+  "ledgerAnchor": {
+    "count": 190,
+    "sha256": "52f51a8cbf0ebf7e5c9ce3c266743c11e0724e09f2732eb55639d8dcbd8de68d"
+  },
+  "migrations": [
+    {
+      "name": "20261119120000_usage_event_quota_reservations",
+      "sha256": "8320493531a1957534e8ca2afa00d03dfe8edb2428860fc8d84261f42b216829",
+      "creates": {
+        "columns": [
+          {
+            "table": "usage_events",
+            "column": "reservation_entry",
+            "nullable": true
+          },
+          {
+            "table": "usage_events",
+            "column": "reservation_id",
+            "nullable": true
+          }
+        ],
+        "indexes": [
+          {
+            "table": "usage_events",
+            "name": "usage_events_reservation_id_reservation_entry_idx",
+            "unique": false
+          },
+          {
+            "table": "usage_events",
+            "name": "usage_events_reservation_entry_timestamp_idx",
+            "unique": false
+          },
+          {
+            "table": "usage_events",
+            "name": "usage_events_one_release_per_reservation",
+            "unique": true
+          }
+        ]
+      },
+      "rollbackSql": "DROP INDEX IF EXISTS \"usage_events_one_release_per_reservation\"; DROP INDEX IF EXISTS \"usage_events_reservation_entry_timestamp_idx\"; DROP INDEX IF EXISTS \"usage_events_reservation_id_reservation_entry_idx\"; ALTER TABLE \"usage_events\" DROP COLUMN IF EXISTS \"reservation_id\", DROP COLUMN IF EXISTS \"reservation_entry\";"
+    },
+    {
+      "name": "20261119130000_subscription_last_event_id",
+      "sha256": "f0b402a15839d9436665d1feee442f9e40b1ece60b1ddc6de1e9cd3830d11790",
+      "creates": {
+        "columns": [
+          {
+            "table": "subscriptions",
+            "column": "last_event_id",
+            "nullable": true
+          }
+        ]
+      },
+      "rollbackSql": "ALTER TABLE \"subscriptions\" DROP COLUMN IF EXISTS \"last_event_id\";"
+    },
+    {
+      "name": "20261119140000_subscription_stripe_subscription_created_at",
+      "sha256": "02f3957029fd2a40c7af3fc23a95fbb740998eff20b6e0d1f1e0f0b55bd709f1",
+      "creates": {
+        "columns": [
+          {
+            "table": "subscriptions",
+            "column": "stripe_subscription_created_at",
+            "nullable": true
+          }
+        ]
+      },
+      "rollbackSql": "ALTER TABLE \"subscriptions\" DROP COLUMN IF EXISTS \"stripe_subscription_created_at\";"
+    }
+  ]
+}

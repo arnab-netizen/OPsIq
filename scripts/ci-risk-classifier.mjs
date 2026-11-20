@@ -133,6 +133,19 @@ const RULES = [
       p === '.github/workflows/reconcile-runtime-role.yml' ||
       p === 'src/__tests__/deployment/production-release-reconcile.test.ts' ||
       p === 'src/__tests__/deployment/release-plan.test.ts' },
+  // MAIN_BATCH production migration path: the version-controlled batch manifests that authorize a production migration batch,
+  // the scripts that gate it (scripts/release/migration-batch.mjs, scripts/release/migration-additive-scan.mjs -- already covered by the
+  // scripts/release rule above, repeated here by name so the guarantee does not depend on that directory rule) and the tests that prove
+  // it. The manifest's anchor/sha256 claims and the real-database recovery proof are only verified by the DB lane, so a change to any of
+  // them must run db-verify. Named exactly, never a broader directory rule.
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      /^\.claude\/production-migration-batches\/[^/]+\.json$/.test(p) ||
+      p === 'scripts/release/migration-batch.mjs' ||
+      p === 'scripts/release/migration-additive-scan.mjs' ||
+      p === 'src/__tests__/deployment/migration-batch-gates.test.ts' ||
+      p === 'src/__tests__/deployment/migration-additive-scan.test.ts' ||
+      p === 'src/__tests__/deployment/migrate-workflow-main-batch-safety.test.ts' ||
+      p === 'src/__tests__/deployment/production-batch-migration-recovery.db.test.ts' },
   // Canonical event store: append-only events, numbering, idempotency, replay, snapshots, projections (rp1, rp3-isolation, rp6-rp10, phase-3-*).
   { tier: TIERS.DB_RUNTIME, test: (p) =>
       /^src\/services\/(event-emitter|event-replay-engine|projection-engine|projection-rebuild-engine|snapshot-engine|snapshot-optimization-engine|replay-failure-handler|idempotency)\.ts$/.test(p) ||
