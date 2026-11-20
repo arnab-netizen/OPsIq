@@ -123,6 +123,14 @@ const RULES = [
       p === '.claude/runtime-proof-manifest.json' ||
       p === 'scripts/ci/check-runtime-proof.mjs' ||
       p === 'src/__tests__/ci-cd/runtime-proof-manifest.test.ts' },
+  // Standalone real-DB proofs run by db-verify outside the manifest (GSC ingestion-role proof; PgBouncer transaction-pooling proof). Their
+  // harness, count gate, the role SQL they apply and the gate's unit test are proven only by those steps, so changing any of them must run
+  // db-verify. (The *.db.test.ts proof files themselves already classify DB_RUNTIME via the generic rule above.) Named exactly.
+  { tier: TIERS.DB_RUNTIME, test: (p) =>
+      p === 'src/__tests__/test-helpers/pgbouncer-harness.ts' ||
+      p === 'scripts/ci/check-db-proof-counts.mjs' ||
+      p === 'scripts/gsc/opsiq-gsc-ingestion-role.sql' ||
+      p === 'src/__tests__/ci-cd/db-proof-counts.test.ts' },
   // Production release path: the migration/role-reconcile gate, planner, release evidence, the role-cutover tool and the
   // topology verifier are proven only by DB-lane steps inside db-verify, so changing any of them must run db-verify
   // (otherwise a green aggregate can release unproven code against production).
