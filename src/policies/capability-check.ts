@@ -1,5 +1,5 @@
 import type { CapabilityName } from "@/domain/constants/capabilities";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { CAPABILITIES, PLATFORM_CAPABILITIES } from "@/domain/constants/capabilities";
 import { ROLES, ROLE_HIERARCHY, type RoleName, isClientRole } from "@/domain/constants/roles";
 import { ForbiddenError } from "@/infra/errors";
 
@@ -356,6 +356,15 @@ export function getCapabilitiesForRole(
     return OWNER_SCOPED_CAPABILITIES;
   }
   return ROLE_CAPABILITIES[role] ?? [];
+}
+
+/**
+ * A platform role is one whose capability bundle carries any PLATFORM_CAPABILITIES entry (derived from the role and
+ * capability definitions, so a new role holding a platform capability is covered without a name list). Platform
+ * roles are provisioned out of band only; the workspace role-management API refuses to grant or revoke them.
+ */
+export function isPlatformRole(role: RoleName): boolean {
+  return (ROLE_CAPABILITIES[role] ?? []).some((capability) => PLATFORM_CAPABILITIES.includes(capability));
 }
 
 export function hasCapability(
