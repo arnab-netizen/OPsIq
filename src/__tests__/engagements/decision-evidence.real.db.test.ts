@@ -196,6 +196,56 @@ describe("[db] GET /api/engagements/[id]/decision-evidence — real route, real 
       expect(resolved.data.impactBasis.recoveryProbabilityPct).toBe(80);
     });
 
+    it("[db] three RESOLVED critical findings and no unresolved ones: no trigger, recovery 80, risk level 0 — resolved findings add nothing", async () => {
+      for (let i = 0; i < 3; i++) await seedFinding(e, { status: i === 0 ? "closed" : "resolved", title: `${e.tag}-resolved-${i}` });
+
+      const res = await getEvidence(e.admin.token, e.engagementId);
+
+      expect(res.status, res.text).toBe(200);
+      expect(res.data.inputs.findings).toMatchObject({ total: 3, critical: 3, unresolved: 0 });
+      expect(res.data.reasoning.triggers).toEqual(["Engagement tracking normally - no critical issues detected"]);
+      expect(res.data.impactBasis.recoveryProbabilityPct).toBe(80);
+      expect((res.data as unknown as { confidenceBreakdown: { riskLevel: number } }).confidenceBreakdown.riskLevel).toBe(0);
+    });
+
+    it("[db] three UNRESOLVED critical findings: trigger names 3, recovery 20, risk level carries the 3x20 weight", async () => {
+      for (let i = 0; i < 3; i++) await seedFinding(e, { title: `${e.tag}-open-${i}` });
+
+      const res = await getEvidence(e.admin.token, e.engagementId);
+
+      expect(res.status, res.text).toBe(200);
+      expect(res.data.inputs.findings).toMatchObject({ total: 3, critical: 3, unresolved: 3 });
+      expect(res.data.reasoning.triggers).toContain("3 unresolved critical finding(s)");
+      expect(res.data.impactBasis.recoveryProbabilityPct).toBe(20);
+      // (3 * 20 + drift 0 + max(0, 50 - confidence)) / 5, at least 12
+      expect((res.data as unknown as { confidenceBreakdown: { riskLevel: number } }).confidenceBreakdown.riskLevel).toBeGreaterThanOrEqual(12);
+    });
+
+    it("[db] a blocked action with only a RESOLVED critical finding raises no blocked-with-findings trigger; with an unresolved one it does", async () => {
+      await seedAction(e, { status: "blocked" });
+      await seedFinding(e, { status: "resolved" });
+
+      const resolvedOnly = await getEvidence(e.admin.token, e.engagementId);
+      expect(resolvedOnly.status, resolvedOnly.text).toBe(200);
+      expect(resolvedOnly.data.reasoning.triggers.some((t) => t.includes("blocked critical action"))).toBe(false);
+
+      await seedFinding(e);
+      const withOpen = await getEvidence(e.admin.token, e.engagementId);
+      expect(withOpen.data.reasoning.triggers).toContain("1 blocked critical action(s) with unresolved findings");
+    });
+
+    it("[db] two resolved plus one unresolved critical finding: exactly 1 is counted", async () => {
+      await seedFinding(e, { status: "resolved" });
+      await seedFinding(e, { status: "resolved" });
+      await seedFinding(e);
+
+      const res = await getEvidence(e.admin.token, e.engagementId);
+
+      expect(res.status, res.text).toBe(200);
+      expect(res.data.reasoning.triggers).toContain("1 unresolved critical finding(s)");
+      expect(res.data.impactBasis.recoveryProbabilityPct).toBe(50);
+    });
+
     it("[db] the primary decision (decision-control) is the critical-finding decision, consistent with the evidence trigger", async () => {
       await seedFinding(e, { title: "Cash is collapsing" });
 

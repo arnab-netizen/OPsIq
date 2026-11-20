@@ -357,6 +357,32 @@ describe("[db] GET /api/engagements/[id]/report — real route, real wrapper, re
       expect((res.body.metadata as { dataCompleteness: { hasRecommendations: boolean } }).dataCompleteness.hasRecommendations).toBe(true);
     });
 
+    it("[db] a client_team_member reader gets only the client-visible recommendation; an internal-only engagement is 404 for them", async () => {
+      const member = await seedMember(fx.workspaceId, ROLES.CLIENT_TEAM_MEMBER, fx.engagementId);
+
+      const res = await getReport(member.token, fx.engagementId);
+
+      expect(res.status, res.text).toBe(200);
+      expect((res.body.recommendations as Array<{ id: string }>).map((r) => r.id)).toEqual([fx.visibleRecId]);
+      expect(res.text).not.toContain(fx.tag);
+
+      const internal = await seedEngagement("internal");
+      const member2 = await seedMember(internal.workspaceId, ROLES.CLIENT_TEAM_MEMBER, internal.engagementId);
+      const denied = await getReport(member2.token, internal.engagementId);
+      expect(denied.status, denied.text).toBe(404);
+      expect(denied.text).not.toContain(internal.tag);
+    });
+
+    it("[db] a user holding BOTH a client role and an internal role (client_owner + analyst) is an internal reader: sees the internal-only recommendation", async () => {
+      const mixed = await seedMember(fx.workspaceId, ROLES.CLIENT_OWNER, fx.engagementId);
+      await db.userRoleAssignment.create({ data: { id: randomUUID(), userId: mixed.userId, role: ROLES.ANALYST, scope: "workspace", scopeId: fx.workspaceId, isActive: true } });
+
+      const res = await getReport(mixed.token, fx.engagementId);
+
+      expect(res.status, res.text).toBe(200);
+      expect((res.body.recommendations as Array<{ id: string }>).map((r) => r.id).sort()).toEqual([fx.internalRecId, fx.visibleRecId].sort());
+    });
+
     it("[db] a client_owner reader sees no recommendations at all when every recommendation is internal-only", async () => {
       await db.recommendation.update({ where: { id: fx.visibleRecId }, data: { visibility: "internal" } });
       const client = await seedMember(fx.workspaceId, ROLES.CLIENT_OWNER, fx.engagementId);
