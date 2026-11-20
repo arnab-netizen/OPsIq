@@ -119,7 +119,5 @@ describe("OwnerNowViewPage — business selector", () => {
   // STALE_RESPONSE_RACE_AUDIT, for the same finding applied to every other page touched this
   // session. UX-01's own out-of-order coverage (business-context-behavioral.test.tsx) exercises
   // the same guard on a page whose loading indicator is inline rather than full-page.
-  it.todo(
-    "documented above: rapid A→B reselect is not reachable via this page's full-page loading gate — see comment"
-  );
+  // No it.todo is kept for it: a pending test that can never be implemented through this page is a false signal.
 });
