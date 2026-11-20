@@ -4,10 +4,26 @@ name: Migrate Production Database
 # deliberate, human-gated operation. This workflow NEVER seeds, resets, or
 # performs any destructive operation; it only applies pending Prisma migrations.
 #
-# Two modes:
+# Three modes:
 #   MAIN            - applies whatever pending migrations already exist in
 #                      main's own prisma/migrations directory. Unchanged
 #                      behavior from the original single-mode workflow.
+#   MAIN_BATCH      - applies an ORDERED BATCH of migrations already committed to
+#                      main, authorized by a version-controlled, PR-reviewed
+#                      manifest (.claude/production-migration-batches/<batch_id>.json).
+#                      It exists because MAIN's exact-one-pending gate (below)
+#                      always refuses a database that is more than one migration
+#                      behind main. The MAIN gate is NOT weakened: it still runs,
+#                      unchanged, for MAIN. MAIN_BATCH replaces it with a stricter,
+#                      manifest-bound proof (scripts/release/migration-batch.mjs):
+#                      exact main SHA, exact DB host, pending set == manifest (or a
+#                      resumable suffix of it), pre-batch ledger anchor, per-file
+#                      sha256, static additive-only scan, then the SAME single
+#                      `prisma migrate deploy`, a blocking post-batch verification,
+#                      and the SAME runtime-role reconcile gate and redeploy hook.
+#                      Implemented as a mode of THIS workflow (not a second file)
+#                      so exactly one workflow can ever mutate production.
+#                      Runbook: docs/opsiq/ci/PRODUCTION_BATCH_MIGRATION_RUNBOOK.md
 #   PINNED_PREDEPLOY - applies exactly ONE additional, owner-authorized
 #                      migration from an exact, unmerged PR commit SHA,
 #                      before that PR is merged. Used only when application
@@ -83,15 +99,16 @@ on:
         options:
           - production
       mode:
-        description: 'MAIN (migrations already in main) or PINNED_PREDEPLOY (one owner-authorized migration from an exact unmerged PR SHA)'
+        description: 'MAIN (one migration already in main), MAIN_BATCH (a manifest-authorized ordered batch already in main) or PINNED_PREDEPLOY (one owner-authorized migration from an exact unmerged PR SHA)'
         required: true
         default: 'MAIN'
         type: choice
         options:
           - MAIN
+          - MAIN_BATCH
           - PINNED_PREDEPLOY
       confirm:
-        description: 'MAIN: type "MIGRATE PRODUCTION". PINNED_PREDEPLOY: type "MIGRATE PRODUCTION PINNED PREDEPLOY".'
+        description: 'MAIN: type "MIGRATE PRODUCTION". MAIN_BATCH: type "MIGRATE PRODUCTION BATCH". PINNED_PREDEPLOY: type "MIGRATE PRODUCTION PINNED PREDEPLOY".'
         required: true
         type: string
       source_pr:
@@ -103,15 +120,23 @@ on:
         required: false
         type: string
       migration_name:
-        description: 'Required for both modes. Migration folder name that must be the sole pending migration before deploy, e.g. 20260819000001_startup_session_business_handoff. MAIN mode requires this folder to already exist in main; PINNED_PREDEPLOY requires it to NOT yet exist there (see Verify migration-chain integrity).'
-        required: true
+        description: 'Required for both MAIN and PINNED_PREDEPLOY (enforced by their input-validation steps); must be empty for MAIN_BATCH. Migration folder name that must be the sole pending migration before deploy, e.g. 20260819000001_startup_session_business_handoff. MAIN mode requires this folder to already exist in main; PINNED_PREDEPLOY requires it to NOT yet exist there (see Verify migration-chain integrity).'
+        required: false
         type: string
       migration_sha256:
         description: '[PINNED_PREDEPLOY only] SHA-256 checksum of the migration.sql file, as authorized by the owner'
         required: false
         type: string
+      batch_id:
+        description: '[MAIN_BATCH only] Batch manifest id: the file name (without .json) under .claude/production-migration-batches/ in main. The manifest, not this dispatch, defines the migrations.'
+        required: false
+        type: string
+      expected_main_sha:
+        description: '[MAIN_BATCH only] Exact 40-char lowercase SHA of main that was reviewed; the job refuses unless the checked-out HEAD equals it.'
+        required: false
+        type: string
       expected_database_host:
-        description: 'Required for both modes. Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) — never a full URL, credentials, path, or query string'
+        description: 'Required for every mode. Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) — never a full URL, credentials, path, or query string'
         required: true
         type: string
 
@@ -157,9 +182,9 @@ jobs:
       - name: Validate mode input
         run: |
           case "${{ inputs.mode }}" in
-            MAIN|PINNED_PREDEPLOY) ;;
+            MAIN|MAIN_BATCH|PINNED_PREDEPLOY) ;;
             *)
-              echo "::error::Invalid mode '${{ inputs.mode }}'. Must be MAIN or PINNED_PREDEPLOY."
+              echo "::error::Invalid mode '${{ inputs.mode }}'. Must be MAIN, MAIN_BATCH or PINNED_PREDEPLOY."
               exit 1
               ;;
           esac
@@ -170,6 +195,11 @@ jobs:
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
             if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION PINNED PREDEPLOY" ]; then
               echo "::error::PINNED_PREDEPLOY mode requires the confirm input to be exactly \"MIGRATE PRODUCTION PINNED PREDEPLOY\". Aborting."
+              exit 1
+            fi
+          elif [ "${{ inputs.mode }}" == "MAIN_BATCH" ]; then
+            if [ "${{ github.event.inputs.confirm }}" != "MIGRATE PRODUCTION BATCH" ]; then
+              echo "::error::MAIN_BATCH mode requires the confirm input to be exactly \"MIGRATE PRODUCTION BATCH\". Aborting."
               exit 1
             fi
           else
@@ -237,6 +267,31 @@ jobs:
           esac
           echo "✓ MAIN inputs validated: migration=$MIGRATION_NAME"
 
+      - name: Validate MAIN_BATCH inputs
+        if: inputs.mode == 'MAIN_BATCH'
+        env:
+          BATCH_ID: ${{ inputs.batch_id }}
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+          MIGRATION_NAME: ${{ inputs.migration_name }}
+          SOURCE_PR: ${{ inputs.source_pr }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          MIGRATION_SHA256: ${{ inputs.migration_sha256 }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$BATCH_ID" | grep -qE '^[a-z0-9][a-z0-9-]{2,63}$'; then
+            echo "::error::MAIN_BATCH requires batch_id matching ^[a-z0-9][a-z0-9-]{2,63}$ (the manifest file name without .json)."
+            exit 1
+          fi
+          if ! printf '%s' "$EXPECTED_MAIN_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::MAIN_BATCH requires expected_main_sha to be a full 40-character lowercase hex SHA."
+            exit 1
+          fi
+          if [ -n "$MIGRATION_NAME$SOURCE_PR$SOURCE_SHA$MIGRATION_SHA256" ]; then
+            echo "::error::MAIN_BATCH takes only batch_id, expected_main_sha, expected_database_host and confirm. migration_name, source_pr, source_sha and migration_sha256 must be empty: the manifest defines the migrations."
+            exit 1
+          fi
+          echo "✓ MAIN_BATCH inputs validated: batch_id=$BATCH_ID expected_main_sha=$EXPECTED_MAIN_SHA"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -265,6 +320,19 @@ jobs:
           fi
           echo "✓ SHA ancestry verified"
           echo "MIGRATION_SHA=$CURRENT_SHA" >> "$GITHUB_ENV"
+
+      - name: Assert checked-out HEAD equals the reviewed expected_main_sha (MAIN_BATCH, before any database step)
+        if: inputs.mode == 'MAIN_BATCH'
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA=$(git rev-parse HEAD)
+          if [ "$HEAD_SHA" != "$EXPECTED_MAIN_SHA" ]; then
+            echo "::error::Checked-out HEAD ($HEAD_SHA) is not the reviewed expected_main_sha ($EXPECTED_MAIN_SHA); main moved or the wrong SHA was supplied. Re-review the manifest at the new SHA and re-dispatch. No database step has run."
+            exit 1
+          fi
+          echo "✓ HEAD equals expected_main_sha: $HEAD_SHA"
 
       - name: Verify migration exists on current main
         if: inputs.mode == 'MAIN'
@@ -422,7 +490,64 @@ jobs:
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
         run: node scripts/validate-expected-db-host.mjs
 
+      # MAIN_BATCH preflight: READ ONLY and fail closed. Verifies, before ANY mutation: the manifest is valid and in main;
+      # every batch migration.sql matches its manifest sha256 and passes the static additive-only scan; the live ledger has
+      # no failed/unfinished/rolled-back row; the pending set is exactly the manifest (FRESH) or a resumable suffix of it
+      # with the applied prefix finished and checksum-equal (RESUME); the non-batch ledger equals the manifest anchor
+      # (count + hash); none of the objects about to be created already exists. Then it records the recovery point
+      # (UTC time, WAL LSN, database name, ledger anchor). All reads are fixed, parameterized, inside BEGIN READ ONLY with
+      # default_transaction_read_only=on enforced (the script refuses a session that is not read-only).
+      - name: MAIN_BATCH preflight (read-only, fail-closed; records recovery point)
+        if: inputs.mode == 'MAIN_BATCH'
+        env:
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          BATCH_ID: ${{ inputs.batch_id }}
+          OUTPUT_DIR: ${{ runner.temp }}/batch
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          node scripts/release/migration-batch.mjs preflight | tee "$RUNNER_TEMP/batch-preflight.txt"
+          grep -q '^BATCH_GATE=PASS$' "$RUNNER_TEMP/batch-preflight.txt"
+          {
+            echo "## Production batch recovery point (recorded BEFORE any mutation)"
+            echo ""
+            echo '```json'
+            cat "$OUTPUT_DIR/batch-recovery-point.json"
+            echo '```'
+            echo ""
+            echo "Point-in-time-recovery coordinate. The provider's history-retention window on this project is 6 hours: a restore to this point is possible only inside that window."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "BATCH_PREFLIGHT_PASSED=true" >> "$GITHUB_ENV"
+
+      - name: Upload batch recovery point and preflight record (before mutation)
+        if: success() && inputs.mode == 'MAIN_BATCH'
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch-recovery-point
+          path: ${{ runner.temp }}/batch/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: MAIN_BATCH cross-check against prisma migrate status (read-only)
+        if: inputs.mode == 'MAIN_BATCH'
+        env:
+          OPSIQ_DB_TARGET: production
+          OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
+          MIGRATION_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          BATCH_ID: ${{ inputs.batch_id }}
+          OUTPUT_DIR: ${{ runner.temp }}/batch
+        run: |
+          # `prisma migrate status` exits non-zero when migrations are pending (the expected state); guard the capture.
+          set +e
+          PRISMA_STATUS_TEXT=$(npx prisma migrate status 2>&1)
+          PRISMA_STATUS_CODE=$?
+          set -e
+          echo "$PRISMA_STATUS_TEXT" | tee migration-status-before.txt
+          STATUS_EXIT="$PRISMA_STATUS_CODE" STATUS_OUTPUT="$PRISMA_STATUS_TEXT" node scripts/release/migration-batch.mjs status-crosscheck
+          echo "PREFLIGHT_PASSED=true" >> "$GITHUB_ENV"
+
       - name: Check pending migrations (pre-deploy)
+        if: inputs.mode != 'MAIN_BATCH'
         env:
           OPSIQ_DB_TARGET: production
           OPSIQ_ALLOW_PRODUCTION_DB_COMMAND: 'true'
@@ -461,6 +586,18 @@ jobs:
           echo "DEPLOY_STARTED=true" >> "$GITHUB_ENV"
           npx prisma migrate deploy
           echo "DEPLOY_SUCCEEDED=true" >> "$GITHUB_ENV"
+
+      - name: MAIN_BATCH post-batch verification (blocking, ledger equals pre-batch anchor plus batch, every object present)
+        if: inputs.mode == 'MAIN_BATCH'
+        env:
+          DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
+          BATCH_ID: ${{ inputs.batch_id }}
+          PGOPTIONS: "-c default_transaction_read_only=on"
+        run: |
+          set -euo pipefail
+          node scripts/release/migration-batch.mjs postverify | tee "$RUNNER_TEMP/batch-postverify.txt"
+          grep -q '^BATCH_POSTVERIFY=PASS$' "$RUNNER_TEMP/batch-postverify.txt"
+          echo "BATCH_POSTVERIFY_SUCCEEDED=true" >> "$GITHUB_ENV"
 
       - name: Verify migration status (post-deploy)
         env:
@@ -533,7 +670,7 @@ jobs:
       # schema the reconcile would be computed from. A failure here fails the job and the redeploy hook below
       # does not run, so a release whose grants are not verified is never promoted.
       - name: Reconcile runtime role grants (blocking, reconcile-only)
-        if: success() && inputs.mode == 'MAIN' && env.POST_VERIFY_SUCCEEDED == 'true'
+        if: success() && (inputs.mode == 'MAIN' || inputs.mode == 'MAIN_BATCH') && env.POST_VERIFY_SUCCEEDED == 'true'
         env:
           OWNER_DATABASE_URL: ${{ secrets.OPERATOR_DATABASE_URL }}
           EXPECTED_DATABASE_HOST: ${{ inputs.expected_database_host }}
@@ -566,7 +703,7 @@ jobs:
       # main in Vercel (docs/deployment/PRODUCTION_RELEASE_PROCEDURE.md). The hook
       # URL is a secret and is never echoed.
       - name: Trigger production redeploy of main (release gate re-check)
-        if: success() && inputs.mode == 'MAIN' && env.POST_VERIFY_SUCCEEDED == 'true' && env.RUNTIME_ROLE_RECONCILED == 'true'
+        if: success() && (inputs.mode == 'MAIN' || inputs.mode == 'MAIN_BATCH') && env.POST_VERIFY_SUCCEEDED == 'true' && env.RUNTIME_ROLE_RECONCILED == 'true'
         env:
           DEPLOY_HOOK_URL: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK_URL }}
         run: |
@@ -600,6 +737,12 @@ jobs:
           fi
           echo "| Expected DB host (owner-pinned, exact-match enforced — both modes) | \`${{ inputs.expected_database_host }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Migration (owner-authorized, exact-one-pending enforced — both modes) | \`${{ inputs.migration_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ inputs.mode }}" == "MAIN_BATCH" ]; then
+            echo "| Batch id (manifest-authorized) | \`${{ inputs.batch_id }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Expected main SHA (exact, enforced) | \`${{ inputs.expected_main_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Batch preflight passed (manifest, sha256, additive scan, ledger anchor, pending set) | ${BATCH_PREFLIGHT_PASSED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Batch post-verification passed | ${BATCH_POSTVERIFY_SUCCEEDED:-false} |" >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "${{ inputs.mode }}" == "PINNED_PREDEPLOY" ]; then
             echo "| Source PR | #${{ inputs.source_pr }} |" >> "$GITHUB_STEP_SUMMARY"
             echo "| Source SHA (git-object read only, never checked out) | \`${{ inputs.source_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
