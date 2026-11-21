@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PublicLink } from "@/components/navigation/PublicLink";
+import { CONTACT_MAILTO } from "@/lib/contact";
 
-const SUPPORT_EMAIL = "support@opsiq.solutions";
 
 /**
  * Shared footer for logged-out public pages (homepage, resources). Carries the
@@ -27,7 +27,7 @@ export function PublicSiteFooter() {
         <Link href="/terms" className="text-[var(--primary-text)] hover:underline">
           Terms
         </Link>
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[var(--primary-text)] hover:underline">
+        <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
           Support
         </a>
       </nav>

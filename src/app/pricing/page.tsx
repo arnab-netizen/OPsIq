@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PublicLink } from "@/components/navigation/PublicLink";
 import { PUBLIC_GRACE_DAYS_COPY, PUBLIC_PLAN_NAME, PUBLIC_PRICE_DISPLAY } from "@/domain/billing/public-pricing";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata = {
   title: "Pricing | OpsIQ",
@@ -65,7 +66,7 @@ export default function PricingPage() {
           <Link href="/refund-policy" className={LINK}>Refund and cancellation policy</Link>,{" "}
           <Link href="/terms" className={LINK}>Terms</Link>, and{" "}
           <Link href="/privacy" className={LINK}>Privacy</Link>. Questions:{" "}
-          <a href="mailto:support@opsiq.solutions" className={LINK}>support@opsiq.solutions</a>.
+          <a href={CONTACT_MAILTO} className={LINK}>{CONTACT_EMAIL}</a>.
         </p>
       </div>
     </main>

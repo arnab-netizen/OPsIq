@@ -1,6 +1,7 @@
 import { PublicLink } from "@/components/navigation/PublicLink";
 import Link from "next/link";
 import { PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata = {
   title: "Terms | OpsIQ",
@@ -100,8 +101,8 @@ export default function TermsPage() {
           <h2 className="font-semibold text-foreground">Feedback, support, and questions</h2>
           <p className="mt-1">
             Use the &ldquo;Send beta feedback&rdquo; link inside the product, or email{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             .
           </p>
