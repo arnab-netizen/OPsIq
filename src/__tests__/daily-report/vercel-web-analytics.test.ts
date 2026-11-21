@@ -41,6 +41,25 @@ describe("vercel-web-analytics", () => {
     expect(report.metrics[0].status).toBe("CONFIRMED_ZERO");
   });
 
+  it("sends Vercel's documented since/until parameters (never from/to) plus projectId and teamId", async () => {
+    let captured = "";
+    const mod = createVercelWebAnalyticsModule({
+      fetchImpl: async (url) => {
+        captured = String(url);
+        return jsonResponse(200, { total: 1 });
+      },
+    });
+    await mod.run(ctx({ VERCEL_TOKEN: "tok", VERCEL_PROJECT_ID: "prj_1", VERCEL_TEAM_ID: "team_1" }));
+    const q = new URL(captured).searchParams;
+    expect(new URL(captured).pathname).toBe(WEB_ANALYTICS_VISITS_COUNT_PATH);
+    expect(q.get("since")).toBe(WINDOW.start);
+    expect(q.get("until")).toBe(WINDOW.end);
+    expect(q.get("projectId")).toBe("prj_1");
+    expect(q.get("teamId")).toBe("team_1");
+    expect(q.has("from")).toBe(false);
+    expect(q.has("to")).toBe(false);
+  });
+
   it("reports FAILED for a non-404 HTTP error", async () => {
     const mod = createVercelWebAnalyticsModule({ fetchImpl: async () => jsonResponse(500, { error: "boom" }) });
     const report = await mod.run(ctx({ VERCEL_TOKEN: "tok", VERCEL_PROJECT_ID: "prj_1" }));

@@ -1,13 +1,14 @@
 /**
  * Vercel Web Analytics adapter -- module 2 of the daily reporting system.
  *
- * KNOWN BROKEN INTEGRATION, documented and NOT being re-investigated in this task:
+ * KNOWN BROKEN INTEGRATION (the 404 below is unrelated to the since/until correction made 2026-11-21:
+ * Vercel's documented query parameters are `since`/`until`; this adapter previously sent `from`/`to`):
  *   GET /v1/query/web-analytics/visits/count returns 404 despite the Vercel dashboard showing
  *   real visit data for the same project. Root cause unproven (undocumented/renamed endpoint,
  *   wrong query shape, or a plan/scope gate -- unknown).
  *
  * This adapter is built against the documented endpoint contract (Vercel's public Web Analytics
- * query API: GET {apiBase}/v1/query/web-analytics/visits/count?projectId=...&from=...&to=...,
+ * query API: GET {apiBase}/v1/query/web-analytics/visits/count?projectId=...&since=...&until=...,
  * bearer VERCEL_TOKEN) so it is ready to flip on the instant that 404 resolves -- no shape change
  * needed, just the fix landing server-side. Until then:
  *   - no credential configured  -> BLOCKED
@@ -54,8 +55,8 @@ export function createVercelWebAnalyticsModule(opts: VercelWebAnalyticsOptions =
 
       const params = new URLSearchParams({
         projectId,
-        from: ctx.window.start,
-        to: ctx.window.end,
+        since: ctx.window.start,
+        until: ctx.window.end,
       });
       if (teamId) params.set("teamId", teamId);
       const url = `${apiBase}${WEB_ANALYTICS_VISITS_COUNT_PATH}?${params.toString()}`;
