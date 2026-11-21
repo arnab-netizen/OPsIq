@@ -27,8 +27,11 @@ export function PublicSiteFooter() {
         <Link href="/terms" className="text-[var(--primary-text)] hover:underline">
           Terms
         </Link>
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[var(--primary-text)] hover:underline">
+        <PublicLink href="/support" className="text-[var(--primary-text)] hover:underline">
           Support
+        </PublicLink>
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[var(--primary-text)] hover:underline">
+          Contact
         </a>
       </nav>
     </footer>

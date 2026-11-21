@@ -97,6 +97,19 @@ export default function TermsPage() {
         </section>
 
         <section>
+          <h2 className="font-semibold text-foreground">Connected services (QuickBooks Online)</h2>
+          <p className="mt-1">
+            OpsIQ can optionally connect to third-party services such as QuickBooks Online. By connecting, you confirm that you are authorized to grant OpsIQ access to that company data and to have it imported. Connecting is optional, and you can disconnect at any time from the Data page.
+          </p>
+          <p className="mt-1">
+            In this version the QuickBooks connection is read-only. OpsIQ does not create, edit, or delete accounting records in QuickBooks. OpsIQ depends on Intuit services and APIs that we do not control, so imported figures may be delayed, incomplete, or unavailable if Intuit changes or interrupts its service.
+          </p>
+          <p className="mt-1">
+            OpsIQ is not your accounting system of record and is not an accountant, bookkeeper, tax preparer, or financial adviser. You remain responsible for your accounting records and for checking figures against QuickBooks before relying on them. Disconnecting stops further imports and revokes the stored access; figures already imported remain in your workspace. See the Privacy page for how deletion requests work and their current limits.
+          </p>
+        </section>
+
+        <section>
           <h2 className="font-semibold text-foreground">Feedback, support, and questions</h2>
           <p className="mt-1">
             Use the &ldquo;Send beta feedback&rdquo; link inside the product, or email{" "}
