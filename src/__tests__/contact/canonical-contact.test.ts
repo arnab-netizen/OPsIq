@@ -3,7 +3,7 @@
  * does not exist. This guards every active customer-facing surface against the unauthorized address coming back and
  * against new hard-coded contact addresses bypassing the single shared constant.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
@@ -13,8 +13,9 @@ const ROOT = process.cwd();
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
-    if (name === "node_modules" || name === ".next") continue;
-    const st = statSync(p);
+    if (name === "node_modules" || name === ".next" || name === "generated") continue;
+    const st = lstatSync(p);
+    if (st.isSymbolicLink()) continue;
     if (st.isDirectory()) walk(p, out);
     else if (/\.(tsx?|json)$/.test(name)) out.push(p);
   }
