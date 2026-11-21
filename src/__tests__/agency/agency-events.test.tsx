@@ -112,8 +112,8 @@ describe("optional feedback link", () => {
     expect(screen.queryByRole("link", { name: /email feedback/i })).toBeNull();
     submit();
     const link = screen.getByRole("link", { name: /email feedback/i }) as HTMLAnchorElement;
-    expect(link.getAttribute("href")).toMatch(/^mailto:support@opsiq\.solutions\?/);
-    expect(link.textContent).toMatch(/support@opsiq\.solutions/);
+    expect(link.getAttribute("href")).toMatch(/^mailto:contact\.us@opsiq\.solutions\?/);
+    expect(link.textContent).toMatch(/contact\.us@opsiq\.solutions/);
     expect(document.body.textContent).toMatch(/Was this useful\? Tell us what worked or what was missing\./);
     expect(document.body.textContent).toMatch(/nothing is sent unless you send it/);
   });
@@ -124,6 +124,7 @@ describe("optional feedback link", () => {
     submit();
     const href = (screen.getByRole("link", { name: /email feedback/i }) as HTMLAnchorElement).getAttribute("href") ?? "";
     const decoded = decodeURIComponent(href);
+    expect(decoded).not.toMatch(/support@/i);
     expect(decoded).not.toMatch(/424242|100000|55000|30000|\d{3,}|%|margin is|fix this first/i);
     const url = new URL(href);
     expect(url.searchParams.get("subject")).toBe("Agency Decision Diagnostic feedback");

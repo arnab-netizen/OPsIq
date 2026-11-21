@@ -1,7 +1,9 @@
 "use client";
 
-/** Existing public support mailbox (same address as the site footer). */
-export const AGENCY_FEEDBACK_EMAIL = "support@opsiq.solutions";
+import { CONTACT_EMAIL } from "@/lib/contact";
+
+/** The one authorized OpsIQ contact mailbox (shared constant). */
+export const AGENCY_FEEDBACK_EMAIL = CONTACT_EMAIL;
 
 /**
  * Fixed text only. The link never includes the numbers entered, the result, or anything derived from them;
