@@ -127,7 +127,7 @@ describe("full-document navigation boundary (isDocumentNavigationRequired)", () 
     (h) => expect(isDocumentNavigationRequired(h)).toBe(false),
   );
   it("does not concern external, mailto/tel or same-page targets", () => {
-    for (const h of ["https://example.com/login", "mailto:support@opsiq.solutions", "tel:+1555", "//cdn.example.com/x", "#top"]) {
+    for (const h of ["https://example.com/login", "mailto:contact.us@opsiq.solutions", "tel:+1555", "//cdn.example.com/x", "#top"]) {
       expect(isDocumentNavigationRequired(h)).toBe(false);
     }
   });

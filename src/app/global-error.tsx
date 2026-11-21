@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { captureError } from "@/infra/observability";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 /**
  * Global (root) error boundary. Must render its own <html>/<body>.
@@ -47,8 +48,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           </div>
           <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "1rem" }}>
             Contact beta support:{" "}
-            <a href="mailto:support@opsiq.solutions" style={{ color: "#4f46e5" }}>
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} style={{ color: "#4f46e5" }}>
+              {CONTACT_EMAIL}
             </a>
           </p>
         </div>

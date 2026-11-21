@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PublicBetaText } from "@/components/landing/PublicBetaCta";
 import { AnalyticsPreferencesButton } from "@/components/analytics/AnalyticsPreferencesButton";
 import { resolveClarityProjectId } from "@/lib/analytics/clarity-policy";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata = {
   title: "Privacy | OpsIQ",
@@ -109,8 +110,8 @@ export default function PrivacyPage() {
             ) : null}
             . Withdrawing stops new recording and reloads the page. To ask about recordings
             already collected, email{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             . This is separate from the Vercel Web Analytics described above, which does not use
             cookies and does not depend on this choice.
@@ -169,8 +170,8 @@ export default function PrivacyPage() {
           <p className="mt-1">
             You can request a copy of your data, a correction, or deletion of your account and
             data at any time by emailing{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             . These requests are currently fulfilled manually by our team, not instantly or
             automatically — we aim to acknowledge every request promptly and will tell you when
@@ -182,8 +183,8 @@ export default function PrivacyPage() {
           <h2 className="font-semibold text-foreground">Privacy contact</h2>
           <p className="mt-1">
             Questions about this notice, or any privacy request:{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             .
           </p>
