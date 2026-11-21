@@ -47,8 +47,9 @@ export default function AgencyDiagnosticPage() {
 
         <p className="mt-6 max-w-2xl text-xs leading-relaxed text-muted-foreground">
           Educational tool, not financial, tax or legal advice. The numbers you enter stay in your browser and are not sent to or stored by
-          OpsIQ. We may collect privacy-preserving usage analytics such as page views, diagnostic starts and completions, and CTA
-          clicks. These events do not include the numbers you enter. There is no email capture. Thresholds (delivery margin above 50% of adjusted gross income, overhead at or below
+          OpsIQ. We may collect privacy-preserving usage analytics such as page views, diagnostic starts and completions (recorded
+          only as whether the illustrative example values were changed), feedback-link clicks, and CTA clicks. These events do not
+          include the numbers you enter. There is no email capture. If you choose to email feedback, we receive only what you write. Thresholds (delivery margin above 50% of adjusted gross income, overhead at or below
           30%) come from the Parakeeto agency profitability guide. The order in which issues are ranked is an OpsIQ working heuristic,
           not a published benchmark. The starting numbers are a worked example, not real data.
         </p>
