@@ -135,6 +135,14 @@ on:
         description: '[MAIN_BATCH only] Exact 40-char lowercase SHA of main that was reviewed; the job refuses unless the checked-out HEAD equals it.'
         required: false
         type: string
+      redeploy_after_migration:
+        description: 'NO (default): migration only, the production deploy hook is NEVER called, even if VERCEL_PRODUCTION_DEPLOY_HOOK_URL is populated. YES: also call the deploy hook after the migration, runtime-role reconcile and verification pass (a production redeploy of main, which needs its own separate owner authorization).'
+        required: false
+        default: 'NO'
+        type: choice
+        options:
+          - 'NO'
+          - 'YES'
       expected_database_host:
         description: 'Required for every mode. Exact owner-authorized production DB hostname, bare hostname only (e.g. ep-xxxx.region.aws.neon.tech) — never a full URL, credentials, path, or query string'
         required: true
@@ -191,6 +199,19 @@ jobs:
               ;;
           esac
           echo "✓ Mode: $INPUT_MODE"
+
+      - name: Validate redeploy_after_migration input (fail-closed; anything but exactly YES means no redeploy)
+        env:
+          INPUT_REDEPLOY: ${{ inputs.redeploy_after_migration }}
+        run: |
+          case "$INPUT_REDEPLOY" in
+            NO|YES) ;;
+            *)
+              echo "::error::Invalid redeploy_after_migration '$INPUT_REDEPLOY'. Must be exactly NO or YES."
+              exit 1
+              ;;
+          esac
+          echo "✓ redeploy_after_migration: $INPUT_REDEPLOY"
 
       - name: Confirm explicit intent
         env:
@@ -708,7 +729,7 @@ jobs:
       # main in Vercel (docs/deployment/PRODUCTION_RELEASE_PROCEDURE.md). The hook
       # URL is a secret and is never echoed.
       - name: Trigger production redeploy of main (release gate re-check)
-        if: success() && (inputs.mode == 'MAIN' || inputs.mode == 'MAIN_BATCH') && env.POST_VERIFY_SUCCEEDED == 'true' && env.RUNTIME_ROLE_RECONCILED == 'true'
+        if: success() && (inputs.mode == 'MAIN' || inputs.mode == 'MAIN_BATCH') && env.POST_VERIFY_SUCCEEDED == 'true' && env.RUNTIME_ROLE_RECONCILED == 'true' && inputs.redeploy_after_migration == 'YES'
         env:
           DEPLOY_HOOK_URL: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK_URL }}
         run: |
@@ -719,6 +740,12 @@ jobs:
           fi
           curl -fsS -X POST --max-time 30 -o /dev/null "$DEPLOY_HOOK_URL"
           echo "REDEPLOY=triggered" >> "$GITHUB_ENV"
+
+      - name: Skip production redeploy (migration only, no hook request is made)
+        if: success() && (inputs.mode == 'MAIN' || inputs.mode == 'MAIN_BATCH') && env.POST_VERIFY_SUCCEEDED == 'true' && env.RUNTIME_ROLE_RECONCILED == 'true' && inputs.redeploy_after_migration != 'YES'
+        run: |
+          echo "REDEPLOY=skipped_migration_only" >> "$GITHUB_ENV"
+          echo "::notice::Migration only: no production redeploy was requested (redeploy_after_migration is not YES). Production keeps serving its current build; a release needs its own owner authorization."
 
       - name: Migration summary
         if: always()
