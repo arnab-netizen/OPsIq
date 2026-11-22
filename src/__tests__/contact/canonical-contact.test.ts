@@ -63,11 +63,13 @@ describe("canonical contact address", () => {
     }
   });
 
-  it("no active source hard-codes any other @opsiq.solutions mailbox", () => {
+  it("no active source hard-codes a literal mailto: address outside the shared constant (system sender addresses remain allowed)", () => {
     const offenders: string[] = [];
     for (const f of appFiles) {
-      for (const m of readFileSync(f, "utf8").matchAll(/[A-Za-z0-9._%+-]+@opsiq\.solutions/g)) {
-        if (m[0] !== "contact.us@opsiq.solutions") offenders.push(`${relative(ROOT, f)}: ${m[0]}`);
+      if (relative(ROOT, f) === "src/lib/contact.ts") continue;
+      for (const m of readFileSync(f, "utf8").matchAll(/mailto:\s*[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/g)) {
+        // Validators and policy code may mention the scheme with example addresses; real links must use CONTACT_MAILTO.
+        if (!/resource-content|clarity-policy/.test(f)) offenders.push(`${relative(ROOT, f)}: ${m[0]}`);
       }
     }
     expect(offenders).toEqual([]);
