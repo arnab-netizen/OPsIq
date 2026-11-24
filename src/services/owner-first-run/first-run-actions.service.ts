@@ -11,6 +11,7 @@ import { READ_STALE_CODE, READ_STALE_MESSAGE as STALE_READ_COPY } from "@/domain
 import { isReadCurrentForWrite } from "@/services/owner-first-run/first-run-evidence.reader";
 import { amendmentChangesNothing } from "@/domain/owner-first-run/improve-target";
 import { isAuthoritativeEvidence } from "@/domain/owner-finance/evidence-quality";
+import { buildFinanceAcceptanceContract } from "@/domain/owner-first-run/acceptance-contract";
 import type { FinancialSnapshotAmendInput } from "@/domain/owner-finance/validation";
 import { amendFinancialSnapshot, getFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
@@ -51,19 +52,24 @@ export async function acceptFirstResultAction(
       { fieldErrors: [] },
     );
   }
-  const action = view.presentedAction;
+  const presented = view.presentedAction;
+  // Structured, scoped facts only: the persisted action and the persisted cycle the read was made from (never recommendation text).
+  const actionId = view.candidateId.split(":")[2];
+  const [actionRow, cycleRow] = await Promise.all([
+    db.ownerFinanceAction.findFirst({ where: { id: actionId, workspaceId, businessId }, select: { id: true, cycleId: true, findingCode: true } }),
+    db.ownerFinanceCycle.findFirst({ where: { id: view.cycleId, workspaceId, businessId }, select: { id: true, dataConfidenceScore: true } }),
+  ]);
+  if (!actionRow || !cycleRow) throw readStale();
+  const { contract } = buildFinanceAcceptanceContract({
+    action: { id: actionRow.id, cycleId: actionRow.cycleId, title: presented.title, verificationMetric: presented.verificationMetric, expectedTimeframeDays: presented.expectedTimeframeDays, findingCode: actionRow.findingCode },
+    readCycle: { id: cycleRow.id, dataConfidenceScore: typeof cycleRow.dataConfidenceScore === "number" ? cycleRow.dataConfidenceScore : null },
+    authoritativeEvidence: isAuthoritativeEvidence(view.read.evidenceQuality),
+  });
   const result = await recordOwnerDecision(workspaceId, actorId, businessId, {
     candidateId: view.candidateId,
     state: "ACCEPTED",
     idempotencyKey: `first-run-accept:${idempotencyKey}`,
-    contract: {
-      commitmentDescription: action.title,
-      verificationMetric: action.verificationMetric,
-      observationWindowDays: Math.max(1, action.expectedTimeframeDays),
-      // Only evidence the owner stated is from their records is authoritative. Estimates AND legacy/unspecified (NULL)
-      // provenance are owner-entered: later verification must not treat them as measured truth.
-      expectedMeasurementSource: isAuthoritativeEvidence(view.read.evidenceQuality) ? "AUTHORITATIVE_SNAPSHOT" : "OWNER_ENTERED",
-    },
+    contract,
   }, {
     guard: (tx) => assertReadStillCurrent(tx, workspaceId, businessId, view.snapshotId, view.cycleId),
   });

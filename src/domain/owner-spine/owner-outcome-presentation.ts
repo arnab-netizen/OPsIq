@@ -11,6 +11,7 @@
  *   - "not assessed" is never "no relationship";
  *   - unknown is never zero.
  */
+import { humanizeMetricKey } from "@/lib/metric-label";
 import type {
   OutcomeCausalAttribution,
   OutcomeExecutionStatus,
@@ -242,7 +243,7 @@ export function contractLines(d: OwnerDecisionRecordDto): ContractLine[] {
     : `${d.baselineValue}${d.baselineProvenance ? ` (${BASELINE_PROVENANCE_LABEL[d.baselineProvenance] ?? d.baselineProvenance})` : ""}`;
   return [
     { label: "What you will do", value: d.commitmentDescription ?? "Not stated" },
-    { label: "What will be measured", value: d.verificationMetric ?? "Not set" },
+    { label: "What will be measured", value: d.verificationMetric ? humanizeMetricKey(d.verificationMetric) : "Not set" },
     { label: "Starting value", value: baseline },
     { label: "Direction", value: DIRECTION_LABEL[d.targetDirection ?? "unknown"] ?? (d.targetDirection ?? "Direction not specified") },
     { label: "Target", value: d.targetValue === null ? "No target set" : String(d.targetValue) },
@@ -250,6 +251,30 @@ export function contractLines(d: OwnerDecisionRecordDto): ContractLine[] {
     { label: "Planned finish", value: d.intendedCompletionAt ? d.intendedCompletionAt.slice(0, 10) : "Not set" },
     { label: "Measured from", value: d.expectedMeasurementSource ? (MEASUREMENT_SOURCE_LABEL[d.expectedMeasurementSource] ?? d.expectedMeasurementSource) : "Not set" },
   ];
+}
+
+/**
+ * What the owner can still supply when the recorded commitment is incomplete (unknown is never filled in for them).
+ * An earlier OpsIQ estimate is never a target: only a target the owner records counts.
+ */
+export function contractGuidance(d: OwnerDecisionRecordDto): string[] {
+  if (!decisionCommits(d.decisionState)) return [];
+  const out: string[] = [];
+  if (d.baselineValue === null) out.push("No starting value was recorded, so OpsIQ cannot say how far this has moved. You can add it under “Update what you committed to”.");
+  if (d.targetDirection !== "up" && d.targetDirection !== "down") out.push("It is not recorded whether higher or lower is better for this measure, so a change cannot be judged as an improvement or a setback.");
+  if (d.targetValue === null) out.push("No target is set. Any figure OpsIQ suggested earlier was an estimate, not a commitment. Set your own target if you want the result judged against it.");
+  return out;
+}
+
+/**
+ * Why a check made before the work is recorded cannot count, in owner terms. A saved correction or a newer diagnosis shows the
+ * information improved; it does not show that the planned work was done, and it is never treated as completion.
+ */
+export function earlyCheckExplanation(d: OwnerDecisionRecordDto | null, a: OwnerOutcomeAssessmentDto | null): string | null {
+  if (!a || !d || !decisionCommits(d.decisionState)) return null;
+  if (a.executionStatus !== "NOT_STARTED" && a.executionStatus !== "IN_PROGRESS") return null;
+  const plan = d.observationWindowDays === null ? "the measurement period you set" : `${d.observationWindowDays} days`;
+  return `OpsIQ has no record that the planned work was finished. Saving corrected figures or seeing a newer reading shows your information improved; it does not count as doing the work. Mark the action done with what you did, then the ${plan} measurement starts from that date. This check was requested on ${a.assessedAt.slice(0, 10)}, before that, so it cannot count as the planned measurement.`;
 }
 
 // ── Recommendation snapshot (what OpsIQ originally said) ──────────────────────────────────────────────────────────
