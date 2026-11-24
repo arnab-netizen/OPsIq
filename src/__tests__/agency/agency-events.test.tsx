@@ -117,3 +117,19 @@ describe("privacy copy and page behaviour", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("result invitation click event", () => {
+  it("reports location 'result' only for the CTA inside the result invitation, with no form content", () => {
+    render(
+      <div>
+        <div data-agency-cta="result">
+          <button type="button">Request beta access</button>
+        </div>
+        <AgencyCtaTracker />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /request beta access/i }));
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith("AGENCY_CTA_CLICK", { location: "result" });
+  });
+});
