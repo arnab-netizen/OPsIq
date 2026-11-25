@@ -1,0 +1,64 @@
+name: GSC read-only access probe (branch-only, temporary)
+
+# Verifies, once, that the owner-configured Workload Identity Federation service account can read
+# Search Console for sc-domain:opsiq.solutions. Read-only: scope webmasters.readonly; no database, no
+# secrets, no writes anywhere. Triggers ONLY on pushes to this probe branch; never on pull_request.
+# This file is not intended for main and is removed once the probe result is recorded.
+
+on:
+  push:
+    branches: ['claude/r16-gsc-readonly-probe']
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: gsc-readonly-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Search Console read-only probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check configuration is present
+        env:
+          WIP: ${{ vars.GSC_WORKLOAD_IDENTITY_PROVIDER }}
+          SA: ${{ vars.GSC_SERVICE_ACCOUNT }}
+        run: |
+          [ -n "$WIP" ] && [ -n "$SA" ] || { echo "::error::GSC WIF variables missing"; exit 1; }
+          echo "WIF variables present"
+
+      - name: Authenticate to Google Cloud (WIF, webmasters.readonly only)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GSC_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GSC_SERVICE_ACCOUNT }}
+          token_format: 'access_token'
+          access_token_scopes: 'https://www.googleapis.com/auth/webmasters.readonly'
+
+      - name: Query Search Console (read-only)
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set +e
+          SITE='sc-domain:opsiq.solutions'
+          ENC='sc-domain%3Aopsiq.solutions'
+          B='https://www.googleapis.com/webmasters/v3'
+          echo "== sites.list (which properties this identity can see, and its permission level)"
+          curl -s -m 30 -w '\nHTTP %{http_code}\n' -H "Authorization: Bearer $TOKEN" "$B/sites"
+          END=$(date -u -d '3 days ago' +%F); START=$(date -u -d '31 days ago' +%F)
+          echo "== window $START..$END (GSC data lags up to 3 days)"
+          q() { curl -s -m 60 -w '\nHTTP %{http_code}\n' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' "$B/sites/$ENC/searchAnalytics/query" -d "$1"; }
+          echo "== totals"
+          q "{\"startDate\":\"$START\",\"endDate\":\"$END\"}"
+          echo "== top queries"
+          q "{\"startDate\":\"$START\",\"endDate\":\"$END\",\"dimensions\":[\"query\"],\"rowLimit\":10}"
+          echo "== top pages"
+          q "{\"startDate\":\"$START\",\"endDate\":\"$END\",\"dimensions\":[\"page\"],\"rowLimit\":10}"
+          echo "== url inspection (homepage)"
+          curl -s -m 60 -w '\nHTTP %{http_code}\n' -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' 'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect' -d "{\"inspectionUrl\":\"https://opsiq.solutions/\",\"siteUrl\":\"$SITE\"}"
+          exit 0
