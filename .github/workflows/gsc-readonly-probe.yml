@@ -2,12 +2,12 @@ name: GSC read-only access probe (branch-only, temporary)
 
 # Verifies, once, that the owner-configured Workload Identity Federation service account can read
 # Search Console for sc-domain:opsiq.solutions. Read-only: scope webmasters.readonly; no database, no
-# secrets, no writes anywhere. Triggers ONLY on pushes to this probe branch; never on pull_request.
-# This file is not intended for main and is removed once the probe result is recorded.
+# secrets, no writes anywhere. workflow_dispatch only (never pull_request/push) and it refuses to run
+# off main, because the WIF attribute condition rejects tokens from other refs (verified by a branch
+# run on 2026-11-25: 'The given credential is rejected by the attribute condition'). Remove after use.
 
 on:
-  push:
-    branches: ['claude/r16-gsc-readonly-probe']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,6 +22,7 @@ jobs:
     name: Search Console read-only probe
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Check configuration is present
         env:
