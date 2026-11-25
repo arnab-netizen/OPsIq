@@ -52,6 +52,13 @@ describe("/privacy", () => {
     expect(t).toContain("This is separate from the Vercel Web Analytics described above, which does not use cookies and does not depend on this choice.");
   });
 
+  it("discloses the /agency funnel counters and the free tools without altering the existing Vercel sentence", async () => {
+    const t = text(await page({}));
+    expect(t).toContain("counts visits to the free profit-margin calculator and the agency diagnostic page");
+    expect(t).toContain("how many visitors start the diagnostic, how many complete it, and which beta-access button on the page was clicked");
+    expect(t).toContain("None of what you type into the diagnostic, and none of its result, is sent.");
+  });
+
   it("offers the 'Analytics preferences' control only where Clarity is configured", async () => {
     expect((await page({ VERCEL_ENV: "production", NEXT_PUBLIC_CLARITY_PROJECT_ID: "ymoglnln74" })).querySelector('[data-testid="analytics-preferences"]')).not.toBeNull();
     cleanup();
