@@ -59,6 +59,14 @@ export default function PrivacyPage() {
             account information, and does not record visits to signed-in pages.
           </p>
           <p className="mt-2">
+            <strong>Free tools and the agency diagnostic.</strong> The same Vercel Web Analytics also
+            counts visits to the free profit-margin calculator and the agency diagnostic page. On the
+            agency diagnostic page it additionally counts, as plain totals, how many visitors start the
+            diagnostic, how many complete it, and which beta-access button on the page was clicked. None
+            of what you type into the diagnostic, and none of its result, is sent. These counts use no
+            cookies and do not depend on the Clarity choice described below.
+          </p>
+          <p className="mt-2">
             <strong>Billing.</strong> If you subscribe to a paid plan, Paddle collects your payment details, billing
             name and address, and tax information and handles your payment as Merchant of Record under{" "}
             <a href="https://www.paddle.com/legal/privacy" className="text-[var(--primary-text)] hover:underline">Paddle&rsquo;s privacy policy</a>.
