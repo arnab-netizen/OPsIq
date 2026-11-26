@@ -109,7 +109,7 @@ describe("buildResourceJsonLd", () => {
 });
 
 describe("buildSitemap", () => {
-  const baseline = ["/", "/about", "/tools", "/tools/profit-margin-calculator", "/tools/client-profitability-calculator", "/tools/agency-retainer-pricing-calculator", "/tools/agency-utilization-calculator", "/tools/agency-scope-creep-calculator", "/tools/agency-hourly-rate-calculator", "/tools/agency-capacity-calculator", "/agency", "/privacy", "/terms", "/pricing", "/refund-policy"].map((p) => `https://opsiq.solutions${p}`);
+  const baseline = ["/", "/about", "/tools/profit-margin-calculator", "/agency", "/privacy", "/terms", "/pricing", "/refund-policy"].map((p) => `https://opsiq.solutions${p}`);
 
   it("keeps the baseline public pages and adds the resource index with no resources", () => {
     const urls = buildSitemap([]).map((e) => e.url);

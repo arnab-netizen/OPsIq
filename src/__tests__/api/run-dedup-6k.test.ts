@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => ({
   checkRateLimit: vi.fn().mockReturnValue(true),
   isDuplicateRequest: vi.fn().mockReturnValue(false),
   getRequestHash: vi.fn().mockReturnValue("hash-unique-1"),
-  resolveServerRole: vi.fn().mockResolvedValue("ADMIN"),
+  deriveServerRole: vi.fn().mockReturnValue("ADMIN"),
   canEdit: vi.fn().mockReturnValue(true),
   recordLifecycleStage: vi.fn().mockResolvedValue(undefined),
   runSystem: vi.fn(),
@@ -69,7 +69,7 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
 }));
 
 vi.mock("@/services/auth/server-role", () => ({
-  resolveServerRole: mocks.resolveServerRole,
+  deriveServerRole: mocks.deriveServerRole,
 }));
 vi.mock("@/services/auth/access", () => ({
   canEdit: mocks.canEdit,
@@ -172,7 +172,7 @@ beforeEach(() => {
   mocks.checkRateLimit.mockReturnValue(true);
   mocks.isDuplicateRequest.mockReturnValue(false);
   mocks.getRequestHash.mockReturnValue("hash-unique-1");
-  mocks.resolveServerRole.mockResolvedValue("ADMIN");
+  mocks.deriveServerRole.mockReturnValue("ADMIN");
   mocks.canEdit.mockReturnValue(true);
   mocks.validateDependencies.mockReturnValue({ valid: true });
   mocks.emitAuditEvent.mockResolvedValue(undefined);
@@ -326,8 +326,8 @@ describe("Phase 6K — run route in-process duplicate detection", () => {
     );
   });
 
-  it("resolveServerRole is called as part of role verification", async () => {
+  it("deriveServerRole is called as part of role verification", async () => {
     try { await runPOST(makeCtx() as never); } catch { /* expected */ }
-    expect(mocks.resolveServerRole).toHaveBeenCalled();
+    expect(mocks.deriveServerRole).toHaveBeenCalled();
   });
 });

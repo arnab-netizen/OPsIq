@@ -60,10 +60,7 @@ describe("public → login boundary on the real header", () => {
     expect(signIn.getAttribute("data-soft-nav")).toBeNull();
     // the logo link back home is a full-document load too (the homepage redirects signed-in visitors into the app)
     expect(screen.getByRole("link", { name: /opsiq home/i }).getAttribute("data-soft-nav")).toBeNull();
-    // the calculator hub is deliberately NOT Clarity-eligible (its calculators take payroll and client figures), so the
-    // header link into it is a full-document navigation too; public-to-public navigation into eligible pages stays client-side
-    const calculators = screen.getByRole("link", { name: /calculators/i });
-    expect(calculators.getAttribute("href")).toBe("/tools");
-    expect(calculators.getAttribute("data-soft-nav")).toBeNull();
+    // while public-to-public navigation stays client-side
+    expect(screen.getByRole("link", { name: /calculators/i }).getAttribute("data-soft-nav")).toBe("true");
   });
 });

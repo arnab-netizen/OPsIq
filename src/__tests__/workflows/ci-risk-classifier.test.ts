@@ -692,6 +692,56 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
     });
   });
 
+  describe("production release path requires db-verify", () => {
+    it.each([
+      "scripts/release/runtime-role-reconcile-gate.mjs",
+      "scripts/release/release-plan.mjs",
+      "scripts/db/opsiq-role-cutover.ts",
+      "src/services/privacy-erasure/role-topology.ts",
+      ".github/workflows/migrate-production.yml",
+      ".github/workflows/reconcile-runtime-role.yml",
+      "src/__tests__/deployment/production-release-reconcile.test.ts",
+      // MAIN_BATCH production migration path (manifest, gates, scan, tests)
+      ".claude/production-migration-batches/2026-11-20-quota-reservations-and-stripe-ordering.json",
+      ".claude/production-migration-batches/any-future-batch.json",
+      "scripts/release/migration-batch.mjs",
+      "scripts/release/migration-additive-scan.mjs",
+      "src/__tests__/deployment/migration-batch-gates.test.ts",
+      "src/__tests__/deployment/migration-additive-scan.test.ts",
+      "src/__tests__/deployment/migrate-workflow-main-batch-safety.test.ts",
+      "src/__tests__/deployment/production-batch-migration-recovery.db.test.ts",
+    ])("%s sets dbRequired", (file) => {
+      const result = classifyChangeSet([file]);
+      expect(result.tier).toBe(TIERS.DB_RUNTIME);
+      expect(result.dbRequired).toBe(true);
+    });
+  });
+
+  describe("MAIN_BATCH path is not diluted by cheaper rules", () => {
+    it("the batch manifest directory only matches exact manifest json files; a nested path or a non-json file there is not silently DB-tier by this rule", () => {
+      expect(classifyChangeSet([".claude/production-migration-batches/README.md"]).tier).toBe(TIERS.DOCS_ONLY);
+    });
+    it("the full real change set of the MAIN_BATCH work classifies DB_RUNTIME with dbRequired true (docs alone would not)", () => {
+      const files = [
+        ".claude/production-migration-batches/2026-11-20-quota-reservations-and-stripe-ordering.json",
+        ".github/workflows/migrate-production.yml",
+        "docs/opsiq/ci/PRODUCTION_BATCH_MIGRATION_RUNBOOK.md",
+        "scripts/ci-risk-classifier.mjs",
+        "scripts/release/migration-additive-scan.mjs",
+        "scripts/release/migration-batch.mjs",
+        "src/__tests__/deployment/migrate-workflow-main-batch-safety.test.ts",
+        "src/__tests__/deployment/migration-additive-scan.test.ts",
+        "src/__tests__/deployment/migration-batch-gates.test.ts",
+        "src/__tests__/deployment/production-batch-migration-recovery.db.test.ts",
+        "src/__tests__/workflows/ci-risk-classifier.test.ts",
+      ];
+      const result = classifyChangeSet(files);
+      expect(result.tier).toBe(TIERS.DB_RUNTIME);
+      expect(result.dbRequired).toBe(true);
+      expect(classifyChangeSet(["docs/opsiq/ci/PRODUCTION_BATCH_MIGRATION_RUNBOOK.md"]).dbRequired).toBe(false);
+    });
+  });
+
   // CI-MIN-01: a workflow-only / named-CI-script-only PR (CI_GOVERNANCE
   // tier) must not run the ~28,000-test broad application suite -- it gets
   // its own narrow TARGETED_CI_GOVERNANCE mode instead, the same pattern

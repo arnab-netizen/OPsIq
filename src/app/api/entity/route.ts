@@ -1,7 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError, ValidationError } from "@/infra/errors";
 import { createEntity, getEntities } from "@/services/entity/store";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { canEdit } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -18,25 +18,25 @@ export const GET = withCanonicalEnforcement(
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     // Enforce server-side auth
-    const role = await resolveServerRole();
+    const role = deriveServerRole(ctx.policy);
     if (!role) {
       throw new UnauthorizedError("Unauthorized");
     }
 
     if (!canEdit(role)) {
-      throw new Error("Insufficient permissions");
+      throw new ForbiddenError("Insufficient permissions");
     }
 
     const body = await ctx.request!.json();
     const { name, type } = body;
 
     if (!name || !type) {
-      throw new Error("Missing required fields: name, type");
+      throw new ValidationError("Missing required fields: name, type");
     }
 
     const validTypes = ["business_unit", "client", "project"];
     if (!validTypes.includes(type)) {
-      throw new Error("Invalid type: must be business_unit, client, or project");
+      throw new ValidationError("Invalid type: must be business_unit, client, or project");
     }
 
     const entityId = randomUUID();

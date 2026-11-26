@@ -7,8 +7,6 @@ import { ResourceDefaultCta } from "@/components/resources/ResourceCtaPanel";
 import { ProfitCashCalculator } from "@/components/tools/ProfitCashCalculator";
 import { DEFAULT_SOCIAL_IMAGE, serializeJsonLd } from "@/services/resources/resource-seo";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
-import { CalculatorEventsTracker } from "@/components/tools/agency/CalculatorEventsTracker";
-import { AGENCY_DIAGNOSTIC_PATH, TOOLS_HUB_PATH, getAgencyTool } from "@/services/tools/agency/registry";
 
 const PATH = "/tools/profit-margin-calculator";
 // Title kept at 60 characters or fewer and description at 155 or fewer so search results do not truncate them.
@@ -183,40 +181,7 @@ export default function ProfitMarginCalculatorPage() {
           ))}
         </section>
 
-        <section className="mt-12 max-w-2xl space-y-3 rounded-lg border border-border bg-muted p-5 text-base leading-relaxed" aria-labelledby="agency-heading">
-          <h2 id="agency-heading" className="font-display text-2xl font-bold tracking-tight">
-            Run an agency?
-          </h2>
-          <p>
-            Agency margins have their own wrinkles: pass-through costs, delivery hours and scope that grows after the fee is agreed. The free{" "}
-            <PublicLink href={AGENCY_DIAGNOSTIC_PATH} data-calc-link="agency" className="font-medium text-[var(--primary-text)] underline">
-              agency decision diagnostic
-            </PublicLink>{" "}
-            takes ten monthly numbers and returns the one issue most worth fixing first. It needs no signup and the numbers stay in your browser.
-          </p>
-          <p className="text-sm">
-            Related agency calculators:{" "}
-            <PublicLink href={getAgencyTool("client-profitability").path} data-calc-link="related" className="text-[var(--primary-text)] underline">
-              client profitability
-            </PublicLink>
-            ,{" "}
-            <PublicLink href={getAgencyTool("retainer-pricing").path} data-calc-link="related" className="text-[var(--primary-text)] underline">
-              retainer pricing
-            </PublicLink>
-            ,{" "}
-            <PublicLink href={getAgencyTool("hourly-rate").path} data-calc-link="related" className="text-[var(--primary-text)] underline">
-              hourly rate
-            </PublicLink>{" "}
-            and{" "}
-            <PublicLink href={TOOLS_HUB_PATH} data-calc-link="related" className="text-[var(--primary-text)] underline">
-              all calculators
-            </PublicLink>
-            .
-          </p>
-        </section>
-
         <ResourceDefaultCta />
-        <CalculatorEventsTracker calculator="profit-margin" />
       </div>
 
       <PublicSiteFooter />

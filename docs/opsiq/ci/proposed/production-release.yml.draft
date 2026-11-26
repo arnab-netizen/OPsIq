@@ -1,0 +1,106 @@
+name: Production Release
+
+# Native, event-driven release trigger: a push to main (i.e. a merged, required-checks-green PR) starts the
+# pipeline with NO external workflow dispatch:
+#
+#   push to main -> plan (exact SHA, CI green at that SHA, <=1 new migration)
+#                -> migrate-production.yml (called as a reusable workflow, MAIN mode:
+#                   exact-host pin -> migration -> runtime-role reconcile + strict least-privilege gate -> Vercel redeploy hook)
+#
+# Controls retained, deliberately unchanged here:
+#   * the `production-operator` environment on the called migrate job (approval/branch rules stay until the owner
+#     replaces them with an independently reviewed equivalent -- this workflow does not weaken them);
+#   * the exact-host pin: vars.PRODUCTION_DATABASE_HOST must be set (a non-secret repository variable); unset = fail closed;
+#   * exact-one-pending-migration gate inside the called workflow; this planner supports 0 or 1 new migration per
+#     push and fails closed on more (use the manual workflow for multi-migration recovery);
+#   * runs only from the workflow definition on refs/heads/main; a PR cannot alter this file and run it.
+# The manual workflows (migrate-production.yml, reconcile-runtime-role.yml) remain as the emergency path.
+#
+# Vercel also builds every push to main. Its production-migration-gate fails that build CLOSED until the migration and
+# runtime-role grants are in place (production keeps serving the last good deployment); the redeploy hook at the end of
+# the called workflow then rebuilds main and the gate re-checks. The hook is not SHA-pinned: if main has advanced, the
+# gate evaluates the newer commit's own migrations/grants, and the stale-SHA check in the reconcile gate blocks a
+# release whose checked-out HEAD differs from the SHA that triggered this run.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan release (exact SHA, CI, migrations)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      migration_name: ${{ steps.mig.outputs.migration_name }}
+      has_migration: ${{ steps.mig.outputs.has_migration }}
+      host: ${{ steps.host.outputs.host }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Require exact SHA to still be main HEAD
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          [ "$(git rev-parse origin/main)" = "${GITHUB_SHA}" ] || { echo "::error::main has advanced past ${GITHUB_SHA}; a newer run owns the release"; exit 1; }
+      - name: Require the pinned production host (fail closed)
+        id: host
+        env:
+          HOST: ${{ vars.PRODUCTION_DATABASE_HOST }}
+        run: |
+          set -euo pipefail
+          echo "$HOST" | grep -qE '^[a-z0-9-]+(\.[a-z0-9-]+)+$' || { echo "::error::repository variable PRODUCTION_DATABASE_HOST is unset or not a bare hostname"; exit 1; }
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+      - name: Require CI green at this exact SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 110); do
+            R=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --event push --json status,conclusion --jq '.[0] // empty')
+            if [ -n "$R" ]; then
+              S=$(echo "$R" | jq -r .status); C=$(echo "$R" | jq -r .conclusion)
+              if [ "$S" = "completed" ]; then
+                [ "$C" = "success" ] && { echo "CI green at $GITHUB_SHA"; exit 0; }
+                echo "::error::CI concluded '$C' at $GITHUB_SHA; not releasing"; exit 1
+              fi
+            fi
+            sleep 20
+          done
+          echo "::error::CI did not complete for $GITHUB_SHA in time; not releasing"; exit 1
+      - name: Determine the migration to apply (0 or 1; more fails closed)
+        id: mig
+        run: |
+          set -euo pipefail
+          BEFORE="${{ github.event.before }}"
+          if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then echo "::error::cannot resolve the previous main SHA"; exit 1; fi
+          NEW=$(git diff --name-only --diff-filter=A "$BEFORE" "$GITHUB_SHA" -- prisma/migrations | grep '/migration.sql$' | sed -E 's#prisma/migrations/([^/]+)/migration.sql#\1#' || true)
+          N=$(printf '%s' "$NEW" | grep -c . || true)
+          if [ "$N" = "0" ]; then echo "has_migration=false" >> "$GITHUB_OUTPUT"; echo "migration_name=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$N" != "1" ]; then echo "::error::$N new migrations in one push; the automated path supports exactly one. Use the manual migrate workflow."; exit 1; fi
+          echo "has_migration=true" >> "$GITHUB_OUTPUT"
+          echo "migration_name=$NEW" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Migrate, reconcile runtime role, verify, redeploy
+    needs: plan
+    if: needs.plan.outputs.has_migration == 'true'
+    uses: ./.github/workflows/migrate-production.yml
+    with:
+      environment: production
+      mode: MAIN
+      confirm: MIGRATE PRODUCTION
+      migration_name: ${{ needs.plan.outputs.migration_name }}
+      expected_database_host: ${{ needs.plan.outputs.host }}
+    secrets: inherit

@@ -43,31 +43,3 @@ describe("agency diagnostic page", () => {
     expect(screen.queryByRole("heading", { name: /fix this first/i })).toBeNull();
   });
 });
-
-describe("optional beta invitation under a completed result", () => {
-  it("is absent before a result and on an invalid submission, and present only after a valid result", () => {
-    render(<AgencyDiagnosticPage />);
-    expect(document.querySelector('[data-agency-cta="result"]')).toBeNull();
-    fireEvent.change(screen.getByLabelText(/Hours scoped/i), { target: { value: "0" } });
-    fireEvent.click(screen.getByRole("button", { name: /find my first priority/i }));
-    expect(document.querySelector('[data-agency-cta="result"]')).toBeNull();
-    fireEvent.change(screen.getByLabelText(/Hours scoped/i), { target: { value: "100" } });
-    fireEvent.click(screen.getByRole("button", { name: /find my first priority/i }));
-    const invitation = document.querySelector('[data-agency-cta="result"]');
-    expect(invitation).not.toBeNull();
-    expect(invitation?.textContent).toMatch(/do not need an account/i);
-  });
-
-  it("makes no network call and sends no beacon when the result and invitation render", () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
-    const beacon = vi.fn();
-    Object.defineProperty(navigator, "sendBeacon", { value: beacon, configurable: true });
-    render(<AgencyDiagnosticPage />);
-    fireEvent.click(screen.getByRole("button", { name: /find my first priority/i }));
-    expect(document.querySelector('[data-agency-cta="result"]')).not.toBeNull();
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(beacon).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
-  });
-});

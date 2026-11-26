@@ -31,7 +31,8 @@
  */
 import { db } from "@/lib/db";
 import { DatabaseSchedulerProvider } from "@/infra/scheduler";
-import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_REASSESSMENT_SCAN, TASK_NAME_RISK_REVIEW_SCAN } from "@/infra/scheduler-handlers";
+import { TASK_NAME_ALERT_EMAIL_RETRY, TASK_NAME_FINANCE_LEARNING_BRIDGE, TASK_NAME_REASSESSMENT_SCAN, TASK_NAME_RISK_REVIEW_SCAN, TASK_NAME_QUOTA_RESERVATION_SWEEP } from "@/infra/scheduler-handlers";
+import { findWorkspacesWithExpiredCapabilityReservations } from "@/services/entitlement.service";
 import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mapping";
 
 const EMAIL_MAX_ATTEMPTS = 3;
@@ -187,6 +188,33 @@ export async function enqueueDueRiskReviewScanTasks(): Promise<ProducerScanResul
       maxAttempts: 3,
       workspaceId,
       idempotencyKey: `${TASK_NAME_RISK_REVIEW_SCAN}:${workspaceId}:${dayBucket}`,
+    });
+    enqueued++;
+  }
+
+  return { candidatesFound: workspaceIds.length, enqueued };
+}
+
+/**
+ * Enqueue one quota-reservation-sweep per workspace holding a plan-quota reservation that expired without
+ * being finalized (its process died between reserving the units and finalizing them). Hour-bucketed
+ * idempotency key, so a later invocation the same day can still recover reservations that expired since.
+ * The handler re-scopes to the task's own claimed workspaceId.
+ */
+export async function enqueueDueQuotaReservationSweepTasks(): Promise<ProducerScanResult> {
+  const scheduler = new DatabaseSchedulerProvider();
+  const now = new Date();
+  const workspaceIds = (await findWorkspacesWithExpiredCapabilityReservations(now)).slice(0, MAX_ENQUEUE_PER_SCAN);
+  const hourBucket = now.toISOString().slice(0, 13); // YYYY-MM-DDTHH (UTC)
+
+  let enqueued = 0;
+  for (const workspaceId of workspaceIds) {
+    await scheduler.schedule({
+      taskName: TASK_NAME_QUOTA_RESERVATION_SWEEP,
+      scheduledFor: now,
+      maxAttempts: 3,
+      workspaceId,
+      idempotencyKey: `${TASK_NAME_QUOTA_RESERVATION_SWEEP}:${workspaceId}:${hourBucket}`,
     });
     enqueued++;
   }

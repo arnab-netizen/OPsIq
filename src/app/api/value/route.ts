@@ -1,8 +1,8 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { getItems } from "@/services/operator/store";
 import { calculateValue } from "@/services/value/tracker";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { canView } from "@/services/auth/access";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -12,14 +12,14 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     // Resolve role from server-side session/database (never from request)
-    const role = await resolveServerRole();
+    const role = deriveServerRole(ctx.policy);
 
     if (!role) {
       throw new UnauthorizedError("Unauthorized");
     }
 
     if (!canView(role)) {
-      throw new Error("Insufficient permissions");
+      throw new ForbiddenError("Insufficient permissions");
     }
 
     // Get actor ID from verified context

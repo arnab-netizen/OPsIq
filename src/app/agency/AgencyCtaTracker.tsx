@@ -8,7 +8,7 @@ const CTA_LABEL = /^\s*(request beta access|start free)\s*$/i;
 
 /**
  * Fires AGENCY_CTA_CLICK when the visitor actually clicks the page's beta/sign-up call to action
- * (the shared PublicBetaCta in the header, the optional invitation under a completed result, or the closing panel). Renders nothing; the shared CTA
+ * (the shared PublicBetaCta in the header or the closing panel). Renders nothing; the shared CTA
  * components stay untouched. Sends only the CTA's position, never page or form content.
  */
 export function AgencyCtaTracker() {
@@ -18,7 +18,7 @@ export function AgencyCtaTracker() {
       if (!(target instanceof Element)) return;
       const control = target.closest("a, button");
       if (!control || !CTA_LABEL.test(control.textContent ?? "")) return;
-      trackAgencyEvent("AGENCY_CTA_CLICK", control.closest("header") ? "header" : control.closest("[data-agency-cta=\"result\"]") ? "result" : "lower");
+      trackAgencyEvent("AGENCY_CTA_CLICK", control.closest("header") ? "header" : "lower");
     }
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);

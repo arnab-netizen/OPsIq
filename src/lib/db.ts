@@ -992,7 +992,9 @@ export async function pingDatabase(timeoutMs = 90000): Promise<void> {
       : rawUrl;
 
   const pg = await import("pg");
-  const ssl = dbUrl.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined;
+  // P0-15: no manual `ssl` override — see createPrismaClient() above for why
+  // `{ rejectUnauthorized: false }` here actively weakens cert verification
+  // instead of relying on the connection string's own sslmode=require.
   const deadline = Date.now() + timeoutMs;
 
   // Retry loop: each attempt is capped at PER_ATTEMPT_MS via Promise.race.
@@ -1006,7 +1008,7 @@ export async function pingDatabase(timeoutMs = 90000): Promise<void> {
     const remaining = deadline - Date.now();
     if (remaining <= 0) throw new Error(`pingDatabase timeout after ${timeoutMs}ms`);
 
-    const client = new pg.Client({ connectionString: dbUrl, ssl });
+    const client = new pg.Client({ connectionString: dbUrl });
     let success = false;
     try {
       await Promise.race([

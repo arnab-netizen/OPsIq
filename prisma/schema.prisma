@@ -1244,23 +1244,27 @@ model Stage {
 }
 
 model Subscription {
-  id                   String         @id @db.Uuid
-  billingAccountId     String         @unique @map("billing_account_id") @db.Uuid
-  planId               String         @map("plan_id") @db.Uuid
-  status               String         @default("trialing")
-  currentPeriodStart   DateTime       @map("current_period_start")
-  currentPeriodEnd     DateTime       @map("current_period_end")
-  trialEndsAt          DateTime?      @map("trial_ends_at")
-  canceledAt           DateTime?      @map("canceled_at")
-  cancelReason         String?        @map("cancel_reason")
-  createdAt            DateTime       @default(now()) @map("created_at")
-  updatedAt            DateTime       @updatedAt @map("updated_at")
-  stripeSubscriptionId String?        @map("stripe_subscription_id")
-  paddleSubscriptionId String?        @unique @map("paddle_subscription_id")
-  cancelAtPeriodEnd    Boolean        @default(false) @map("cancel_at_period_end")
-  lastEventTimestamp   DateTime?      @map("last_event_timestamp") @db.Timestamp(6)
-  billingAccount       BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
-  plan                 Plan           @relation(fields: [planId], references: [id])
+  id                          String         @id @db.Uuid
+  billingAccountId            String         @unique @map("billing_account_id") @db.Uuid
+  planId                      String         @map("plan_id") @db.Uuid
+  status                      String         @default("trialing")
+  currentPeriodStart          DateTime       @map("current_period_start")
+  currentPeriodEnd            DateTime       @map("current_period_end")
+  trialEndsAt                 DateTime?      @map("trial_ends_at")
+  canceledAt                  DateTime?      @map("canceled_at")
+  cancelReason                String?        @map("cancel_reason")
+  createdAt                   DateTime       @default(now()) @map("created_at")
+  updatedAt                   DateTime       @updatedAt @map("updated_at")
+  stripeSubscriptionId        String?        @map("stripe_subscription_id")
+  paddleSubscriptionId        String?        @unique @map("paddle_subscription_id")
+  cancelAtPeriodEnd           Boolean        @default(false) @map("cancel_at_period_end")
+  lastEventTimestamp          DateTime?      @map("last_event_timestamp") @db.Timestamp(6)
+  /// Provider event id of the event that set lastEventTimestamp (same-timestamp ordering tiebreak).
+  lastEventId                 String?        @map("last_event_id")
+  /// Stripe's created time of the bound subscription (stripeSubscriptionId): the binding key.
+  stripeSubscriptionCreatedAt DateTime?      @map("stripe_subscription_created_at") @db.Timestamp(6)
+  billingAccount              BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
+  plan                        Plan           @relation(fields: [planId], references: [id])
 
   @@index([lastEventTimestamp], map: "idx_subscriptions_last_event_timestamp")
   @@index([stripeSubscriptionId], map: "idx_subscriptions_stripe_subscription_id")
@@ -1300,18 +1304,30 @@ model ThresholdConfig {
   @@map("threshold_configs")
 }
 
+/// Append-only plan-usage ledger: a workspace's usage of a capability is the SUM of `value` over the
+/// current billing period. Rows written by a quota reservation (withCapabilityQuota) carry
+/// `reservationId` + `reservationEntry`: one "reserve" row (+units, id = reservationId), zero or more
+/// "settle" rows (value 0, one per unit kept, written in the SAME transaction as the business write)
+/// and exactly one "release" row (-unused units) that finalizes the reservation. A reservation with no
+/// release row older than the reservation TTL is returned by reconcileExpiredCapabilityReservations.
+/// Rows with a NULL reservationId are plain usage (always final).
 model UsageEvent {
-  id          String   @id @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  key         String
-  value       Int
-  timestamp   DateTime @default(now())
-  createdAt   DateTime @default(now()) @map("created_at")
+  id               String   @id @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  key              String
+  value            Int
+  timestamp        DateTime @default(now())
+  createdAt        DateTime @default(now()) @map("created_at")
+  reservationId    String?  @map("reservation_id") @db.Uuid
+  reservationEntry String?  @map("reservation_entry")
 
+  @@unique([reservationId], where: raw("(reservation_entry = 'release'::text)"), map: "usage_events_one_release_per_reservation")
   @@index([timestamp])
   @@index([workspaceId])
   @@index([workspaceId, key])
   @@index([workspaceId, timestamp])
+  @@index([reservationId, reservationEntry])
+  @@index([reservationEntry, timestamp])
   @@map("usage_events")
 }
 
@@ -7428,4 +7444,36 @@ model PrivacyErasureRequest {
   @@index([workspaceId, businessId])
   @@index([status])
   @@map("privacy_erasure_requests")
+}
+
+/// Google Search Console daily performance rows (searchanalytics.query), ingested per the
+/// scaffold in src/lib/integrations/search-console.ts and src/services/external-systems/
+/// search-console-ingestion.service.ts. NOT workspace-scoped: this tracks OpsIQ's own
+/// sc-domain:opsiq.solutions property, not a per-tenant customer connector (unlike
+/// OwnerConnector). rowKey is a deterministic hash of (siteUrl, date, query, page, device,
+/// country) so re-ingesting the same day upserts in place instead of duplicating rows — GSC
+/// itself can revise a day's numbers for a few days after it is first reported, which this
+/// upsert-by-rowKey design accommodates intentionally (not just "skip duplicates").
+model SearchConsoleMetric {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  siteUrl     String   @map("site_url")
+  /// The GSC report date this row covers — never "today"; see freshness handling in the client.
+  date        DateTime @map("date") @db.Date
+  /// "" when the row is not broken out by this dimension.
+  query       String   @default("")
+  page        String   @default("")
+  device      String   @default("")
+  country     String   @default("")
+  clicks      Int
+  impressions Int
+  ctr         Float
+  position    Float
+  rowKey      String   @map("row_key")
+  fetchedAt   DateTime @default(now()) @map("fetched_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([rowKey], map: "search_console_metrics_row_key_key")
+  @@index([siteUrl, date])
+  @@map("search_console_metrics")
 }

@@ -28,11 +28,11 @@ describe("public /agency acquisition tool", () => {
     }
   });
 
-  it("emits only the intended privacy-minimal funnel events: three fixed names, at most a header/lower/result position, via @vercel/analytics only", () => {
+  it("emits only the intended privacy-minimal funnel events: three fixed names, at most a header/lower position, via @vercel/analytics only", () => {
     const events = readFileSync(join(process.cwd(), "src/app/agency/agency-events.ts"), "utf8");
     expect(events).toContain('from "@vercel/analytics"');
     expect([...events.matchAll(/"(AGENCY_[A-Z_]+)"/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).sort()).toEqual(["AGENCY_CTA_CLICK", "AGENCY_DIAGNOSTIC_COMPLETE", "AGENCY_DIAGNOSTIC_START"]);
-    expect(events).toMatch(/track\(name, \{ location: location === "header" \|\| location === "result" \? location : "lower" \}\)/);
+    expect(events).toMatch(/track\(name, \{ location: location === "header" \? "header" : "lower" \}\)/);
     expect(events).not.toMatch(/track\([^)]*(input|revenue|email|name:|value)/);
     for (const f of files) {
       const src = readFileSync(join(process.cwd(), f), "utf8");

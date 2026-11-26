@@ -1,4 +1,11 @@
-import { UnauthorizedError, NotFoundError } from "@/infra/errors";
+import {
+  UnauthorizedError,
+  NotFoundError,
+  ValidationError,
+  ForbiddenError,
+  ConflictError,
+  InvalidStateTransitionError,
+} from "@/infra/errors";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -11,7 +18,7 @@ import { calculateOutcomeDelta } from "@/services/operator/outcome";
 import { calculateDecisionAccuracy } from "@/services/operator/accuracy";
 import { validateCompletion } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
-import { resolveServerRole } from "@/services/auth/server-role";
+import { deriveServerRole } from "@/services/auth/server-role";
 import { sendWebhook } from "@/services/integration/webhook";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -49,7 +56,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   // Check idempotency key (required)
   idempotencyKey = ctx.request.headers.get("idempotency-key");
   if (!idempotencyKey) {
-    throw new Error("idempotency-key header required");
+    throw new ValidationError("idempotency-key header required");
   }
 
   const body = await ctx.request.json();
@@ -57,18 +64,18 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const { status, actualOutcome, approvalRequired } = body;
 
   // Resolve role from server-side session/database (never from request body)
-  const role = await resolveServerRole();
+  const role = deriveServerRole(ctx.policy);
 
   if (!role) {
     throw new UnauthorizedError("Unauthorized");
   }
 
   if (!canEdit(role)) {
-    throw new Error("Insufficient permissions");
+    throw new ForbiddenError("Insufficient permissions");
   }
 
   if (!id) {
-    throw new Error("Missing required field: id");
+    throw new ValidationError("Missing required field: id");
   }
 
   // Get actor ID from verified context
@@ -101,6 +108,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   // Check idempotency after we have workspace context
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
+    workspaceId: ctx.verifiedWorkspaceId,
     operationName: "updateOperatorItem",
     actorId: actorId || "unknown",
     payload: body,
@@ -116,7 +124,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     const newStatus = status as "pending" | "in_progress" | "done" | "failed";
     const transitionError = getStatusTransitionError(currentStatus, newStatus);
     if (transitionError) {
-      throw new Error(transitionError);
+      throw new InvalidStateTransitionError("OperatorItem", currentStatus, newStatus);
     }
   }
 
@@ -133,17 +141,17 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       };
       const completionPolicy = validateCompletion(completionValidationCandidate, approvalRequired);
       if (!completionPolicy.allowed) {
-        throw new Error(completionPolicy.reason);
+        throw new ValidationError(completionPolicy.reason ?? "Completion requirements are not met");
       }
 
       if (typeof actualOutcome !== "number") {
-        throw new Error("Missing or invalid field: actualOutcome must be a number");
+        throw new ValidationError("Missing or invalid field: actualOutcome must be a number");
       }
 
       // Unit validation: actualOutcome must be numeric and non-negative
       // ASSUMPTION: impactExpected and actualOutcome use identical business units (recommended: USD)
       if (actualOutcome < 0) {
-        throw new Error("Invalid field: actualOutcome cannot be negative");
+        throw new ValidationError("Invalid field: actualOutcome cannot be negative");
       }
 
       // Check if approval is required for high-impact decisions
@@ -153,7 +161,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         item.impactExpected
       );
       if (!approvalCheck.allowed) {
-        throw new Error(approvalCheck.reason);
+        throw new ConflictError(approvalCheck.reason ?? "Approval is required before completion");
       }
 
       // If approval is required but not yet created, create it now
@@ -226,7 +234,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     if (classification.category === "failure" || classification.category === "uncertain") {
       const outcomeNotes = body.outcomeNotes || "";
       if (!outcomeNotes.trim()) {
-        throw new Error(`Outcome notes required for ${classification.category} outcome: ${classification.reason}`);
+        throw new ValidationError(`Outcome notes required for ${classification.category} outcome: ${classification.reason}`);
       }
       updatePayload.outcomeNotes = outcomeNotes.trim();
     }

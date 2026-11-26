@@ -10,6 +10,8 @@
     "lint": "eslint",
     "lint:ratchet": "node scripts/lint-ratchet.mjs",
     "validate:deployment": "tsx scripts/validate-deployment.ts",
+    "daily-report": "tsx scripts/daily-report/run-daily-report.ts",
+    "gsc:ingest": "tsx scripts/ingest-search-console.ts",
     "db:generate": "prisma generate",
     "db:migrate:dev": "OPSIQ_DB_TARGET=local prisma migrate dev",
     "db:migrate:deploy": "OPSIQ_DB_TARGET=local prisma migrate deploy",

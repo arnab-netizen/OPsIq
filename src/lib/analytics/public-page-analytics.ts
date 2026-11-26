@@ -1,5 +1,3 @@
-import { PUBLIC_TOOL_PATHS } from "@/services/tools/agency/registry";
-
 /**
  * Page-view analytics policy (Vercel Web Analytics) for OpsIQ's public,
  * logged-out acquisition surface only.
@@ -15,15 +13,15 @@ import { PUBLIC_TOOL_PATHS } from "@/services/tools/agency/registry";
  * beta-request record itself (src/lib/attribution/acquisition-attribution.ts).
  */
 
-/** Exact public pages whose visits are counted. The calculator routes come from the registry so they cannot drift. */
-const PUBLIC_EXACT_PATHS = new Set<string>([
+/** Exact public pages whose visits are counted. */
+const PUBLIC_EXACT_PATHS = new Set([
   "/",
   "/about",
   "/beta",
   "/privacy",
   "/terms",
   "/resources",
-  ...PUBLIC_TOOL_PATHS,
+  "/tools/profit-margin-calculator",
   "/agency",
 ]);
 
