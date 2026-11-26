@@ -21,7 +21,8 @@ The candidate SHA and tree hash are reported with the hand-over message, because
 - **New UI:** `src/components/tools/agency/`, seven route files under `src/app/tools/`.
 - **Changed existing files:** the existing profit-margin calculator page and its badge/banner colors, `PublicSiteHeader`, `sitemap.ts`, `public-page-analytics.ts`, `clarity-policy.ts`, `privacy/page.tsx`, and five existing tests whose assertions described the old behavior.
 - **Documents:** the phase-two specification and this file.
-- **Not touched (verified by diff):** `prisma/`, `package.json`, `package-lock.json`, `vercel.json`, `.github/`, every API route, auth, billing, policies, scheduler, scripts, `.claude/`. Zero new dependencies, zero database changes.
+- **CI:** `.github/workflows/db-verification.yml` (LANE_B only): installs the PostgreSQL 16 client matching the `postgres:16` service and fails closed on a major mismatch, records checkout SHA and tree, and adds type-check, lint ratchet, production build and a mandatory restore-portability proof. No other workflow changed.
+- **Not touched (verified by diff):** `prisma/`, `package.json`, `package-lock.json`, `vercel.json`, any other `.github/` file, every API route, auth, billing, policies, scheduler, scripts, `.claude/`. Zero new dependencies, zero database changes.
 
 ## Correctness fixes made in R27
 | Defect | Result |
@@ -80,4 +81,4 @@ In R26 the candidate was pushed onto `claude/upbeat-archimedes-gyd1ex`, which is
 - Accessibility acceptance is automated plus keyboard and focus checks only.
 - Microsoft Clarity masking is configured in the Clarity dashboard and cannot be verified from code; the calculators do not depend on it.
 - Nine existing test files have 59 failures that are identical on live. They need their own root-cause pull request, not a change here.
-- CI for this exact SHA must be run as a separate validation (see the hand-over message); a cancelled run is not a pass.
+- Run `45860892252` (before the CI correction) failed only four restore-portability tests because the runner's pg_dump was major 18 against a PostgreSQL 16 server (`transaction_timeout`). The corrected LANE_B must be run on the final SHA; results are in the hand-over message. A failed or cancelled run is not a pass.
