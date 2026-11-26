@@ -28,7 +28,15 @@ SELECT
   (SELECT rolconnlimit FROM r)::int AS conn_limit,
   ((SELECT count(*) FROM rec) - 1)::int AS memberships,
   (SELECT count(*) FROM pg_auth_members a, r WHERE a.member = r.oid AND a.set_option)::int AS set_role_grants,
-  (SELECT count(*) FROM pg_auth_members a, r WHERE a.roleid = r.oid)::int AS members_of_role,
+  -- Legitimate operator administration (PostgreSQL 16+ grants a CREATEROLE creator ADMIN OPTION on the role it creates,
+  -- without INHERIT or SET) is allowed and REQUIRED for recovery. Any other member, or the creator with INHERIT/SET, is not.
+  (SELECT count(*) FROM pg_auth_members a, r
+    WHERE a.roleid = r.oid
+      AND NOT (a.member = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+               AND a.admin_option AND NOT a.inherit_option AND NOT a.set_option))::int AS unexpected_members_of_role,
+  ((SELECT rolsuper FROM pg_roles WHERE rolname = current_user)
+   OR EXISTS (SELECT 1 FROM pg_auth_members a, r
+              WHERE a.roleid = r.oid AND a.member = (SELECT oid FROM pg_roles WHERE rolname = current_user) AND a.admin_option)) AS operator_can_administer,
   ((SELECT count(*) FROM pg_class c, r WHERE c.relowner = r.oid)
    + (SELECT count(*) FROM pg_proc p, r WHERE p.proowner = r.oid)
    + (SELECT count(*) FROM pg_namespace n, r WHERE n.nspowner = r.oid)

@@ -24,7 +24,10 @@ describe("provision-gsc-ingestion-credential.yml safety", () => {
     expect(job.environment).toBe("production-operator");
     expect(job["timeout-minutes"]).toBeLessThanOrEqual(10);
     expect(wf.permissions).toEqual({ contents: "read" });
-    expect(wf.concurrency.group).toBe("provision-gsc-ingestion-credential");
+    // Shares the EXISTING production-writing-operations group with migrate-production.yml and reconcile-runtime-role.yml.
+    expect(wf.concurrency.group).toBe("migrate-production");
+    expect(YAML.load(readFileSync(join(process.cwd(), ".github/workflows/reconcile-runtime-role.yml"), "utf8")) as { concurrency: { group: string } }).toMatchObject({ concurrency: { group: "migrate-production" } });
+    expect(YAML.load(readFileSync(join(process.cwd(), ".github/workflows/migrate-production.yml"), "utf8")) as { concurrency: { group: string } }).toMatchObject({ concurrency: { group: "migrate-production" } });
   });
   it("the FIRST step is the fail-closed main-origin guard and it references no secret or input", () => {
     expect(steps[0].name).toMatch(/^Assert workflow origin is main/);
@@ -59,11 +62,14 @@ describe("provision-gsc-ingestion-credential.yml safety", () => {
   });
   it("accepts no SQL, password or connection string as an input", () => {
     const inputs = Object.keys((wf.on.workflow_dispatch as { inputs: object }).inputs);
-    expect(inputs).toEqual(["mode", "confirm", "expected_main_sha", "expected_database_host", "env_public_key", "env_key_id"]);
+    expect(inputs).toEqual(["mode", "confirm", "expected_main_sha", "expected_database_host", "expected_run_id", "expected_artifact_sha256"]);
+    // The recipient key is pinned in reviewed code; it can never be supplied at dispatch time.
+    expect(inputs.some((n) => /key/i.test(n))).toBe(false);
+    expect(functional).not.toMatch(/GSC_ENV_PUBLIC_KEY|GSC_ENV_KEY_ID|env_public_key|env_key_id/);
     expect(functional).not.toMatch(/inputs\.(sql|password|url|connection)/i);
   });
-  it("has exactly the four modes and no migration, deployment or arbitrary-command surface", () => {
-    expect((wf.on.workflow_dispatch as { inputs: { mode: { options: string[] } } }).inputs.mode.options).toEqual(["DRY_RUN", "CREATE", "RECOVER_NOLOGIN", "ACTIVATE"]);
+  it("has exactly the five modes and no migration, deployment or arbitrary-command surface", () => {
+    expect((wf.on.workflow_dispatch as { inputs: { mode: { options: string[] } } }).inputs.mode.options).toEqual(["DRY_RUN", "CREATE", "RECOVER_NOLOGIN", "ACTIVATE", "DEACTIVATE"]);
     expect(functional).not.toMatch(/prisma|migrate deploy|vercel|deploy[-_ ]hook|psql|curl |wget /i);
   });
   it("installs from the lockfile without lifecycle scripts and removes local env files", () => {
@@ -84,6 +90,6 @@ describe("provision-gsc-ingestion-credential.yml safety", () => {
   it("the provisioning step passes only inputs/secret through env and invokes the reviewed script", () => {
     const s = steps[idx(/^Run provisioning script/)];
     expect(s.run).toBe("node_modules/.bin/tsx scripts/gsc-provision/provision.ts");
-    expect(Object.keys(s.env ?? {}).sort()).toEqual(["DATABASE_URL", "GSC_CONFIRM", "GSC_ENV_KEY_ID", "GSC_ENV_PUBLIC_KEY", "GSC_EXPECTED_HOST", "GSC_EXPECTED_SHA", "GSC_MODE", "GSC_SEALED_OUT"]);
+    expect(Object.keys(s.env ?? {}).sort()).toEqual(["DATABASE_URL", "GSC_CONFIRM", "GSC_EXPECTED_ARTIFACT_SHA", "GSC_EXPECTED_HOST", "GSC_EXPECTED_RUN_ID", "GSC_EXPECTED_SHA", "GSC_MODE", "GSC_SEALED_OUT"]);
   });
 });
