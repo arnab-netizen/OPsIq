@@ -15,7 +15,7 @@ const KEY = "opsiq_analytics_consent_v1";
 const ID = "ymoglnln74";
 const TAG = `https://www.clarity.ms/tag/${ID}`;
 
-const ALLOWLISTED = ["/", "/about", "/resources", "/resources/some-article", "/tools/profit-margin-calculator", "/tools/another", "/privacy", "/terms", "/beta"];
+const ALLOWLISTED = ["/", "/about", "/resources", "/resources/some-article", "/tools/another", "/privacy", "/terms", "/beta"];
 
 type ClarityWindow = Window & { clarity?: ((...a: unknown[]) => void) & { q?: IArguments[] } };
 

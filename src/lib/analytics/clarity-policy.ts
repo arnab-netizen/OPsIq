@@ -1,4 +1,4 @@
-import { AGENCY_TOOLS } from "@/services/tools/agency/registry";
+import { AGENCY_TOOLS, PROFIT_MARGIN_TOOL_PATH } from "@/services/tools/agency/registry";
 
 /**
  * Microsoft Clarity policy for OpsIQ's PUBLIC, logged-out pages only (pure; no DOM, no I/O).
@@ -55,11 +55,13 @@ export function resolveClarityProjectId(env: Record<string, string | undefined> 
 const ELIGIBLE_EXACT_PATHS: ReadonlySet<string> = new Set(["/", "/about", "/beta", "/privacy", "/terms", "/resources"]);
 
 /**
- * Calculator pages that take payroll, margin or client figures. Fail closed: Clarity never runs on them, even though they sit
- * under the /tools/ prefix. The existing profit-margin calculator is unchanged. Links to these pages are full-document
- * navigations (isDocumentNavigationRequired), so a Clarity runtime from an eligible page cannot follow a visitor into them.
+ * EVERY calculator that takes financial figures: the six agency calculators (payroll, margin, client revenue) and the existing
+ * profit-margin calculator (revenue, costs, cash). Fail closed: Clarity never runs on them, even though they sit under the
+ * /tools/ prefix. Links to these pages are full-document navigations (isDocumentNavigationRequired), so a Clarity runtime
+ * from an eligible page cannot follow a visitor into one. Any future page added under /tools/ must be added here unless it
+ * has no inputs.
  */
-export const CLARITY_EXCLUDED_EXACT_PATHS: ReadonlySet<string> = new Set(AGENCY_TOOLS.map((t) => t.path));
+export const CLARITY_EXCLUDED_EXACT_PATHS: ReadonlySet<string> = new Set([PROFIT_MARGIN_TOOL_PATH, ...AGENCY_TOOLS.map((t) => t.path)]);
 
 /** Prefixes whose sub-pages may run Clarity (one or more further segments are required). */
 const ELIGIBLE_PREFIXES: readonly string[] = ["/resources/", "/tools/"];

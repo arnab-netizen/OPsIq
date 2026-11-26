@@ -32,7 +32,12 @@ describe("PublicLink", () => {
     expect(screen.getByRole("link").getAttribute("data-soft-nav")).toBeNull();
   });
 
-  it.each(["/about", "/resources", "/resources/x", "/tools/profit-margin-calculator", "/privacy", "/terms", "/beta"])(
+  it.each(["/tools/profit-margin-calculator", "/tools/client-profitability-calculator", "/agency"])("%s is a full-document navigation (financial inputs are never recorded)", (href) => {
+    render(<PublicLink href={href}>x</PublicLink>);
+    expect(screen.getByRole("link").getAttribute("data-soft-nav")).toBeNull();
+  });
+
+  it.each(["/about", "/resources", "/resources/x", "/privacy", "/terms", "/beta"])(
     "%s between public pages stays a client-side Link",
     (href) => {
       render(<PublicLink href={href}>go</PublicLink>);

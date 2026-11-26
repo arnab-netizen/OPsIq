@@ -1,4 +1,4 @@
-import { roundCents, safeDiv, type CalcResult } from "./shared";
+import { MIN_POSITIVE, roundCents, safeDiv, tooLarge, type CalcResult } from "./shared";
 
 /**
  * Agency Billable Utilization Calculator (pure). Every ratio states its denominator.
@@ -43,12 +43,13 @@ export type UtilizationResult = {
 export function calculateUtilization(i: UtilizationInput): CalcResult<{ result: UtilizationResult }> {
   const errors: string[] = [];
   for (const [k, v] of Object.entries(i)) if (!Number.isFinite(v) || v < 0) errors.push(`${k} must be a finite number that is 0 or more.`);
-  if (!(i.teamMembers > 0)) errors.push("Team size must be more than 0.");
-  if (!(i.paidHoursPerPerson > 0)) errors.push("Paid hours per person must be more than 0.");
+  if (!(i.teamMembers >= MIN_POSITIVE)) errors.push(`Team size must be at least ${MIN_POSITIVE}.`);
+  if (!(i.paidHoursPerPerson >= MIN_POSITIVE)) errors.push(`Paid hours per person must be at least ${MIN_POSITIVE}.`);
   if (i.leaveHoursPerPerson >= i.paidHoursPerPerson) errors.push("Leave and holiday hours must be less than paid hours, otherwise no capacity is available.");
   if (!(i.targetPct > 0 && i.targetPct < 100)) errors.push("Target utilization must be above 0% and below 100%.");
   if (errors.length) return { ok: false, errors };
 
+  if (tooLarge(i.teamMembers * i.paidHoursPerPerson, i.deliveryHours * Math.max(1, i.earnedRate))) return { ok: false, errors: ["These figures are too large to calculate exactly. Reduce them."] };
   const paidCapacity = i.teamMembers * i.paidHoursPerPerson;
   const availableCapacity = i.teamMembers * (i.paidHoursPerPerson - i.leaveHoursPerPerson);
   const targetHours = (i.targetPct / 100) * availableCapacity;

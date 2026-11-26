@@ -10,11 +10,12 @@ import {
   parseAnalyticsConsent,
   resolveClarityProjectId,
   SERVER_REDIRECTING_PUBLIC_PATHS,
+  CLARITY_EXCLUDED_EXACT_PATHS,
 } from "@/lib/analytics/clarity-policy";
 
 describe("route allowlist (unknown route = DENY)", () => {
   it.each([
-    "/", "/about", "/resources", "/resources/", "/resources/how-to-read-margin", "/resources/a/b", "/tools/profit-margin-calculator", "/tools/anything",
+    "/", "/about", "/resources", "/resources/", "/resources/how-to-read-margin", "/resources/a/b", "/tools/anything",
     "/privacy", "/terms", "/beta", "/about/", "/privacy?x=1", "/beta#top",
   ])("allows %s", (p) => expect(isClarityEligiblePath(p)).toBe(true));
 
@@ -121,7 +122,7 @@ describe("full-document navigation boundary (isDocumentNavigationRequired)", () 
   it("only the declared redirecting pages are affected", () => {
     expect([...SERVER_REDIRECTING_PUBLIC_PATHS]).toEqual(["/"]);
   });
-  it.each(["/about", "/resources", "/resources/x", "/tools/profit-margin-calculator", "/privacy", "/terms", "/beta", "/beta#request"])(
+  it.each(["/about", "/resources", "/resources/x", "/privacy", "/terms", "/beta", "/beta#request"])(
     "keeps %s a client-side link",
     (h) => expect(isDocumentNavigationRequired(h)).toBe(false),
   );
@@ -132,5 +133,30 @@ describe("full-document navigation boundary (isDocumentNavigationRequired)", () 
   });
   it("fails closed for relative or non-string targets", () => {
     for (const h of ["login", "../login", "./x", undefined, null, 5]) expect(isDocumentNavigationRequired(h)).toBe(true);
+  });
+});
+
+
+describe("financial calculators are never recorded (fail closed)", () => {
+  const CALCULATORS = [
+    "/tools/profit-margin-calculator",
+    "/tools/client-profitability-calculator",
+    "/tools/agency-retainer-pricing-calculator",
+    "/tools/agency-utilization-calculator",
+    "/tools/agency-scope-creep-calculator",
+    "/tools/agency-hourly-rate-calculator",
+    "/tools/agency-capacity-calculator",
+  ];
+  it.each(CALCULATORS)("%s is not Clarity-eligible and every link into it is a full-document navigation", (path) => {
+    expect(isClarityEligiblePath(path)).toBe(false);
+    expect(isClarityEligiblePath(`${path}/`)).toBe(false);
+    expect(isDocumentNavigationRequired(path)).toBe(true);
+    expect(isDocumentNavigationRequired(`${path}?utm_source=x`)).toBe(true);
+  });
+  it("the exclusion set is exactly the seven calculators, so a new one cannot be added silently", () => {
+    expect([...CLARITY_EXCLUDED_EXACT_PATHS].sort()).toEqual([...CALCULATORS].sort());
+  });
+  it("other /tools/ pages stay eligible (the prefix rule itself is unchanged)", () => {
+    expect(isClarityEligiblePath("/tools/anything")).toBe(true);
   });
 });

@@ -91,10 +91,10 @@ describe("registry and SEO metadata", () => {
 });
 
 describe("Clarity privacy boundary", () => {
-  it("never runs session replay on the six agency calculators or the hub, and leaves the existing calculator unchanged", () => {
+  it("never runs session replay on any of the seven financial calculators or the hub", () => {
     for (const t of AGENCY_TOOLS) expect(isClarityEligiblePath(t.path)).toBe(false);
     expect(isClarityEligiblePath("/tools")).toBe(false);
-    expect(isClarityEligiblePath("/tools/profit-margin-calculator")).toBe(true);
+    expect(isClarityEligiblePath("/tools/profit-margin-calculator")).toBe(false);
   });
 
   it("makes every link into them, the hub and /agency a full-document navigation", () => {
@@ -148,7 +148,7 @@ describe("calculator component behaviour", () => {
     for (const id of IDS) {
       const config = CALC_CONFIGS[id];
       const values = Object.fromEntries(config.fields.map((f) => [f.key, Number(f.sample)]));
-      const out = config.evaluate(values, makeFmt("USD"));
+      const out = config.evaluate(values, makeFmt("USD"), {});
       expect(out.ok).toBe(true);
       const { unmount, container } = render(<AgencyCalculator id={id} />);
       if (out.ok) expect(container.textContent).toContain(out.view.headline);
@@ -289,6 +289,95 @@ describe("calculator component behaviour", () => {
     expect(input.getAttribute("aria-invalid")).toBe("true");
     const describedBy = input.getAttribute("aria-describedby") ?? "";
     expect(describedBy.split(" ").some((id) => container.querySelector(`#${id}[role="alert"]`))).toBe(true);
+  });
+});
+
+describe("corrected calculation behaviour on screen", () => {
+  it("client profitability: 49.96% against a 50% target shows two decimals and a miss, not a contradictory 50.0%", () => {
+    const { container } = render(<AgencyCalculator id="client-profitability" />);
+    fireEvent.change(field(/^Client revenue/), { target: { value: "10000" } });
+    fireEvent.change(field(/^Pass-through expenses included/), { target: { value: "0" } });
+    fireEvent.change(field(/^Delivery hours: main team/), { target: { value: "0" } });
+    fireEvent.change(field(/^Delivery hours: second role/), { target: { value: "" } });
+    fireEvent.change(field(/^Other direct delivery costs/), { target: { value: "5004" } });
+    fireEvent.change(field(/^Target delivery margin/), { target: { value: "50" } });
+    const t = container.textContent ?? "";
+    expect(t).toContain("49.96%");
+    expect(t).toMatch(/points below your target/);
+    expect(t).not.toMatch(/at or above your target/);
+  });
+
+  it("client profitability: second-role hours without a rate withhold the result instead of treating the time as free", () => {
+    const { container } = render(<AgencyCalculator id="client-profitability" />);
+    fireEvent.change(field(/^Loaded staff cost per hour: second role/), { target: { value: "" } });
+    expect(container.textContent).toContain("Results not available yet");
+    expect(container.textContent).toMatch(/second role/i);
+  });
+
+  it("client profitability: an explicit zero rate is accepted but prominently warned about", () => {
+    const { container } = render(<AgencyCalculator id="client-profitability" />);
+    fireEvent.change(field(/^Loaded staff cost per hour: main team/), { target: { value: "0" } });
+    expect(container.textContent).toContain("Read this before relying on the result");
+    expect(container.textContent).toMatch(/overstated/);
+  });
+
+  it("retainer: other costs above the cost budget is described as exceeding it, not as 'not covering'", () => {
+    const { container } = render(<AgencyCalculator id="retainer-pricing" />);
+    fireEvent.change(field(/^A fee you are considering/), { target: { value: "500" } });
+    expect(container.textContent).toMatch(/alone exceed it/);
+    expect(container.textContent).not.toMatch(/does not cover your other direct costs/);
+  });
+
+  it("retainer: other costs equal to the cost budget say so", () => {
+    const { container } = render(<AgencyCalculator id="retainer-pricing" />);
+    fireEvent.change(field(/^A fee you are considering/), { target: { value: "600" } });
+    expect(container.textContent).toMatch(/use up entirely/);
+  });
+
+  it("retainer: a zero hourly cost is 'not limited by cost' and never unlimited capacity", () => {
+    const { container } = render(<AgencyCalculator id="retainer-pricing" />);
+    fireEvent.change(field(/^Loaded delivery cost per hour/), { target: { value: "0" } });
+    const t = container.textContent ?? "";
+    expect(t).toContain("Not limited by cost");
+    expect(t).toMatch(/does not mean unlimited hours/);
+  });
+
+  it("capacity: planned clients with no workload per client withhold the assessment", () => {
+    const { container } = render(<AgencyCalculator id="capacity" />);
+    fireEvent.change(field(/^Estimated workload per additional client/), { target: { value: "" } });
+    const t = container.textContent ?? "";
+    expect(t).toContain("Withheld");
+    expect(t).toMatch(/planned-client assessment is withheld/);
+    expect(t).not.toMatch(/fit within your target capacity/);
+  });
+
+  it("capacity: a typed zero workload is also withheld", () => {
+    const { container } = render(<AgencyCalculator id="capacity" />);
+    fireEvent.change(field(/^Estimated workload per additional client/), { target: { value: "0" } });
+    expect(container.textContent).toContain("Withheld");
+  });
+});
+
+describe("calculator_complete semantics", () => {
+  it("fires only for a valid result on inputs that differ from the sample, after an edit, once", () => {
+    render(<AgencyCalculator id="capacity" />);
+    fireEvent.change(field(/^Existing committed client workload/), { target: { value: "610" } });
+    fireEvent.change(field(/^Existing committed client workload/), { target: { value: "620" } });
+    expect(trackMock.mock.calls.filter((c) => c[0] === "calculator_complete")).toHaveLength(1);
+  });
+
+  it("does not fire for Load sample or Clear all, which are not assessments of the visitor's own numbers", () => {
+    render(<AgencyCalculator id="capacity" />);
+    fireEvent.click(screen.getByText("Clear all"));
+    fireEvent.click(screen.getByText("Load sample"));
+    expect(trackMock).not.toHaveBeenCalled();
+  });
+
+  it("does not fire while only some fields are filled (results withheld)", () => {
+    render(<AgencyCalculator id="capacity" />);
+    fireEvent.click(screen.getByText("Clear all"));
+    fireEvent.change(field(/^Delivery staff/), { target: { value: "3" } });
+    expect(trackMock.mock.calls.filter((c) => c[0] === "calculator_complete")).toHaveLength(0);
   });
 });
 
