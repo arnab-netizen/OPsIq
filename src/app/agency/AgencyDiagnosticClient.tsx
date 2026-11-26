@@ -9,6 +9,7 @@ import {
   type AgencyDiagnosticResult,
 } from "@/lib/agency-diagnostic/diagnose";
 import { trackAgencyEvent } from "./agency-events";
+import { AgencyFeedbackLink } from "./AgencyFeedbackLink";
 
 type Draft = Record<keyof AgencyDiagnosticInput, string>;
 
@@ -19,9 +20,11 @@ const initialDraft = (): Draft =>
 export function AgencyDiagnosticClient() {
   const [draft, setDraft] = useState<Draft>(initialDraft);
   const [result, setResult] = useState<AgencyDiagnosticResult | null>(null);
-  // Funnel counters fire at most once per page mount; no form content is ever passed to them.
+  // Funnel counters fire at most once per page mount each; no form content is ever passed to them.
   const started = useRef(false);
-  const completed = useRef(false);
+  const completedExample = useRef(false);
+  const completedEdited = useRef(false);
+  const feedbackInitiated = useRef(false);
 
   function markStarted() {
     if (started.current) return;
@@ -36,11 +39,24 @@ export function AgencyDiagnosticClient() {
     ) as AgencyDiagnosticInput;
     const next = diagnoseAgency(parsed);
     setResult(next);
-    if (next.ok && !completed.current) {
-      markStarted();
-      completed.current = true;
-      trackAgencyEvent("AGENCY_DIAGNOSTIC_COMPLETE");
+    if (next.ok) {
+      // Only a boolean comparison against the illustrative example is made; the values themselves never leave this function.
+      const usedExampleOnly = AGENCY_INPUT_FIELDS.every((f) => parsed[f.key] === AGENCY_EXAMPLE_INPUT[f.key]);
+      if (usedExampleOnly && !completedExample.current) {
+        completedExample.current = true;
+        trackAgencyEvent("AGENCY_DIAGNOSTIC_COMPLETE_EXAMPLE");
+      } else if (!usedExampleOnly && !completedEdited.current) {
+        markStarted();
+        completedEdited.current = true;
+        trackAgencyEvent("AGENCY_DIAGNOSTIC_COMPLETE_EDITED");
+      }
     }
+  }
+
+  function onFeedbackInitiated() {
+    if (feedbackInitiated.current) return;
+    feedbackInitiated.current = true;
+    trackAgencyEvent("AGENCY_FEEDBACK_CLICK");
   }
 
   return (
@@ -104,6 +120,7 @@ export function AgencyDiagnosticClient() {
                 </ol>
               </div>
             )}
+            <AgencyFeedbackLink onInitiate={onFeedbackInitiated} />
           </section>
         )}
       </div>
