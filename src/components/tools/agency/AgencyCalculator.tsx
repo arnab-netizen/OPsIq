@@ -27,24 +27,31 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
   const [resetCount, setResetCount] = useState(0);
   const hasMoney = config.fields.some((f) => f.rule.kind === "money");
 
-  const { outcome, fieldErrors, allBlank } = useMemo(() => {
+  const { outcome, fieldErrors, allBlank, differsFromSample } = useMemo(() => {
     const values: Record<string, number> = {};
+    const blanks: Record<string, boolean> = {};
     const fieldErrors: Record<string, string> = {};
     for (const f of config.fields) {
       const p = parseField(raw[f.key] ?? "", f.rule, f.label, Boolean(bad[f.key]));
-      if (p.ok) values[f.key] = p.value;
-      else fieldErrors[f.key] = p.message;
+      if (p.ok) {
+        values[f.key] = p.value;
+        blanks[f.key] = p.blank;
+      } else fieldErrors[f.key] = p.message;
     }
     const allBlank = config.fields.every((f) => (raw[f.key] ?? "").trim() === "" && !bad[f.key]);
+    const differsFromSample = config.fields.some((f) => (raw[f.key] ?? "").trim() !== f.sample);
     const outcome: EvalOutcome =
-      Object.keys(fieldErrors).length > 0 ? { ok: false, errors: Object.values(fieldErrors) } : config.evaluate(values, makeFmt(currency));
-    return { outcome, fieldErrors, allBlank };
+      Object.keys(fieldErrors).length > 0 ? { ok: false, errors: Object.values(fieldErrors) } : config.evaluate(values, makeFmt(currency), blanks);
+    return { outcome, fieldErrors, allBlank, differsFromSample };
   }, [raw, bad, currency, config]);
 
   const startedRef = useRef(false);
+  // calculator_complete means exactly this and nothing more: the calculator displayed a VALID result for inputs that differ from
+  // the preloaded sample, after the visitor changed an input. It does not show that every sample value was replaced, that the
+  // numbers are real, or that the visitor is a genuine business owner or has any purchase intent.
   useEffect(() => {
-    if (edited && outcome.ok) trackCalculatorEvent("calculator_complete", id);
-  }, [edited, outcome.ok, id]);
+    if (edited && differsFromSample && outcome.ok) trackCalculatorEvent("calculator_complete", id);
+  }, [edited, differsFromSample, outcome.ok, id]);
 
   function onChange(key: string, value: string, unreadable: boolean) {
     setRaw((r) => ({ ...r, [key]: value }));
@@ -173,6 +180,16 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
         )}
         {view && (
           <>
+            {view.warnings.length > 0 && (
+              <div role="note" className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                <strong className="block">Read this before relying on the result</strong>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {view.warnings.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="mt-3 rounded-md border-l-4 border-[var(--primary-text)] bg-muted p-4">
               <strong className={`block text-base ${TONE_CLASS[view.headlineTone]}`}>{view.headline}</strong>
             </div>

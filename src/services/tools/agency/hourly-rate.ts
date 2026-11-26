@@ -1,4 +1,4 @@
-import { feeForMargin, roundCents, safeDiv, type CalcResult } from "./shared";
+import { MIN_POSITIVE, ceilCents, feeForMargin, moneyOrNull, roundCents, safeDiv, tooLarge, type CalcResult } from "./shared";
 
 /**
  * Agency Hourly Rate Calculator (pure). Result is an EARNED AVERAGE rate: agency gross income per billable delivery
@@ -12,6 +12,7 @@ import { feeForMargin, roundCents, safeDiv, type CalcResult } from "./shared";
  *   Target operating profit   = required annual income - cost pool
  *
  * Operating margin here is a share of agency gross income. Pass-through costs belong outside this tool.
+ * Required income and rates are REQUIRED prices, so they round UP to the cent and never fall below the true requirement.
  */
 
 export type HourlyRateInput = {
@@ -42,14 +43,14 @@ function requiredRateFor(i: HourlyRateInput, utilPct: number, costFactor: number
   const pool = (i.annualPayroll + i.annualOverhead) * costFactor;
   const income = feeForMargin(pool, i.targetOperatingMarginPct / 100);
   if (income === null) return null;
-  const rate = safeDiv(income, i.annualCapacityHours * (utilPct / 100));
-  return rate === null ? null : roundCents(rate);
+  const rate = moneyOrNull(safeDiv(income, i.annualCapacityHours * (utilPct / 100)));
+  return rate === null ? null : ceilCents(rate);
 }
 
 export function calculateHourlyRate(i: HourlyRateInput): CalcResult<{ result: HourlyRateResult }> {
   const errors: string[] = [];
   for (const [k, v] of Object.entries(i)) if (!Number.isFinite(v) || v < 0) errors.push(`${k} must be a finite number that is 0 or more.`);
-  if (!(i.annualCapacityHours > 0)) errors.push("Annual available delivery capacity must be more than 0 hours.");
+  if (!(i.annualCapacityHours >= MIN_POSITIVE)) errors.push(`Annual available delivery capacity must be at least ${MIN_POSITIVE} hours.`);
   if (!(i.targetUtilizationPct > 0 && i.targetUtilizationPct < 100)) errors.push("Target utilization must be above 0% and below 100%.");
   if (i.targetOperatingMarginPct >= 100) errors.push("Target operating margin must be below 100%.");
   if (!(i.annualPayroll + i.annualOverhead > 0)) errors.push("Enter payroll or overhead so there is a cost to recover.");
@@ -58,8 +59,9 @@ export function calculateHourlyRate(i: HourlyRateInput): CalcResult<{ result: Ho
   const pool = i.annualPayroll + i.annualOverhead;
   const billable = i.annualCapacityHours * (i.targetUtilizationPct / 100);
   const income = feeForMargin(pool, i.targetOperatingMarginPct / 100) as number;
-  const be = safeDiv(pool, billable);
-  const req = safeDiv(income, billable);
+  if (tooLarge(pool, income, billable)) return { ok: false, errors: ["These amounts are too large to calculate exactly to the cent. Reduce them or lower the target margin."] };
+  const be = moneyOrNull(safeDiv(pool, billable));
+  const req = moneyOrNull(safeDiv(income, billable));
   const u = i.targetUtilizationPct;
 
   const sensitivity: RateSensitivity[] = [
@@ -75,10 +77,10 @@ export function calculateHourlyRate(i: HourlyRateInput): CalcResult<{ result: Ho
     result: {
       costPool: roundCents(pool),
       billableCapacity: Math.round(billable * 10) / 10,
-      breakEvenRate: be === null ? null : roundCents(be),
-      requiredIncome: roundCents(income),
-      requiredRate: req === null ? null : roundCents(req),
-      targetProfit: roundCents(income - pool),
+      breakEvenRate: be === null ? null : ceilCents(be),
+      requiredIncome: ceilCents(income),
+      requiredRate: req === null ? null : ceilCents(req),
+      targetProfit: roundCents(ceilCents(income) - pool),
       sensitivity,
     },
   };

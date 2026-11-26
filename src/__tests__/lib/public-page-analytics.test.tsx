@@ -94,3 +94,16 @@ describe("PublicPageAnalytics", () => {
     expect(analyticsProps.last).toEqual({ beforeSend: filterPublicPageView });
   });
 });
+
+
+describe("beforeSend handles custom-event objects as well as page views", () => {
+  it("passes an allowlisted event through with query parameters stripped", async () => {
+    const { filterPublicPageView } = await import("@/lib/analytics/public-page-analytics");
+    const out = filterPublicPageView({ type: "event", url: "https://opsiq.solutions/tools/agency-capacity-calculator?income=123456&utm_source=li", name: "calculator_start" });
+    expect(out).toEqual({ type: "event", url: "https://opsiq.solutions/tools/agency-capacity-calculator?utm_source=li", name: "calculator_start" });
+  });
+  it("drops an event raised on a private page", async () => {
+    const { filterPublicPageView } = await import("@/lib/analytics/public-page-analytics");
+    expect(filterPublicPageView({ type: "event", url: "https://opsiq.solutions/owner/finance", name: "calculator_start" })).toBeNull();
+  });
+});

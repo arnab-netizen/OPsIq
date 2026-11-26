@@ -40,7 +40,7 @@ export type FieldRule = {
   exclusiveMin?: boolean;
 };
 
-export type ParsedField = { ok: true; value: number } | { ok: false; reason: "missing" | "unreadable" | "out_of_range"; message: string };
+export type ParsedField = { ok: true; value: number; /** true when an optional field was left blank (so its default was used, not a typed 0) */ blank: boolean } | { ok: false; reason: "missing" | "unreadable" | "out_of_range"; message: string };
 
 const DEFAULT_MAX: Record<FieldKind, number> = {
   money: 1_000_000_000_000,
@@ -58,7 +58,7 @@ export function parseField(raw: string, rule: FieldRule, label: string, unreadab
     return { ok: false, reason: "unreadable", message: `${label}: enter numbers only (no currency symbols, spaces or separators).` };
   }
   if (text === "") {
-    if (!rule.required) return { ok: true, value: rule.defaultWhenBlank ?? 0 };
+    if (!rule.required) return { ok: true, value: rule.defaultWhenBlank ?? 0, blank: true };
     return { ok: false, reason: "missing", message: `${label}: required.` };
   }
   const n = Number(text);
@@ -74,7 +74,53 @@ export function parseField(raw: string, rule: FieldRule, label: string, unreadab
   if (rule.kind === "count" && !Number.isInteger(n)) {
     return { ok: false, reason: "out_of_range", message: `${label}: must be a whole number.` };
   }
-  return { ok: true, value: n + 0 }; // "+ 0" turns -0 into 0
+  return { ok: true, value: n + 0, blank: false }; // "+ 0" turns -0 into 0
+}
+
+/**
+ * Smallest positive value accepted wherever a field is used as a divisor (hours, staff, capacity, fees). Below this a result
+ * would be dominated by the divisor and show absurd figures, so it is rejected with a message instead of computed.
+ */
+export const MIN_POSITIVE = 0.01;
+
+/**
+ * Money is exact to the cent only below about 9e13 in double precision (9e15 / 100). Anything larger, including a product of
+ * two large inputs, is refused rather than shown with a wrong last digit.
+ */
+export const MAX_EXACT_MONEY = 9e13;
+
+/** True when any value is non-finite or too large to be exact to the cent. */
+export function tooLarge(...values: number[]): boolean {
+  return values.some((v) => !Number.isFinite(v) || Math.abs(v) > MAX_EXACT_MONEY);
+}
+
+/** A money result, or null when it is non-finite or outside the exact range (shown as Not available). */
+export function moneyOrNull(n: number | null): number | null {
+  return n === null || tooLarge(n) ? null : n;
+}
+
+/** Tolerance for comparing unrounded ratios that should be equal but differ by floating-point error (about 1e-16 per operation). */
+export const RATIO_TOLERANCE = 1e-9;
+
+/**
+ * 1 - margin, computed on a 12-decimal grid. The plain subtraction loses digits near 100% (1 - 0.9990000000000001 is
+ * 0.0009999999999998899, off by 1e-13 relative), which would push a required fee up by a cent. The inputs have far fewer than
+ * 12 decimals, so snapping the complement to that grid only removes floating-point noise.
+ */
+export function complement(margin: number): number {
+  return Number((1 - margin).toFixed(12));
+}
+
+/**
+ * Round UP to whole cents. Used for REQUIRED prices, fees and rates so the displayed figure is never below the true
+ * requirement (nearest-cent rounding could leave a target margin missed by a fraction of a cent). The tolerance absorbs
+ * floating-point noise (a few units in the 15th digit) such as 4166.666666666667 * 100 = 416666.66666666674.
+ */
+export function ceilCents(n: number): number {
+  const cents = n * 100;
+  const eps = Math.max(1e-6, Math.abs(cents) * 3e-15);
+  const c = Math.ceil(cents - eps) / 100;
+  return c === 0 ? 0 : c;
 }
 
 /** Round a money value to whole cents (half away from zero) so 0.1 + 0.2 style drift never reaches the screen. */
@@ -99,7 +145,9 @@ export function safeDiv(numerator: number, denominator: number): number | null {
 /** Fee needed so that (fee - cost) / fee equals `targetMargin` (a fraction in [0, 1)). null when the target is 100% or more. */
 export function feeForMargin(cost: number, targetMargin: number): number | null {
   if (!(targetMargin >= 0 && targetMargin < 1)) return null;
-  return cost / (1 - targetMargin);
+  const c = complement(targetMargin);
+  if (!(c > 0)) return null;
+  return cost / c;
 }
 
 export type CalcErrors = { ok: false; errors: string[] };

@@ -21,7 +21,7 @@ export function AgencyToolPage({ id }: { id: AgencyToolId }) {
   const config = CALC_CONFIGS[id];
 
   const sampleValues = Object.fromEntries(config.fields.map((f) => [f.key, Number(f.sample)])) as Record<string, number>;
-  const worked = config.evaluate(sampleValues, makeFmt("USD"));
+  const worked = config.evaluate(sampleValues, makeFmt("USD"), {});
   const workedView: Presentation | null = worked.ok ? worked.view : null;
   const inputsText = config.fields
     .filter((f) => Number(f.sample) !== 0)
