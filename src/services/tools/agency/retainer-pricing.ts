@@ -29,9 +29,9 @@ export type MarginScenario = { marginPct: number; fee: number; invoice: number; 
 /**
  * Why a proposed fee does or does not fund delivery hours at the target margin.
  *  - other_costs_exceed_budget: other direct costs alone are more than the cost budget, so no hours fit.
- *  - other_costs_equal_budget: other direct costs use exactly the whole budget, leaving zero hours.
+ *  - other_costs_equal_budget: other direct costs use exactly the whole budget and hours cost money, leaving zero hours.
  *  - hours_limited_by_cost: positive budget remains and hours cost money, so a finite number of hours fit.
- *  - hours_not_limited_by_cost: the hourly cost is 0 and the budget covers other costs, so cost does not limit hours
+ *  - hours_not_limited_by_cost: the hourly cost is 0 and the budget covers other costs (even with nothing to spare), so cost does not limit hours
  *    (real delivery capacity still does; this is never "unlimited hours").
  */
 export type SustainabilityState = "other_costs_exceed_budget" | "other_costs_equal_budget" | "hours_limited_by_cost" | "hours_not_limited_by_cost";
@@ -104,10 +104,11 @@ export function calculateRetainerPricing(i: RetainerPricingInput): CalcResult<{ 
     let maxHours: number | null = null;
     if (laborBudget < -eps) {
       state = "other_costs_exceed_budget";
-    } else if (laborBudget <= eps) {
+    } else if (laborBudget <= eps && i.costPerHour > 0) {
+      // Other direct costs use the whole budget and every delivery hour costs money, so no hours fit.
       state = "other_costs_equal_budget";
       maxHours = 0;
-    } else if (i.costPerHour > 0) {
+    } else if (laborBudget > eps && i.costPerHour > 0) {
       state = "hours_limited_by_cost";
       maxHours = Math.round((laborBudget / i.costPerHour) * 10) / 10;
     } else {

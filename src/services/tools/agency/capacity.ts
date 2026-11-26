@@ -60,6 +60,8 @@ export function calculateCapacity(i: CapacityInput): CalcResult<{ result: Capaci
   if (!(i.availableHoursPerPerson >= MIN_POSITIVE)) errors.push(`Available monthly hours per person must be at least ${MIN_POSITIVE}.`);
   if (!(i.targetPct > 0 && i.targetPct < 100)) errors.push("Target utilization must be above 0% and below 100%.");
   if (!Number.isInteger(i.plannedNewClients)) errors.push("Planned new clients must be a whole number.");
+  // A workload that is positive but below the shared minimum divisor would turn spare hours into an absurd client count.
+  if (i.hoursPerNewClient !== null && i.hoursPerNewClient > 0 && i.hoursPerNewClient < MIN_POSITIVE) errors.push(`Workload per additional client must be 0 (to withhold) or at least ${MIN_POSITIVE} hours.`);
   if (errors.length) return { ok: false, errors };
   if (tooLarge(i.staff * i.availableHoursPerPerson, i.committedHours)) return { ok: false, errors: ["These figures are too large to calculate exactly. Reduce them."] };
 
