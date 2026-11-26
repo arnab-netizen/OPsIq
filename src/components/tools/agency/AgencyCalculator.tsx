@@ -92,7 +92,7 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
           <h2 id={`calc-${id}-heading`} className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             {config.basis}
           </h2>
-          <span className="shrink-0 rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">{isSample ? "Sample numbers" : "Your numbers"}</span>
+          <span className="shrink-0 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground">{isSample ? "Sample numbers" : "Your numbers"}</span>
         </div>
         {hasMoney && (
           <label className="mt-4 block text-sm font-medium">
@@ -150,10 +150,10 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
           })}
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
-          <button type="button" className="min-h-11 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted" onClick={() => reset(empty, false)}>
+          <button type="button" className="min-h-11 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]" onClick={() => reset(empty, false)}>
             Clear all
           </button>
-          <button type="button" className="min-h-11 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted" onClick={() => reset(sample, true)}>
+          <button type="button" className="min-h-11 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]" onClick={() => reset(sample, true)}>
             Load sample
           </button>
         </div>
@@ -164,7 +164,7 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
         {!outcome.ok && (
           <div className="mt-3 rounded-md border-l-4 border-amber-500 bg-muted p-4">
             <strong className="block text-base">{allBlank ? "Enter your numbers" : "Results not available yet"}</strong>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-[var(--muted-foreground-accessible)]">
               {allBlank
                 ? "Fill in the required boxes to see your results."
                 : "Every required field needs a valid number before results are shown. Nothing has been calculated from the values as typed."}
@@ -198,12 +198,10 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
                 {s.title && <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{s.title}</h3>}
                 <dl className="mt-1 divide-y divide-border text-sm">
                   {s.rows.map((r) => (
-                    <div key={r.label} className="py-2">
-                      <div className="flex justify-between gap-3 tabular-nums">
-                        <dt>{r.label}</dt>
-                        <dd className={`shrink-0 font-semibold ${TONE_CLASS[r.tone ?? ""]}`}>{r.value}</dd>
-                      </div>
-                      {r.note && <p className="text-xs text-muted-foreground">{r.note}</p>}
+                    <div key={r.label} className="flex flex-wrap justify-between gap-x-3 py-2 tabular-nums">
+                      <dt>{r.label}</dt>
+                      <dd className={`shrink-0 font-semibold ${TONE_CLASS[r.tone ?? ""]}`}>{r.value}</dd>
+                      {r.note && <dd className="basis-full text-xs font-normal text-muted-foreground">{r.note}</dd>}
                     </div>
                   ))}
                 </dl>
@@ -284,7 +282,7 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
                 <li key={t}>{t}</li>
               ))}
             </ul>
-            <button type="button" onClick={copy} className="mt-4 min-h-11 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+            <button type="button" onClick={copy} className="mt-4 min-h-11 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">
               Copy my results
             </button>
             {copyStatus && <p className="mt-2 text-xs text-muted-foreground">{copyStatus}</p>}
