@@ -60,11 +60,14 @@ export default function PrivacyPage() {
           </p>
           <p className="mt-2">
             <strong>Free tools and the agency diagnostic.</strong> The same Vercel Web Analytics also
-            counts visits to the free profit-margin calculator and the agency diagnostic page. On the
-            agency diagnostic page it additionally counts, as plain totals, how many visitors start the
-            diagnostic, how many complete it, and which beta-access button on the page was clicked. None
-            of what you type into the diagnostic, and none of its result, is sent. These counts use no
-            cookies and do not depend on the Clarity choice described below.
+            counts visits to the free calculators and the agency diagnostic page. On the agency
+            diagnostic page and on each calculator it additionally counts, as plain totals, how many
+            visitors start it, how many complete it, which related calculator or agency diagnostic link
+            was clicked, and which beta-access button on the page was clicked. Each count carries only
+            the name of the calculator and, for beta-access buttons, whether the button was in the header
+            or lower on the page. None of what you type into a calculator or the diagnostic, and none of
+            its result, is sent. These counts use no cookies and do not depend on the Clarity choice
+            described below.
           </p>
           <p className="mt-2">
             <strong>Billing.</strong> If you subscribe to a paid plan, Paddle collects your payment details, billing
