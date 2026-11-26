@@ -111,9 +111,7 @@ export async function diagnoseBusiness(
   // leaving an orphan client behind on every refused attempt.
   const entitlement = await assertCapability(validatedWorkspaceId, "create_engagement");
   if (!entitlement.allowed) {
-    throw new PlanLimitError("create_engagement", entitlement.reason || "Plan limit exceeded", undefined, {
-      entitlementUnverifiable: entitlement.unverifiable === true,
-    });
+    throw new PlanLimitError("create_engagement", entitlement.reason || "Plan limit exceeded");
   }
 
   const answer = buildGenericDiagnosisAnswer(input);

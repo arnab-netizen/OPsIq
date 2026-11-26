@@ -8,7 +8,6 @@ import {
   DEFAULT_RETRY_POLICY,
 } from "@/domain/execution/job";
 import { v4 as uuidv4 } from "uuid";
-import { stableStringify } from "@/domain/owner-spine/owner-decision-record";
 
 export class ExecutionJobSafety {
   private job_cache: Map<string, ExecutionJob> = new Map();
@@ -286,12 +285,7 @@ export class ExecutionJobSafety {
     action_id: string,
     job_inputs: Record<string, unknown>
   ): string {
-    // Recursively key-sorted (a top-level key array as a JSON.stringify replacer would empty nested objects and
-    // make jobs that differ only in nested inputs collide). For the flat, plain-JSON inputs hashed today the bytes equal
-    // the previous form; they differ for integer-like keys (now emitted in ascending numeric order ahead of
-    // other keys, not string-sorted) and for values with a toJSON other than Date (e.g. Decimal, URL, Buffer: now
-    // serialized from their own enumerable properties, not their toJSON output).
-    const sorted_inputs = stableStringify(job_inputs);
+    const sorted_inputs = JSON.stringify(job_inputs, Object.keys(job_inputs).sort());
     const combined = `${action_id}:${sorted_inputs}`;
     return createHash("sha256").update(combined).digest("hex").substring(0, 16);
   }

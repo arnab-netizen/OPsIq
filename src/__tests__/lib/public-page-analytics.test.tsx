@@ -23,7 +23,7 @@ vi.mock("@vercel/analytics/next", () => ({
 import { PublicPageAnalytics } from "@/components/analytics/PublicPageAnalytics";
 
 describe("isPublicAnalyticsPath", () => {
-  it.each(["/", "/about", "/beta", "/privacy", "/terms", "/resources", "/resources/", "/resources/profitable-but-short-on-cash", "/tools/profit-margin-calculator", "/tools/profit-margin-calculator/", "/agency", "/agency/"])(
+  it.each(["/", "/about", "/beta", "/privacy", "/terms", "/resources", "/resources/", "/resources/profitable-but-short-on-cash", "/tools", "/tools/", "/tools/profit-margin-calculator", "/tools/profit-margin-calculator/", "/tools/client-profitability-calculator", "/tools/agency-retainer-pricing-calculator", "/tools/agency-utilization-calculator", "/tools/agency-scope-creep-calculator", "/tools/agency-hourly-rate-calculator", "/tools/agency-capacity-calculator", "/agency", "/agency/"])(
     "counts public page %s",
     (path) => expect(isPublicAnalyticsPath(path)).toBe(true)
   );
@@ -41,8 +41,9 @@ describe("isPublicAnalyticsPath", () => {
     "/api/beta-requests",
     "/resourcesx",
     "/aboutus",
-    "/tools",
     "/tools/other-tool",
+    "/tools/client-profitability-calculatorx",
+    "/tools/agency-capacity-calculator/internal",
     "/tools/profit-margin-calculatorx",
     "/agencyx",
     "/agency/internal",

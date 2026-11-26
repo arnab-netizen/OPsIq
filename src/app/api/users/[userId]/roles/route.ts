@@ -1,8 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { getActorHierarchyLevel } from "@/policies/capability-check";
-import { UnauthorizedError, ValidationError } from "@/infra/errors";
-import { canonicalJson } from "@/lib/canonical-json-response";
+import { resolveServerRole } from "@/services/auth/server-role";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   assignRole,
@@ -12,7 +11,7 @@ import {
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
-import { ROLES } from "@/domain/constants/roles";
+import { ROLES, type RoleName } from "@/domain/constants/roles";
 
 const roleValues = Object.values(ROLES) as [string, ...string[]];
 
@@ -21,15 +20,6 @@ const assignRoleSchema = z.object({
   scope: z.string().optional(),
   scopeId: z.string().uuid().optional(),
 });
-
-/**
- * The actor's ROLE_HIERARCHY level, read from the wrapper's verified PolicyContext (its real role assignments).
- * assignRole/revokeRole allow managing only roles strictly below this level. Fails closed without a verified policy.
- */
-function verifiedActorHierarchyLevel(ctx: CanonicalAuthContext): number {
-  if (!ctx.policy) throw new UnauthorizedError("Unauthorized");
-  return getActorHierarchyLevel(ctx.policy);
-}
 
 const revokeRoleSchema = z.object({
   role: z.enum(roleValues),
@@ -44,7 +34,7 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, userId);
 
     const roles = await getRolesForUser(userId, workspaceId);
-    return { roles };
+    return Response.json({ roles });
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.USER_VIEW] }
 );
@@ -53,7 +43,10 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
   const workspaceId = ctx.verifiedWorkspaceId;
   const idempotencyKey = ctx.request?.headers.get("idempotency-key");
   if (!idempotencyKey) {
-    throw new ValidationError("idempotency-key header required");
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
   }
 
   const { userId } = params;
@@ -61,7 +54,12 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
 
   const body = await parseRequestBody(ctx.request!, assignRoleSchema);
 
-  const actorLevel = verifiedActorHierarchyLevel(ctx);
+  const role = await resolveServerRole();
+  const policy = {
+    userId: ctx.verifiedActorId,
+    roles: role ? [{ role: role as RoleName, scope: undefined, scopeId: undefined }] : [],
+  };
+  const actorLevel = getActorHierarchyLevel(policy);
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
@@ -72,7 +70,9 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return canonicalJson(idempotencyCheck.cachedResponse.body, { status: idempotencyCheck.cachedResponse.status });
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
   }
 
   try {
@@ -83,7 +83,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
       workspaceId
     );
     await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
-    return canonicalJson(result, { status: result.isNew ? 201 : 200 });
+    return Response.json(result, { status: result.isNew ? 201 : 200 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);
@@ -99,7 +99,12 @@ export const DELETE = withCanonicalEnforcement(async (ctx: CanonicalAuthContext,
 
   const body = await parseRequestBody(ctx.request!, revokeRoleSchema);
 
-  const actorLevel = verifiedActorHierarchyLevel(ctx);
+  const role = await resolveServerRole();
+  const policy = {
+    userId: ctx.verifiedActorId,
+    roles: role ? [{ role: role as RoleName, scope: undefined, scopeId: undefined }] : [],
+  };
+  const actorLevel = getActorHierarchyLevel(policy);
 
   await revokeRole(
     { userId, ...body } as Parameters<typeof revokeRole>[0],
@@ -108,5 +113,5 @@ export const DELETE = withCanonicalEnforcement(async (ctx: CanonicalAuthContext,
     workspaceId
   );
 
-  return { status: "revoked" };
+  return Response.json({ status: "revoked" });
 }, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.USER_ASSIGN_ROLE] });

@@ -121,10 +121,9 @@ async function setup() {
       // never starts its auto-suspend timer between test worker queries.
       const pgLib = await import("pg");
       const kaUrl = (process.env.DATABASE_URL || "").replace("-pooler.", ".");
-      // P0-15: no manual `ssl` override — pg-connection-string already parses
-      // sslmode=require from the connection string when `ssl` is left unset.
+      const kaSsl = kaUrl.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined;
       const makeGlobalKaClient = () => new pgLib.Client({
-        connectionString: kaUrl, keepAlive: true, keepAliveInitialDelayMillis: 5000,
+        connectionString: kaUrl, ssl: kaSsl, keepAlive: true, keepAliveInitialDelayMillis: 5000,
       });
       _globalKeepaliveClient = makeGlobalKaClient();
       try { await _globalKeepaliveClient.connect(); } catch { _globalKeepaliveClient = null; }

@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => ({
   buildIntakeOperatorItemData: vi.fn(),
   enforceWorkspaceScoping: vi.fn(),
   // operator deps
-  deriveServerRole: vi.fn(),
+  resolveServerRole: vi.fn(),
   canEdit: vi.fn(),
   assertCapability: vi.fn(),
   checkIdempotencyKey: vi.fn(),
@@ -76,16 +76,10 @@ vi.mock("@/lib/canonical-route-enforcement", () => ({
   withCanonicalEnforcement: (handler: (ctx: unknown) => unknown) => handler,
 }));
 vi.mock("@/services/auth/server-role", () => ({
-  deriveServerRole: mocks.deriveServerRole,
+  resolveServerRole: mocks.resolveServerRole,
 }));
 vi.mock("@/services/auth/access", () => ({
   canEdit: mocks.canEdit,
-}));
-// The intake route persists through the quota-governed service (its quota is proven by the DB tests in
-// src/__tests__/services/capability-quota/); here it forwards to the db mock so the route's own write and
-// audit sequencing stay observable.
-vi.mock("@/services/decisions/decision-creation-service", () => ({
-  persistDecisionItemWithinQuota: (_workspaceId: string, data: unknown) => mocks.dbOperatorItemCreate({ data }),
 }));
 vi.mock("@/services/entitlement.service", () => ({
   assertCapability: mocks.assertCapability,
@@ -199,7 +193,7 @@ beforeEach(() => {
   mocks.buildIntakeOperatorItemData.mockReturnValue({ id: "item-1" });
 
   // operator defaults
-  mocks.deriveServerRole.mockReturnValue("ADMIN");
+  mocks.resolveServerRole.mockResolvedValue("ADMIN");
   mocks.canEdit.mockReturnValue(true);
   mocks.assertCapability.mockResolvedValue({ allowed: true });
   mocks.checkIdempotencyKey.mockResolvedValue({ isNew: true, cachedResponse: null });

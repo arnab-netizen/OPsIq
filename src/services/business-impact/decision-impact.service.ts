@@ -1,7 +1,5 @@
 import { db } from "@/lib/db";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import { NotFoundError } from "@/infra/errors";
-import type { OperatorItem } from "@/generated/prisma/client";
 
 export interface DecisionImpactMetrics {
   decisionId: string;
@@ -55,8 +53,7 @@ export async function calculateDecisionImpact(
   });
 
   if (!decision) {
-    // Another workspace's decision is the same 404 as an unknown id (tenant non-disclosure).
-    throw new NotFoundError("Decision", decisionId);
+    throw new Error(`Decision not found or unauthorized`);
   }
 
   // Expected impact: impactExpected (deterministic)
@@ -153,7 +150,7 @@ export async function calculateWorkspaceImpactSummary(
 
   // Calculate metrics for each decision
   const metrics = await Promise.all(
-    decisions.map((d: OperatorItem) => calculateDecisionImpact(d.id, workspaceId))
+    decisions.map((d: any) => calculateDecisionImpact(d.id, workspaceId))
   );
 
   // Aggregate metrics
@@ -167,9 +164,9 @@ export async function calculateWorkspaceImpactSummary(
   let roiMultipleCount = 0;
   let roiMultipleSum = 0;
 
-  const blockedCount = decisions.filter((d: OperatorItem) => d.status === "blocked").length;
-  const failedCount = decisions.filter((d: OperatorItem) => d.status === "failed").length;
-  const succeededCount = decisions.filter((d: OperatorItem) => d.status === "done").length;
+  const blockedCount = decisions.filter((d: any) => d.status === "blocked").length;
+  const failedCount = decisions.filter((d: any) => d.status === "failed").length;
+  const succeededCount = decisions.filter((d: any) => d.status === "done").length;
 
   for (const metric of metrics) {
     totalExpectedImpact += metric.expected;
@@ -198,7 +195,7 @@ export async function calculateWorkspaceImpactSummary(
   const averagePriorityScore =
     decisions.length > 0
       ? Math.round(
-          (decisions.reduce((sum: number, d: OperatorItem) => sum + (d.priorityScore ?? 0), 0) /
+          (decisions.reduce((sum: number, d: any) => sum + (d.priorityScore ?? 0), 0) /
             decisions.length) *
             100
         ) / 100

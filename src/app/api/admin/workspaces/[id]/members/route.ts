@@ -10,14 +10,13 @@
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { ValidationError } from "@/infra/errors";
 import { listWorkspaceMembersForAdmin } from "@/services/admin/admin-operability.service";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const workspaceId = params.id;
     if (!workspaceId) {
-      throw new ValidationError("Workspace ID required");
+      throw new Error("Workspace ID required");
     }
 
     const url = new URL(ctx.request!.url);

@@ -3,7 +3,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { getRecommendation, updateRecommendation, toRecommendationDetail } from "@/services/recommendation";
+import { getRecommendation, updateRecommendation } from "@/services/recommendation";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
 import {
@@ -77,8 +77,8 @@ export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
   parseOrThrow(uuidSchema, recommendationId);
 
   const body = await parseRequestBody(ctx.request!, updateRecommendationSchema);
-  // The service returns exactly what it committed; project it onto the GET detail shape instead of
-  // re-reading (a re-read could return a later writer's state).
-  const updated = await updateRecommendation(recommendationId, body, authContext, workspaceId);
-  return canonicalJson(toRecommendationDetail(updated), { status: 200 });
+  await updateRecommendation(recommendationId, body, authContext, workspaceId);
+
+  const updated = await getRecommendation(recommendationId, workspaceId);
+  return canonicalJson(updated, { status: 200 });
 }, { requireCommercial: "continuation_action", requireWorkspace: true, requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE] });

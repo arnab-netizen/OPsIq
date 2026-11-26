@@ -27,9 +27,8 @@ import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 /**
  * Mock authentication facts to allow wrapped route handler to execute.
- * The canonical wrapper validates session and policy before calling the handler; only the two fact readers it
- * uses are mocked (getSessionFact, getPolicyContextFact). Because @/services/auth is mocked, this file does NOT
- * exercise real session resolution or the shadow-read enforcer — operator-route.real.db.test.ts does.
+ * The canonical wrapper validates session and policy before calling the handler.
+ * These mocks provide valid facts so the wrapper allows execution.
  */
 let testActorIdForMock = randomUUID();
 let testWorkspaceIdForMock = randomUUID();
@@ -49,11 +48,20 @@ vi.mock("@/services/auth", () => ({
     },
     invalidReason: undefined,
   })),
+  getSession: vi.fn(async () => ({
+    user: {
+      id: testActorIdForMock,
+      email: "test@example.com",
+      name: "Test User",
+      isActive: true,
+    },
+    sessionId: "test-session",
+    expiresAt: new Date(Date.now() + 86400000),
+  })),
   // PR #287 added requireCapabilities:[ACTION_UPDATE] to the operator POST wrapper.
   // "admin" is not a canonical RoleName; ROLE_CAPABILITIES["admin"] is undefined,
   // so hasCapability() returns false → evaluateAuthState Check 4 → 403.
-  // Use the real RoleName that carries ACTION_UPDATE. The route derives its legacy role from this same
-  // verified policy (deriveServerRole(ctx.policy)); it performs no auth read of its own.
+  // Use the real RoleName that carries ACTION_UPDATE (same as getPolicyContext below).
   getPolicyContextFact: vi.fn(async () => ({
     valid: true,
     policy: {
@@ -68,6 +76,21 @@ vi.mock("@/services/auth", () => ({
       engagementMemberships: [],
     },
     invalidReason: undefined,
+  })),
+  // resolveServerRole() imports getPolicyContext() (the raw PolicyContext, not the
+  // fact wrapper) and derives the legacy role from capabilities. Use a real RoleName
+  // ("admin" is not one) so admin_or_portfolio_manager's APPROVAL_DECIDE/ACTION_UPDATE
+  // resolve to an edit-capable role and the operator route is authorized.
+  getPolicyContext: vi.fn(async () => ({
+    userId: testActorIdForMock,
+    roles: [
+      {
+        role: "admin_or_portfolio_manager",
+        scope: "workspace",
+        scopeId: testWorkspaceIdForMock,
+      },
+    ],
+    engagementMemberships: [],
   })),
 }));
 
@@ -385,22 +408,25 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Operator Route Integration", ()
 
       /**
        * STEP 3: Invoke route (REAL invocation)
-       * A 0 outcome on an item with no recorded outcome is refused by the completion policy
-       * (validateCompletion: "Cannot complete without actualOutcome") before classification, as an
-       * owner-safe ValidationError → 400 (a client mistake is never a 500).
+       * Route executes:
+       *   - classifyOutcome(0, ...) → "failure"
+       *   - Route validation check: if failure, require notes
+       *   - Wrapper catches error, returns NextResponse with status 500
        */
       const response = await operatorPost(req, { params: Promise.resolve({}) });
 
       /**
        * STEP 7: Assertions verify validation executed
        */
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(500); // ← Route error caught by wrapper
       const responseBody = await response.json() as Record<string, unknown>;
-      expect(responseBody.error).toBe("Cannot complete without actualOutcome");
-      expect(responseBody.classification).toBe("handler_invocation_validation_error");
+      // The wrapper answers an unclassified failure with a calm, non-technical body and a correlation id: the raw
+      // exception (class, message, stack) is never returned to a client — it stays in the server log. That the
+      // validation really executed is proven by the unchanged database record below.
+      expect(typeof responseBody.error).toBe("string");
       expect(typeof responseBody.correlationId).toBe("string");
       expect(responseBody).not.toHaveProperty("errorName");
-      expect(JSON.stringify(responseBody)).not.toMatch(/stack/i);
+      expect(JSON.stringify(responseBody)).not.toMatch(/actualOutcome|stack/i);
 
       // Database should NOT be updated (validation prevents write)
       const dbRecord = await db.operatorItem.findUnique({

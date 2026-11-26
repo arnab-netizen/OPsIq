@@ -7,7 +7,6 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { parseOrThrow } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   createExperiment,
@@ -96,7 +95,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const validated = parseOrThrow(createExperimentSchema, body);
+    const validated = createExperimentSchema.parse(body);
 
     const experiment = await createExperiment(
       workspaceId,

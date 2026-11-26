@@ -4,7 +4,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
-import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
+import { NotFoundError, ValidationError, PlanLimitError, ConflictError } from "@/infra/errors";
 import { ClassifiedApiError, hasClassification, extractSafePrismaError } from "@/infra/classified-error";
 import {
   optimisticUpdate,
@@ -21,8 +21,8 @@ import type { EngagementStatus, InterventionMode } from "@/domain/constants/stat
 import { INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import { withCapabilityQuota, type CapabilityReservation } from "@/services/entitlement.service";
-import type { Prisma } from "@/generated/prisma/client";
+import { assertCapability } from "@/services/entitlement.service";
+import { recordEngagementCreationUsage } from "@/services/usage.service";
 
 // Service version for diagnostics - exported for route proof endpoint
 export const ENGAGEMENTS_SERVICE_VERSION = "engagements-service-prisma-debug-v2";
@@ -99,25 +99,12 @@ export async function createEngagement(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string; code: string }> {
-  // Plan quota: create_engagement is reserved atomically before the write (PlanLimitError 402 at the
-  // limit) and kept only by settling it inside the engagement insert's transaction. A failed create or an
-  // idempotent replay of the same engagement settles nothing, so the unit is returned.
-  // Enforced: createEngagement asserted create_engagement before usage was recorded here.
-  const outcome = await withCapabilityQuota(
-    workspaceId,
-    "create_engagement",
-    (reservation) => persistEngagement(input, authContext, workspaceId, reservation),
-    { enforce: true }
-  );
-  return { id: outcome.id, code: outcome.code };
-}
+  // Check capability: create_engagement
+  const capabilityCheck = await assertCapability(workspaceId, "create_engagement");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("create_engagement", capabilityCheck.reason || "Plan limit exceeded");
+  }
 
-async function persistEngagement(
-  input: CreateEngagementInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string,
-  reservation: CapabilityReservation
-): Promise<{ id: string; code: string; isNew: boolean }> {
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
@@ -156,31 +143,26 @@ async function persistEngagement(
       // takes the same code fails the unique index. Surface that as a safe, retryable conflict.
       let engagement;
       try {
-        // The insert and the kept create_engagement unit commit together.
-        engagement = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-          const created = await tx.engagement.create({
-            data: {
-              id: randomUUID(),
-              updatedAt: new Date(),
-              code,
-              title: input.title,
-              clientId: input.clientId,
-              workspaceId: validatedWorkspaceId,
-              serviceTier: input.serviceTier,
-              engagementMode: input.engagementMode,
-              description: input.description ?? null,
-              startDate: input.startDate ? new Date(input.startDate) : null,
-              targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
-              ownerId: input.ownerId ?? null,
-              assignedConsultantId: input.assignedConsultantId ?? null,
-              parentEngagementId: input.parentEngagementId ?? null,
-              createdBy: actorId,
-              status: "draft",
-              healthStatus: "unknown",
-            },
-          });
-          await reservation.settle(tx);
-          return created;
+        engagement = await db.engagement.create({
+          data: {
+            id: randomUUID(),
+            updatedAt: new Date(),
+            code,
+            title: input.title,
+            clientId: input.clientId,
+            workspaceId: validatedWorkspaceId,
+            serviceTier: input.serviceTier,
+            engagementMode: input.engagementMode,
+            description: input.description ?? null,
+            startDate: input.startDate ? new Date(input.startDate) : null,
+            targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
+            ownerId: input.ownerId ?? null,
+            assignedConsultantId: input.assignedConsultantId ?? null,
+            parentEngagementId: input.parentEngagementId ?? null,
+            createdBy: actorId,
+            status: "draft",
+            healthStatus: "unknown",
+          },
         });
       } catch (error) {
         if ((error as { code?: string })?.code === "P2002") {
@@ -237,13 +219,20 @@ async function persistEngagement(
     triggeredBy: actorId,
   });
 
+  // Record usage for engagement creation
+  await recordEngagementCreationUsage(validatedWorkspaceId, {
+    engagementId: result.result.id,
+    code: result.result.code,
+    clientId: input.clientId,
+  });
+
   logger.info("Engagement created", {
     engagementId: result.result.id,
     code: result.result.code,
     clientId: input.clientId,
   });
 
-  return { id: result.result.id, code: result.result.code, isNew: result.isNew };
+  return { id: result.result.id, code: result.result.code };
 }
 
 export async function updateEngagement(

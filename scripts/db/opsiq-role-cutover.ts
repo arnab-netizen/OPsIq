@@ -32,7 +32,7 @@ import {
   assertRoleCutoverStaticTarget,
   type RoleCutoverCommand,
 } from "../../src/infra/role-cutover-target";
-import { applyAndVerifyRoleTopology, readModeledTables, roleTopologyStatements, verifyRoleTopologyReadOnly } from "../../src/services/privacy-erasure/role-topology";
+import { applyAndVerifyRoleTopology, readModeledTables, roleTopologyStatements, verifyRoleTopology } from "../../src/services/privacy-erasure/role-topology";
 import { probeRuntimeRole } from "../../src/services/privacy-erasure/runtime-role-probe";
 
 interface Args { cmd: string; target?: string; runtimeRole: string; eraserLogins: string[]; expectedHost?: string; confirm?: string; dryRun: boolean; phase: "pre" | "post"; onlyIfPresent: boolean }
@@ -61,9 +61,7 @@ const print = (token: string, value: string, summary: Record<string, unknown>) =
 };
 
 async function connect(url: string): Promise<Client> {
-  // P0-15: no manual `ssl` override — pg-connection-string already parses
-  // sslmode=require from the connection string when `ssl` is left unset.
-  const c = new Client({ connectionString: url, connectionTimeoutMillis: 60_000 });
+  const c = new Client({ connectionString: url, ssl: /sslmode=require/i.test(url) ? { rejectUnauthorized: false } : undefined, connectionTimeoutMillis: 60_000 });
   await c.connect();
   return c;
 }
@@ -109,7 +107,7 @@ async function main() {
       return;
     }
     if (cmd === "verify") {
-      const r = await verifyRoleTopologyReadOnly(c, names); // explicit BEGIN READ ONLY, effective mode proven, always rolled back
+      const r = await verifyRoleTopology(c, names);
       const absentOk = args.phase === "pre" && r.facts.runtime_role_exists === false;
       const checks = absentOk ? r.checks.filter((x) => x.name !== "runtime role exists") : r.checks;
       const failed = checks.filter((x) => !x.ok).map((x) => x.name);

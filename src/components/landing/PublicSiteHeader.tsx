@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { PublicLink } from "@/components/navigation/PublicLink";
 import { PublicBetaCta } from "@/components/landing/PublicBetaCta";
 
@@ -15,7 +14,7 @@ export function PublicSiteHeader({ admissionMode = null }: { admissionMode?: str
         <Image src="/opsiq-logo.png" alt="OpsIQ home" width={1864} height={541} priority className="h-9 w-auto" />
       </PublicLink>
       <nav aria-label="Primary" className="flex items-center gap-3">
-        <Link href="/tools/profit-margin-calculator" className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground hover:underline">Calculators</Link>
+        <PublicLink href="/tools" className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground hover:underline">Calculators</PublicLink>
         <PublicLink href="/login" className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground hover:underline">
           Sign in
         </PublicLink>

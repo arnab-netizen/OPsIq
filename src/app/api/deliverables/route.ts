@@ -69,7 +69,7 @@ export const POST = withCanonicalEnforcement(
         return createDeliverable(body, authEnvelope);
       },
       body,
-      { actorId: ctx.verifiedActorId, workspaceId: ctx.verifiedWorkspaceId }
+      ctx.verifiedActorId
     );
 
     return canonicalJson(result, { status: isNew ? 201 : 200 });

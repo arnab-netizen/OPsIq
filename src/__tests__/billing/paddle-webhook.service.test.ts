@@ -5,15 +5,7 @@ const h = vi.hoisted(() => ({ fake: null as unknown as ReturnType<typeof createF
 vi.mock("@/lib/db", async () => {
   const m = await import("./fake-billing-db");
   h.fake = m.createFakeBillingDb();
-  // paddle-webhook.service imports webhook.service (claimed apply), which reads these at load.
-  return {
-    db: h.fake.db,
-    getDbInstance: async () => h.fake.db,
-    ACQUISITION_QUEUE_WAIT_MS: 10_000,
-    TRANSACTION_ACQUIRE_MAX_WAIT_MS: 10_000,
-    CLIENT_SIDE_BACKSTOP_MARGIN_MS: 5_000,
-    withStatementTimeout: async (_prisma: unknown, _ms: number, fn: (tx: unknown) => Promise<unknown>) => h.fake.db.$transaction(fn),
-  };
+  return { db: h.fake.db, getDbInstance: async () => h.fake.db };
 });
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn(async (input: Record<string, unknown>) => { h.fake.audits.push(input); return "a"; }),

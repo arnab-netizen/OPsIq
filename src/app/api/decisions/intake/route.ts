@@ -1,8 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { parseOrThrow } from "@/lib/validation";
 import { ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { persistDecisionItemWithinQuota } from "@/services/decisions/decision-creation-service";
+import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { buildIntakeOperatorItemData } from "./intake-data";
@@ -41,7 +40,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const input = parseOrThrow(IntakeSchema, body);
+    const input = IntakeSchema.parse(body);
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
@@ -59,11 +58,9 @@ export const POST = withCanonicalEnforcement(
     }
 
     try {
-      // decision:create usage is recorded atomically with the insert (record-only: intake is free by contract).
-      const decision = await persistDecisionItemWithinQuota(
-        workspaceId,
-        buildIntakeOperatorItemData(input, workspaceId, actorId)
-      );
+      const decision = await db.operatorItem.create({
+        data: buildIntakeOperatorItemData(input, workspaceId, actorId),
+      });
 
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.DECISION_INTAKE,

@@ -1,14 +1,14 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
 import { getMyDayItems } from "@/services/operator/myday";
-import { deriveServerRole } from "@/services/auth/server-role";
+import { resolveServerRole } from "@/services/auth/server-role";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(async (ctx) => {
   // Enforce server-side auth (fail-closed)
-  const role = deriveServerRole(ctx.policy);
+  const role = await resolveServerRole();
   if (!role) {
     throw new UnauthorizedError("Unauthorized");
   }

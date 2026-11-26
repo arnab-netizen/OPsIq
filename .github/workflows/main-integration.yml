@@ -250,7 +250,6 @@ jobs:
           FILES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>f.path).join(' '))")
           echo "Running $(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.total_files)") quarantined file(s) (non-blocking):"
           echo "$FILES" | tr ' ' '\n'
-          if [ -z "$FILES" ]; then echo "No quarantined files: nothing to run"; exit 0; fi
           npx vitest run --maxWorkers 1 $FILES
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test

@@ -43,24 +43,6 @@ export const FINANCE_FIELDS: ReadonlyArray<FinanceFieldDef> = [
   { name: "repeatCustomerCount", label: "Repeat customers", hint: "Of those customers, how many had bought from you before." },
 ];
 
-/** Fields that hold a COUNT of orders/customers, not an amount of money: they must never carry a currency unit. */
-export const FINANCE_COUNT_FIELD_NAMES: ReadonlySet<string> = new Set(["orderCount", "customerCount", "repeatCustomerCount"]);
-
-export function isFinanceCountField(name: string): boolean {
-  return FINANCE_COUNT_FIELD_NAMES.has(name);
-}
-
-/** Input label: money fields carry the business currency; count fields carry no currency. */
-export function financeFieldLabel(f: { name: string; label: string }, currency: string): string {
-  return isFinanceCountField(f.name) ? f.label : `${f.label} (${currency})`;
-}
-
-/** A recorded figure as shown in "Recorded now": counts as plain numbers, everything else through the caller's money formatter. */
-export function formatRecordedFinanceValue(name: string, value: number | null, formatMoney: (n: number | null) => string): string {
-  if (value === null || !isFinanceCountField(name)) return formatMoney(value);
-  return new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(value);
-}
-
 export function financeField(name: string) {
   const f = FINANCE_FIELDS.find((x) => x.name === name);
   if (!f) throw new Error(`Unknown finance field: ${name}`);

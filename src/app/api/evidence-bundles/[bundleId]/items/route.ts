@@ -15,10 +15,6 @@ import { logger } from "@/infra/logger";
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    // Set once this request holds the idempotency claim: only the claimer may record the key's failure. A
-    // request refused BY the check (a duplicate in flight, another caller's key) must not fail the claim
-    // of the request that owns it.
-    let claimed = false;
     try {
       const workspaceId = ctx.verifiedWorkspaceId;
       const { bundleId } = params;
@@ -51,7 +47,6 @@ export const POST = withCanonicalEnforcement(
 
       const idempotencyCheck = await checkIdempotencyKey({
         idempotencyKey,
-        workspaceId: ctx.verifiedWorkspaceId,
         operationName: "addEvidenceToBundle",
         actorId: ctx.verifiedActorId,
         payload: bodyData,
@@ -62,7 +57,6 @@ export const POST = withCanonicalEnforcement(
           status: idempotencyCheck.cachedResponse.status,
         });
       }
-      claimed = true;
 
       await addEvidenceToBundle(bodyData, ctx, workspaceId);
       await recordIdempotencyResponse(idempotencyKey, 201, { success: true });
@@ -71,7 +65,7 @@ export const POST = withCanonicalEnforcement(
     } catch (error) {
       logger.error("Error adding evidence to bundle", error);
       const idempotencyKey = ctx.request!.headers.get("idempotency-key");
-      if (claimed && idempotencyKey) {
+      if (idempotencyKey) {
         const err = error instanceof Error ? error : new Error("Unknown error");
         await recordIdempotencyError(idempotencyKey, err);
       }

@@ -150,16 +150,9 @@ describe("A3 governance: workflows", () => {
     }
   });
 
-  it("production authorization appears only in the governed migration workflow, the read-only status workflow, and the governed runtime-role reconcile workflow", () => {
-    // OPSIQ_DB_TARGET=production / OPSIQ_ALLOW_PRODUCTION_DB_COMMAND is not exclusively a Prisma-CLI signal
-    // (src/infra/prisma-datasource.ts's gate): scripts/db/opsiq-role-cutover.ts's OWN, independent gate
-    // (src/infra/role-cutover-target.ts) requires the identical two env vars for its non-Prisma, raw-`pg`
-    // production authority. reconcile-runtime-role.yml is that tool's one governed, reviewed workflow
-    // consumer (DISCOVER/DRY_RUN/APPLY against opsiq_app's grants only -- never a Prisma command; `found`
-    // above never contains an entry from this file). A fourth consumer must not be added here without the
-    // same review this one received.
+  it("production authorization appears only in the governed migration workflow and the read-only status workflow", () => {
     const offenders = workflows.filter((file) => {
-      if (file === "migrate-production.yml" || file === "production-db-status.yml" || file === "reconcile-runtime-role.yml") return false;
+      if (file === "migrate-production.yml" || file === "production-db-status.yml") return false;
       return /OPSIQ_ALLOW_PRODUCTION_DB_COMMAND|OPSIQ_PRODUCTION_OPERATION|OPSIQ_DB_TARGET:\s*['"]?production/.test(readFileSync(join(WF_DIR, file), "utf8"));
     });
     expect(offenders).toEqual([]);

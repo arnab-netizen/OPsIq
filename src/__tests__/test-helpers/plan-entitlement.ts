@@ -13,16 +13,11 @@ export interface PlanEntitlementFixture {
   subscriptionIds: string[];
 }
 
-/** `limits` sets a per-key plan limit (default: null = unlimited). */
-export async function seedPlanEntitlement(
-  workspaceIds: string[],
-  capabilityKeys: string[],
-  limits: Record<string, number | null> = {}
-): Promise<PlanEntitlementFixture> {
+export async function seedPlanEntitlement(workspaceIds: string[], capabilityKeys: string[]): Promise<PlanEntitlementFixture> {
   const now = new Date();
   const planId = randomUUID();
   await db.plan.create({ data: { id: planId, name: `Test plan ${planId.slice(0, 8)}`, priceMonthly: 0, priceYearly: 0, updatedAt: now } });
-  await db.planCapability.createMany({ data: capabilityKeys.map((key) => ({ id: randomUUID(), planId, key, limit: limits[key] ?? null })) });
+  await db.planCapability.createMany({ data: capabilityKeys.map((key) => ({ id: randomUUID(), planId, key, limit: null })) });
   const fixture: PlanEntitlementFixture = { planId, billingAccountIds: [], subscriptionIds: [] };
   for (const workspaceId of workspaceIds) {
     const billingAccountId = randomUUID();

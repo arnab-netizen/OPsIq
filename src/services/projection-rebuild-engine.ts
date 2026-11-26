@@ -27,10 +27,8 @@ export class ProjectionRebuildEngine {
 
     try {
       // Step 1: Delete existing projection and stale snapshots
-      // Scoped by workspaceId: a rebuild requested under one workspace must never
-      // delete another workspace's projection that happens to share the id.
       await db.recommendation.deleteMany({
-        where: { id: recommendationId, workspaceId },
+        where: { id: recommendationId },
       });
 
       // Also delete snapshots for this aggregate to ensure fresh replay
@@ -154,8 +152,8 @@ export class ProjectionRebuildEngine {
   ): Promise<boolean> {
     try {
       // Get live projection from database
-      const liveProjection = await db.recommendation.findFirst({
-        where: { id: recommendationId, workspaceId },
+      const liveProjection = await db.recommendation.findUnique({
+        where: { id: recommendationId },
       });
 
       if (!liveProjection) {

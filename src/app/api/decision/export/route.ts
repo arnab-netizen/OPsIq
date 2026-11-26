@@ -2,16 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { queryAuditEvents } from "@/infra/audit";
-import { NotFoundError, ValidationError } from "@/infra/errors";
-import { stableStringify } from "@/domain/owner-spine/owner-decision-record";
-
-/** The AuditEvent columns the export reads (queryAuditEvents returns full rows). */
-interface AuditEventRow {
-  eventName: string;
-  actorId: string | null;
-  occurredAt: Date;
-  payload: unknown;
-}
+import type { Prisma } from "@/generated/prisma/client";
 
 interface DecisionExport {
   decision: {
@@ -54,7 +45,7 @@ export const GET = withCanonicalEnforcement(
     const decisionId = searchParams.get("decisionId");
 
     if (!decisionId) {
-      throw new ValidationError("Missing required parameter: decisionId");
+      throw new Error("Missing required parameter: decisionId");
     }
 
     // Fetch operator item
@@ -65,9 +56,8 @@ export const GET = withCanonicalEnforcement(
       },
     });
 
-    // Scoped by workspace: another workspace's decision is the same 404 as an unknown id (tenant non-disclosure).
     if (!item) {
-      throw new NotFoundError("Decision", decisionId);
+      throw new Error("Decision not found");
     }
 
     // Fetch audit trail for this decision
@@ -103,7 +93,7 @@ export const GET = withCanonicalEnforcement(
       actualOutcome: item!.actualOutcome,
       delta: item!.outcomeDelta ? Number(item!.outcomeDelta) : null,
       accuracy: item!.decisionAccuracy ? Number(item!.decisionAccuracy) : null,
-      auditTrail: auditEvents.map((event: AuditEventRow) => ({
+      auditTrail: auditEvents.map((event: Prisma.AuditEventGetPayload<{}>) => ({
         eventName: event.eventName,
         actorId: event.actorId,
         occurredAt: event.occurredAt ? event.occurredAt.toISOString() : null,
@@ -111,9 +101,9 @@ export const GET = withCanonicalEnforcement(
       })),
     };
 
-    // Canonical form: keys sorted recursively at every depth (stableStringify). A top-level key array must never be
-    // used as a JSON.stringify replacer here: it is an allowlist applied at every depth and empties nested objects.
-    const deterministicData = JSON.parse(stableStringify(exportData));
+    // Serialize with deterministic JSON (sorted keys)
+    const jsonString = JSON.stringify(exportData, Object.keys(exportData).sort(), 2);
+    const deterministicData = JSON.parse(jsonString);
 
     return deterministicData;
   },

@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input } from "@/ui/primitives";
 import { assessCorrectionDraft, correctionAmendFields, correctionFields, type CorrectionField } from "@/domain/owner-first-run/correction-form";
 import { formatCashflowAmount } from "@/domain/owner-cashflow/edit-flow";
-import { financeFieldLabel, formatRecordedFinanceValue } from "@/domain/owner-finance/snapshot-fields";
 import { type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
 import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
 import { firstRunApi, type CorrectionResult } from "@/lib/owner-first-run-client";
@@ -103,12 +102,12 @@ export function FirstResultCorrection({
             <div key={f.name}>
               <Input
                 name={f.name}
-                label={financeFieldLabel(f, currency)}
+                label={`${f.label} (${currency})`}
                 type="text"
                 inputMode="decimal"
                 autoComplete="off"
                 placeholder={markedUnknown ? "Will be treated as unknown" : "Blank = leave as is"}
-                hint={recorded && f.name in recorded ? (recorded[f.name] === null ? "Recorded now: nothing yet" : `Recorded now: ${formatRecordedFinanceValue(f.name, recorded[f.name], (n) => formatCashflowAmount(n, currency))}`) : undefined}
+                hint={recorded && f.name in recorded ? (recorded[f.name] === null ? "Recorded now: nothing yet" : `Recorded now: ${formatCashflowAmount(recorded[f.name], currency)}`) : undefined}
                 value={markedUnknown ? "" : draft[f.name] ?? ""}
                 disabled={markedUnknown}
                 error={assessment.errors[f.name]}

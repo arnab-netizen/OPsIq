@@ -167,22 +167,5 @@ export const CAPABILITIES = {
   ACCEPTANCE_FIXTURE_WRITE: "acceptance_fixture:write",
 } as const;
 
-/**
- * Platform-scoped capabilities: authority over the OpsIQ platform itself (system administration, the beta
- * program and its request queue, cross-tenant customer access, acceptance fixtures), not over one customer
- * workspace. Every role carrying any of them is a platform role (policies/capability-check isPlatformRole):
- * it is provisioned out of band (scripts/provision-*-operator.ts) and never granted or revoked through the
- * workspace role-management API. A new platform capability must be added here.
- */
-export const PLATFORM_CAPABILITIES: readonly string[] = [
-  CAPABILITIES.SYSTEM_ADMIN,
-  CAPABILITIES.SYSTEM_VIEW_AUDIT,
-  CAPABILITIES.BETA_REQUEST_REVIEW,
-  CAPABILITIES.BETA_REQUEST_INVITE,
-  CAPABILITIES.BETA_PROGRAM_MANAGE,
-  CAPABILITIES.CUSTOMER_ACCESS_MANAGE,
-  CAPABILITIES.ACCEPTANCE_FIXTURE_WRITE,
-];
-
 export type CapabilityName =
   (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

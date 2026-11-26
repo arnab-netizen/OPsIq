@@ -58,10 +58,6 @@ const KNOWN_PREFIXES: Array<{
   { prefix: "gen-", classification: "GOVERNANCE" },
   { prefix: "generate-", classification: "GOVERNANCE" },
   { prefix: "governance-", classification: "GOVERNANCE" },
-  // ingest-search-console.ts: GET-only calls to the Google Search Console API (no HTTP
-  // mutation) plus a direct Prisma upsert into SearchConsoleMetric — same DB_DIRECT pattern
-  // as provision-*/dry-run-*, not the HTTP-mutation guard pattern.
-  { prefix: "ingest-", classification: "DB_DIRECT" },
   { prefix: "lint-", classification: "GOVERNANCE" },
   { prefix: "owner-data-", classification: "GOVERNANCE" },
   { prefix: "owner-mode-", classification: "GOVERNANCE" },

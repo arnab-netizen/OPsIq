@@ -25,7 +25,6 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
-    workspaceId: ctx.verifiedWorkspaceId,
     operationName: "acknowledgeEngagement",
     actorId: ctx.verifiedActorId,
     payload: { engagementId },

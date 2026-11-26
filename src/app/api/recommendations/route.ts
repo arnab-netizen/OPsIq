@@ -47,6 +47,12 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
 
+    // Check entitlement: decision_create (plan-based quota enforcement)
+    const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
+    if (!capabilityCheck.allowed) {
+      throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
+    }
+
     const idempotencyKey = ctx.request!.headers.get("idempotency-key");
     if (!idempotencyKey) {
       return canonicalJson(
@@ -60,7 +66,6 @@ export const POST = withCanonicalEnforcement(
     // Check idempotency
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
-      workspaceId: ctx.verifiedWorkspaceId,
       operationName: "createRecommendation",
       actorId: ctx.verifiedSessionSnapshot.actorId,
       payload: body,
@@ -73,14 +78,6 @@ export const POST = withCanonicalEnforcement(
     }
 
     try {
-      // Read-only decision:create plan gate, checked after the replay return so a replayed key gets its
-      // cached response even once decision usage reaches the limit; a denial is recorded for this key.
-      const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
-      if (!capabilityCheck.allowed) {
-        throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded", undefined, {
-          entitlementUnverifiable: capabilityCheck.unverifiable === true,
-        });
-      }
       const result = await createRecommendation(body, ctx, workspaceId);
       await recordIdempotencyResponse(idempotencyKey, 201, result);
       return canonicalJson(result, { status: 201 });

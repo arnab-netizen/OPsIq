@@ -11,9 +11,6 @@
  *  4. Apply synchronously (response only after the DB commit) → 200; transient failure → 500 so
  *     Paddle retries; permanently unacceptable signed events (cross-tenant, unknown price/tenant)
  *     are audited and acknowledged 200 so they are not retried forever, and grant nothing.
- *     Settling the claim (processing → processed) commits in the SAME transaction as the mutation
- *     and its audit rows (applied or rejected), so a failure can neither re-apply an applied event
- *     nor strand an applied one; any failure marks the event failed for the provider's retry.
  */
 import { NextResponse } from "next/server";
 import { logger } from "@/infra/logger";
@@ -25,10 +22,15 @@ import {
 import { verifyPaddleSignature } from "@/services/billing/paddle-signature";
 import {
   PaddleEventRejectedError,
-  processClaimedPaddleEvent,
-  recordRejectedPaddleEvent,
+  auditRejectedPaddleEvent,
+  cancelDuplicateSubscription,
+  processPaddleEvent,
 } from "@/services/billing/paddle-webhook.service";
-import { getOrCreateWebhookEvent, markWebhookEventFailed } from "@/services/webhook.service";
+import {
+  getOrCreateWebhookEvent,
+  markWebhookEventFailed,
+  markWebhookEventProcessed,
+} from "@/services/webhook.service";
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
@@ -75,18 +77,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    const outcome = await processClaimedPaddleEvent(eventKey, envelope);
+    const outcome = await processPaddleEvent(envelope);
+    await markWebhookEventProcessed(eventKey);
     return NextResponse.json({ received: true, outcome }, { status: 200 });
   } catch (error) {
     if (error instanceof PaddleEventRejectedError) {
       try {
-        await recordRejectedPaddleEvent(eventKey, envelope, error);
+        await auditRejectedPaddleEvent(envelope, error);
+        await cancelDuplicateSubscription(envelope, error);
+        await markWebhookEventProcessed(eventKey);
       } catch (innerError) {
         logger.error("Failed to record rejected Paddle event", {
           eventId: envelope.event_id,
           error: classifyOperatorError(innerError, { context: "load" }).operatorMessage,
         });
-        return failAndRetry(eventKey, innerError);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
       }
       return NextResponse.json({ received: true, rejected: error.reason }, { status: 200 });
     }
@@ -94,16 +99,11 @@ export async function POST(request: Request) {
       eventId: envelope.event_id,
       error: classifyOperatorError(error, { context: "load" }).operatorMessage,
     });
-    return failAndRetry(eventKey, error);
+    try {
+      await markWebhookEventFailed(eventKey, error instanceof Error ? error : new Error(String(error)));
+    } catch {
+      // failure already logged above; provider retry will re-enter the state machine
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
-}
-
-/** Nothing was committed for this delivery: release the claim as failed so the provider retries. */
-async function failAndRetry(eventKey: string, error: unknown) {
-  try {
-    await markWebhookEventFailed(eventKey, error instanceof Error ? error : new Error(String(error)));
-  } catch {
-    // failure already logged by markWebhookEventFailed; provider retry re-enters the state machine
-  }
-  return NextResponse.json({ error: "Internal error" }, { status: 500 });
 }

@@ -28,18 +28,13 @@ const WORKFLOW_PATH = join(process.cwd(), ".github/workflows/migrate-production.
 const src = readFileSync(WORKFLOW_PATH, "utf-8");
 
 describe("migrate-production.yml — MAIN-mode exact-one-pending gate", () => {
-  it("1. migration_name is mandatory for MAIN and PINNED_PREDEPLOY (not PINNED_PREDEPLOY-only); it is schema-optional ONLY because MAIN_BATCH takes none, and each single-migration mode rejects an empty value in its own validation step", () => {
+  it("1. migration_name is required at the schema level (both modes, not PINNED_PREDEPLOY-only)", () => {
     const idx = src.indexOf("migration_name:");
     expect(idx).toBeGreaterThan(-1);
-    const block = src.slice(idx, src.indexOf("type: string", idx));
+    const block = src.slice(idx, idx + 400);
+    expect(block).toMatch(/required:\s*true/);
     expect(block).not.toMatch(/PINNED_PREDEPLOY only/);
-    expect(block).toMatch(/Required for both MAIN and PINNED_PREDEPLOY/);
-    expect(block).toMatch(/must be empty for MAIN_BATCH/);
-    // The mandatory-ness moved from the schema into the step validations, where it fails closed before checkout.
-    const mainValidate = src.slice(src.indexOf("name: Validate MAIN inputs"), src.indexOf("name: Validate MAIN_BATCH inputs"));
-    expect(mainValidate).toMatch(/if\s*\[\s*-z\s*"\$MIGRATION_NAME"\s*\]/);
-    const pinnedValidate = src.slice(src.indexOf("name: Validate PINNED_PREDEPLOY inputs"), src.indexOf("name: Validate MAIN inputs"));
-    expect(pinnedValidate).toMatch(/\[ -z "\$MIGRATION_NAME" \]/);
+    expect(block).toMatch(/[Rr]equired for both modes/);
   });
 
   it("2. A dedicated 'Validate MAIN inputs' step exists, gated to MAIN mode, running before Checkout code", () => {

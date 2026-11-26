@@ -6,7 +6,6 @@
 
 import { z } from "zod";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import { parseOrThrow } from "@/lib/validation";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   setPreferences,
@@ -69,7 +68,7 @@ export const PATCH = withCanonicalEnforcement(
     const userId = ctx.verifiedActorId;
 
     const body = await ctx.request!.json();
-    const parsed = parseOrThrow(SetPreferencesSchema, body);
+    const parsed = SetPreferencesSchema.parse(body);
 
     const preferences = await setPreferences({
       workspaceId,

@@ -16,8 +16,8 @@ export const readDatabaseIdentity: DatabaseIdentityReader = async (url, sql) => 
   const { Client } = await import("pg");
   const client = new Client({
     connectionString: url,
-    // P0-15: no manual `ssl` override — pg-connection-string already parses
-    // sslmode=require from the connection string when `ssl` is left unset.
+    // Same TLS posture the test harness already uses for Neon (sslmode=require without CA pinning).
+    ssl: /sslmode=require/i.test(url) ? { rejectUnauthorized: false } : undefined,
     connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
     statement_timeout: STATEMENT_TIMEOUT_MS,
     options: "-c default_transaction_read_only=on",

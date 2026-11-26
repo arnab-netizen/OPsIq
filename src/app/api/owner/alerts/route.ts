@@ -6,7 +6,6 @@
  */
 import { z } from "zod";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { parseOrThrow } from "@/lib/validation";
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getAlerts, getUnreadAlertCount, createAlert } from "@/services/alerts/alert-service";
@@ -59,7 +58,7 @@ export const POST = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
     const userId = ctx.verifiedActorId;
     const body = await ctx.request!.json();
-    const parsed = parseOrThrow(CreateAlertSchema, body);
+    const parsed = CreateAlertSchema.parse(body);
 
     const alert = await createAlert({ workspaceId, userId, ...parsed });
     return canonicalJson({ alert }, { status: 201 });

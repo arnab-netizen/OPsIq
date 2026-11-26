@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   dbWorkspaceMembershipFindFirst: vi.fn(),
   dbOperatorItemFindUnique: vi.fn(),
   dbOperatorItemUpdate: vi.fn(),
-  deriveServerRole: vi.fn(),
+  resolveServerRole: vi.fn(),
   hasPermission: vi.fn(),
   fetch: vi.fn(),
 }));
@@ -51,7 +51,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/services/auth/server-role", () => ({
-  deriveServerRole: mocks.deriveServerRole,
+  resolveServerRole: mocks.resolveServerRole,
 }));
 
 vi.mock("@/middleware/workspace-enforcement", () => ({
@@ -65,9 +65,6 @@ vi.mock("@/infra/errors", () => ({
   },
   ForbiddenError: class extends Error {
     constructor(msg: string) { super(msg); this.name = "ForbiddenError"; }
-  },
-  ConflictError: class extends Error {
-    constructor(msg: string) { super(msg); this.name = "ConflictError"; }
   },
 }));
 
@@ -129,7 +126,7 @@ beforeEach(() => {
   mocks.dbWorkspaceMembershipFindFirst.mockResolvedValue({ role: "ADMIN" });
   mocks.dbOperatorItemFindUnique.mockResolvedValue(SAMPLE_DECISION);
   mocks.dbOperatorItemUpdate.mockResolvedValue(SAMPLE_UPDATED);
-  mocks.deriveServerRole.mockReturnValue("ADMIN");
+  mocks.resolveServerRole.mockResolvedValue("ADMIN");
   mocks.hasPermission.mockReturnValue(true);
 
   // Mock global fetch for /api/run call

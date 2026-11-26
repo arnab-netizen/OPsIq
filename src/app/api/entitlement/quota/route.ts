@@ -5,7 +5,6 @@
  */
 
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import { parseOrThrow } from "@/lib/validation";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { z } from "zod";
 import {
@@ -15,7 +14,6 @@ import {
   getSubscriptionTier,
 } from "@/services/entitlement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { PlanLimitError } from "@/infra/errors";
 
 const IncrementQuotaSchema = z.object({
   type: z.enum(["action", "decision", "experiment", "export"]),
@@ -57,8 +55,9 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
-  const body: unknown = await ctx.request!.json();
-  const parsed = parseOrThrow(IncrementQuotaSchema, body);
+  const nextRequest = ctx.request as any;
+  const body = await nextRequest.json();
+  const parsed = IncrementQuotaSchema.parse(body);
 
   // Check if quota available before incrementing
   const usage = getQuotaUsage(workspaceId, userId);
@@ -67,14 +66,11 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
   const quotaField = `${parsed.type}sCreated` as const;
   const limitField = `${parsed.type}sPerMonth` as const;
-  // Indexed by the request's operation type; a field the usage/config shape lacks (e.g. "exportsCreated") reads as
-  // undefined -> 0 usage / unlimited, exactly as before.
-  const currentUsage = (usage as unknown as Record<string, number | undefined>)[quotaField] || 0;
-  const limit = (config as unknown as Record<string, number | undefined>)[limitField] || Infinity;
+  const currentUsage = (usage as any)[quotaField] || 0;
+  const limit = (config as any)[limitField] || Infinity;
 
   if (currentUsage >= limit) {
-    // The repo-wide plan-limit denial contract: PlanLimitError (402 PLAN_LIMIT_EXCEEDED), never a raw 500.
-    throw new PlanLimitError(`${parsed.type}s_per_month`, `Quota exceeded for ${parsed.type}s`);
+    throw new Error(`Quota exceeded for ${parsed.type}s`);
   }
 
   incrementQuotaUsage(workspaceId, userId, parsed.type);

@@ -6,7 +6,7 @@
 
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { UnauthorizedError } from "@/infra/errors";
 import {
   getNotification,
   markAsRead,
@@ -24,16 +24,20 @@ export const GET = withCanonicalEnforcement(async (
   const { id } = params;
 
   if (!id) {
-    throw new ValidationError("Notification ID is required");
+    throw new Error("Notification ID is required");
   }
 
   const workspaceId = ctx.verifiedWorkspaceId;
 
   const notification = await getNotification(id);
 
-  // Another workspace's notification is the same 404 as an unknown id (tenant non-disclosure).
-  if (!notification || notification.workspaceId !== workspaceId) {
-    throw new NotFoundError("Notification", id);
+  if (!notification) {
+    throw new Error("Notification not found");
+  }
+
+  // Verify notification belongs to requesting workspace
+  if (notification.workspaceId !== workspaceId) {
+    throw new UnauthorizedError("Access denied");
   }
 
   return {
@@ -53,16 +57,20 @@ export const PATCH = withCanonicalEnforcement(async (
   const { id } = params;
 
   if (!id) {
-    throw new ValidationError("Notification ID is required");
+    throw new Error("Notification ID is required");
   }
 
   const workspaceId = ctx.verifiedWorkspaceId;
 
   const notification = await getNotification(id);
 
-  // Another workspace's notification is the same 404 as an unknown id (tenant non-disclosure).
-  if (!notification || notification.workspaceId !== workspaceId) {
-    throw new NotFoundError("Notification", id);
+  if (!notification) {
+    throw new Error("Notification not found");
+  }
+
+  // Verify notification belongs to requesting workspace
+  if (notification.workspaceId !== workspaceId) {
+    throw new UnauthorizedError("Access denied");
   }
 
   markAsRead(id);

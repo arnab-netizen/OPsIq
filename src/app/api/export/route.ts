@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { ValidationError } from "@/infra/errors";
-import type { OperatorItem } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import {
   createExportPackage,
@@ -25,7 +23,7 @@ export const GET = withCanonicalEnforcement(
       | "csv";
 
   if (format !== "json" && format !== "csv") {
-    throw new ValidationError("Invalid format. Use 'json' or 'csv'");
+    throw new Error("Invalid format. Use 'json' or 'csv'");
   }
 
   // Fetch real workspace data for export
@@ -79,7 +77,7 @@ export const GET = withCanonicalEnforcement(
           "decisionType", "expectedOutcome", "actualOutcome", "outcomeDelta",
           "decisionAccuracy", "dueAt", "executedAt", "createdAt",
         ],
-        data: operatorItems.map((item: Pick<OperatorItem, "dueAt" | "executedAt" | "createdAt">) => ({
+        data: operatorItems.map((item: any) => ({
           ...item,
           dueAt: item.dueAt?.toISOString() ?? null,
           executedAt: item.executedAt?.toISOString() ?? null,
@@ -90,7 +88,7 @@ export const GET = withCanonicalEnforcement(
         name: "engagements",
         rowCount: engagements.length,
         columns: ["id", "clientName", "status", "startDate", "endDate", "createdAt"],
-        data: engagements.map((eng: { startDate?: Date | null; endDate?: Date | null; createdAt: Date }) => ({
+        data: engagements.map((eng: any) => ({
           ...eng,
           startDate: eng.startDate?.toISOString() ?? null,
           endDate: eng.endDate?.toISOString() ?? null,
@@ -136,7 +134,7 @@ export const POST = withCanonicalEnforcement(
     const format = body.format || "json";
 
     if (format !== "json" && format !== "csv") {
-      throw new ValidationError("Invalid format");
+      throw new Error("Invalid format");
     }
 
     const exportedData: ExportedData = {

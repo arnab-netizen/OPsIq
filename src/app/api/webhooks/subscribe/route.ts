@@ -9,18 +9,24 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { WebhookRegistrationSchema } from "@/domain/webhooks/webhook-contracts";
 import { registerWebhook } from "@/services/webhooks.service";
-import { parseOrThrow } from "@/lib/validation";
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
 
-    // A malformed body raises the canonical ValidationError (400) from the wrapper-provided request; it must not be
-    // caught and re-thrown as a plain Error (an unknown 500).
-    const body: unknown = ctx.request ? await ctx.request.json() : {};
+    let body: any = {};
+    try {
+      body = await ctx.request?.json();
+    } catch {
+      throw new Error("Invalid JSON");
+    }
 
-    // A body failing the schema is a ValidationError (400) carrying only {path, message} field errors.
-    const { url, events, secret } = parseOrThrow(WebhookRegistrationSchema, body);
+    const validationResult = WebhookRegistrationSchema.safeParse(body);
+    if (!validationResult.success) {
+      throw new Error(`Invalid request body: ${JSON.stringify(validationResult.error.issues)}`);
+    }
+
+    const { url, events, secret } = validationResult.data;
 
     const webhook = await registerWebhook(workspaceId, url, events, ctx.verifiedActorId, secret);
 

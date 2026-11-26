@@ -8,7 +8,6 @@
  */
 import { describe, it, expect } from "vitest";
 import { POST } from "@/app/api/auth/signup/route";
-import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 const req = (workspaceName: string, ip: string) =>
   new Request("http://localhost/api/auth/signup", {
@@ -17,8 +16,7 @@ const req = (workspaceName: string, ip: string) =>
     body: JSON.stringify({ email: "ctrl-char@example.com", workspaceName }),
   });
 
-// Needs the database (rate limiter + settings read run before validation): skipped without one, run in the DB Verification job.
-describe.skipIf(!SHOULD_RUN_DB_TESTS)("control characters in business names", () => {
+describe("control characters in business names", () => {
   it.each(["A\u0000B", "line\nbreak", "tab\there", "esc\u001b[31m", "del\u007f"])("signup refuses %j with a 4xx and no technical text", async (name) => {
     const res = await POST(req(name, "192.0.2.91") as never);
     expect(res.status).toBeGreaterThanOrEqual(400);

@@ -21,11 +21,9 @@ import {
   InvalidStateTransitionError,
   NotFoundError,
   ServiceUnavailableError,
-  TooManyRequestsError,
   UnauthorizedError,
   ValidationError,
 } from "@/infra/errors";
-import { RateLimitError } from "@/infra/rate-limit";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -36,13 +34,6 @@ describe("isExpectedClientRejection", () => {
     expect(isExpectedClientRejection(new BadRequestError("bad"), true, 400)).toBe(true);
     expect(isExpectedClientRejection(new NotFoundError("OwnerStrategySnapshot", "x"), true, 404)).toBe(true);
     expect(isExpectedClientRejection(new InvalidStateTransitionError("a", "b", "c"), true, 422)).toBe(true);
-  });
-
-  it("expected: a rate-limit 429 (TooManyRequestsError / RateLimitError) is a client rejection, not a server failure", () => {
-    expect(isExpectedClientRejection(new TooManyRequestsError("slow down", { retryAfterSeconds: 30 }), true, 429)).toBe(true);
-    expect(isExpectedClientRejection(new RateLimitError(30), true, 429)).toBe(true);
-    // A 429-shaped object the wrapper did not classify as a known-safe AppError stays unexpected.
-    expect(isExpectedClientRejection({ statusCode: 429 }, false, 429)).toBe(false);
   });
 
   it("not expected: security-relevant, auth/permission, 5xx, or anything not a known-safe AppError", () => {

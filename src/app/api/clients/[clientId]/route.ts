@@ -74,7 +74,6 @@ export const POST = withCanonicalEnforcement(
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
-      workspaceId: ctx.verifiedWorkspaceId,
       operationName: "archiveClient",
       actorId: ctx.verifiedActorId,
       payload: { clientId, version: body.version },

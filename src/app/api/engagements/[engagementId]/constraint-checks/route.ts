@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { parseOrThrow } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ConstraintEnforcer } from "@/services/decision-core/constraint-enforcer";
 import { z } from "zod/v4";
@@ -36,7 +35,7 @@ export const POST = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const validated = parseOrThrow(constraintCheckSchema, body);
+    const validated = constraintCheckSchema.parse(body);
 
     const enforcer = new ConstraintEnforcer();
 

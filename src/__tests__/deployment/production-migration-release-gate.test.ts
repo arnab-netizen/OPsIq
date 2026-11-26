@@ -220,9 +220,7 @@ describe("approved production migration workflow (migrate-production.yml)", () =
   it("redeploys main only after a successful, post-verified MAIN-mode migration, and never echoes the hook URL", () => {
     const step = wf.slice(wf.indexOf("name: Trigger production redeploy of main"), wf.indexOf("name: Migration summary"));
     expect(wf.indexOf("name: Verify migration status (post-deploy)")).toBeLessThan(wf.indexOf("name: Trigger production redeploy of main"));
-    // MAIN and MAIN_BATCH (the manifest-authorized batch) share this hook; PINNED_PREDEPLOY never redeploys.
-    expect(step).toContain("if: success() && (inputs.mode == 'MAIN' || inputs.mode == 'MAIN_BATCH') && env.POST_VERIFY_SUCCEEDED == 'true'");
-    expect(step).not.toMatch(/PINNED_PREDEPLOY/);
+    expect(step).toContain("if: success() && inputs.mode == 'MAIN' && env.POST_VERIFY_SUCCEEDED == 'true'");
     expect(step).toContain("secrets.VERCEL_PRODUCTION_DEPLOY_HOOK_URL");
     expect(step).not.toMatch(/echo[^\n]*\$DEPLOY_HOOK_URL/);
     expect(step).not.toMatch(/set -x/);

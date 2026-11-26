@@ -118,8 +118,7 @@ describe("migrate-production.yml — preflight errexit safety", () => {
 
   it("10. Migration summary reports the 4 state markers as visible fields", () => {
     const summaryIdx = src.indexOf("name: Migration summary");
-    // the step now opens with an env: section (inputs are passed as env, never interpolated into shell), which pushes the rows down
-    const block = src.slice(summaryIdx, summaryIdx + 2200);
+    const block = src.slice(summaryIdx, summaryIdx + 1200);
     expect(block).toContain("Preflight passed");
     expect(block).toContain("Deploy started");
     expect(block).toContain("Deploy succeeded");

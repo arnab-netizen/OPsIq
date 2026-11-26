@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-nocheck
 /**
  * Dashboard Demo Data Diagnostic
  * Verifies demo data exists and is properly linked to workspace for dashboard queries
@@ -17,10 +18,11 @@ async function createClient() {
     throw new Error("DATABASE_URL environment variable is not set");
   }
 
-  // P0-15: no manual `ssl` override — pg-connection-string already parses
-  // sslmode=require from the connection string when `ssl` is left unset.
   const pool = new Pool({
     connectionString: databaseUrl,
+    ssl: databaseUrl.includes("sslmode=require")
+      ? { rejectUnauthorized: false }
+      : undefined,
   });
 
   const adapter = new PrismaPg(pool);

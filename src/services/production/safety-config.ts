@@ -58,16 +58,6 @@ export function checkRateLimit(workspaceId: string): boolean {
   return true;
 }
 
-/**
- * Seconds until the caller's current per-workspace window resets (for a 429 Retry-After). At least 1; a workspace
- * with no live window gets the full window length.
- */
-export function getRateLimitRetryAfterSeconds(workspaceId: string): number {
-  const state = workspaceRateLimitState.get(workspaceId);
-  const remainingMs = state ? state.resetAt - Date.now() : PRODUCTION_CONFIG.rateLimit.windowMs;
-  return Math.max(1, Math.ceil(remainingMs / 1000));
-}
-
 // Request deduplication: track recent request hashes
 const recentRequests = new Map<string, number>();
 

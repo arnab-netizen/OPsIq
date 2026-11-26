@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input } from "@/ui/primitives";
 import { EvidenceQualityFieldset } from "@/components/owner/EvidenceQualityFieldset";
 import { type EvidenceQuality } from "@/domain/owner-finance/evidence-quality";
-import { FINANCE_FIELDS, financeFieldLabel, formatRecordedFinanceValue } from "@/domain/owner-finance/snapshot-fields";
+import { FINANCE_FIELDS } from "@/domain/owner-finance/snapshot-fields";
 import {
   AMEND_REASONS,
   describeChange,
@@ -116,12 +116,12 @@ export function FinancePeriodEditor({
               <Input
                 id={`period-edit-${f.name}`}
                 name={f.name}
-                label={financeFieldLabel(f, currency)}
+                label={`${f.label} (${currency})`}
                 type="text"
                 inputMode="decimal"
                 autoComplete="off"
                 placeholder={markedUnknown ? "Will be treated as unknown" : "Blank = leave as is"}
-                hint={`Recorded now: ${was === null ? "not entered" : formatRecordedFinanceValue(f.name, was, fmt)}`}
+                hint={`Recorded now: ${was === null ? "not entered" : fmt(was)}`}
                 value={markedUnknown ? "" : draft[f.name] ?? ""}
                 disabled={markedUnknown}
                 error={messages[f.name]}

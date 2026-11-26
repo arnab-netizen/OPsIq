@@ -40,7 +40,6 @@ export const POST = withCanonicalEnforcement(
 
       const idempotencyCheck = await checkIdempotencyKey({
         idempotencyKey,
-        workspaceId: ctx.verifiedWorkspaceId,
         operationName: "validateEvidence",
         actorId: ctx.verifiedActorId,
         payload: bodyData,

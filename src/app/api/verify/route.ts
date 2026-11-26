@@ -1,6 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { ValidationError } from "@/infra/errors";
 import { verifySignature } from "@/services/integrity/sign";
 import {
   generateDecisionHash,
@@ -17,11 +16,11 @@ export const POST = withCanonicalEnforcement(
 
     // Validate inputs
     if (!inputs || typeof inputs !== "object") {
-      throw new ValidationError("Invalid inputs: must be an object");
+      throw new Error("Invalid inputs: must be an object");
     }
 
     if (!decisionHash || typeof decisionHash !== "string") {
-      throw new ValidationError("Invalid decisionHash: must be a string");
+      throw new Error("Invalid decisionHash: must be a string");
     }
 
     // Recompute hash from inputs

@@ -76,7 +76,6 @@ export const PATCH = withCanonicalEnforcement(
     // Check idempotency
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
-      workspaceId: ctx.verifiedWorkspaceId,
       operationName: "updateEngagement",
       actorId: ctx.verifiedActorId,
       payload: { engagementId, ...body },

@@ -19,7 +19,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/infra/logger";
-import { classifyOperatorError, scrubLogText } from "@/lib/operator-error-governance";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { type VerifiedWorkspaceId, asVerifiedWorkspaceId } from "@/lib/workspace-identity";
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import { getSessionFact, getPolicyContextFact } from "@/services/auth";
@@ -34,7 +34,6 @@ import {
   classifyExecution,
   pushExecutionContext,
   popExecutionContext,
-  runInExecutionScope,
 } from "@/lib/execution-reentry-detector";
 import {
   initializeEnforcerForRequest,
@@ -174,40 +173,12 @@ export interface ServiceAuthEnvelope {
  */
 export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<unknown>;
 
-/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood (429: rate limited). */
-const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422, 429]);
-
-/** Caught-error text for ClassifiedApiError messages, trace stages and log context: scrubbed by the governed log scrubber and length-capped. */
-function describeThrown(thrown: unknown, maxLength = 500): string {
-  let text: string;
-  try {
-    text = thrown instanceof Error ? thrown.message : String(thrown);
-  } catch {
-    text = "[unprintable error]";
-  }
-  const scrubbed = scrubLogText(text);
-  return scrubbed.length > maxLength ? `${scrubbed.slice(0, maxLength)}…` : scrubbed;
-}
-
-/** The thrown value for the logger: same error name, message and stack passed through the governed log scrubber. */
-function scrubbedErrorForLog(thrown: unknown): Error {
-  const safe = new Error(describeThrown(thrown));
-  if (thrown instanceof Error) {
-    safe.name = thrown.name;
-    safe.stack = thrown.stack ? describeThrown(thrown.stack, 8000) : undefined;
-  }
-  return safe;
-}
-
-/** The message of a thrown AppError that reports a 4xx status: owner-safe by construction (see src/infra/errors.ts). */
-function readOwnerSafeMessage(thrown: unknown): string {
-  const message = thrown !== null && typeof thrown === "object" ? (thrown as { message?: unknown }).message : undefined;
-  return typeof message === "string" ? message : String(thrown);
-}
+/** 4xx statuses an owner-safe domain AppError uses to reject a request it understood. */
+const EXPECTED_CLIENT_REJECTION_STATUSES = new Set([400, 404, 409, 422]);
 
 /**
  * True when a handler rejected the request on purpose with an owner-safe domain AppError
- * (validation 400, not-found 404, conflict 409, invalid transition 422, rate limit 429) not flagged
+ * (validation 400, not-found 404, conflict 409, invalid transition 422) that is not flagged
  * security-relevant. Such rejections are expected outcomes and are logged below ERROR.
  */
 export function isExpectedClientRejection(error: unknown, isKnownSafeClientError: boolean, statusCode: number): boolean {
@@ -251,9 +222,7 @@ export function withCanonicalEnforcement(
     serviceVersion?: string;
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
-  // Each request runs in its OWN execution-stack scope (see runInExecutionScope): concurrent requests that share an
-  // async ancestor must never push/pop one another's trace (EXECUTION STACK MISMATCH after the handler committed).
-  return (req: NextRequest, context: { params: Promise<Record<string, string>> }) => runInExecutionScope(async () => {
+  return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
     const params = await context.params;
     let telemetry: CanonicalTelemetryLifecycle | null = null;
     let traceManager: CanonicalExecutionTraceManager | null = null;
@@ -443,7 +412,7 @@ export function withCanonicalEnforcement(
             throw error;
           }
           // Wrap unexpected errors as workspace context invalid
-          const errorMsg = describeThrown(error);
+          const errorMsg = error instanceof Error ? error.message : String(error);
           throw new ClassifiedApiError(
             `Failed to derive verified workspace ID from membership: ${errorMsg}`,
             "workspace_context_invalid",
@@ -688,7 +657,7 @@ export function withCanonicalEnforcement(
         },
         correlationId,
         requestId,
-        request: withClientSafeJsonBody(req),
+        request: req,
         session,
         policy,
       };
@@ -783,9 +752,7 @@ export function withCanonicalEnforcement(
         const appError = error as { statusCode?: unknown; code?: unknown };
         const statusCode = typeof appError.statusCode === "number" ? appError.statusCode : 500;
         const errorCode = typeof appError.code === "string" ? appError.code : "INTERNAL_ERROR";
-        // A 4xx AppError carries an owner-safe message by construction and is shown to the client verbatim (a
-        // 5xx message never reaches the client), so only the 5xx text is passed through the diagnostic sanitizer.
-        const errorMessage = statusCode >= 400 && statusCode < 500 ? readOwnerSafeMessage(error) : describeThrown(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
 
         classifiedError = new ClassifiedApiError(
           errorMessage,
@@ -803,7 +770,7 @@ export function withCanonicalEnforcement(
         const fallbackStage = "handler_invocation";
 
         classifiedError = new ClassifiedApiError(
-          describeThrown(error),
+          error instanceof Error ? error.message : String(error),
           fallbackClassification,
           fallbackStage,
           500,
@@ -840,7 +807,7 @@ export function withCanonicalEnforcement(
 
       try {
         if (traceManager) {
-          traceManager.recordStage("HANDLER_FAILED", "failed", describeThrown(error));
+          traceManager.recordStage("HANDLER_FAILED", "failed", String(error));
           const failedTrace = traceManager.finalize({
             allowed: false,
             statusCode: 500,
@@ -858,8 +825,8 @@ export function withCanonicalEnforcement(
       }
 
       // An expected domain rejection (e.g. a duplicate-period 409 ConflictError, a 400 validation
-      // error, a 404, a rate-limit 429) is the request being answered correctly, not a server failure:
-      // logged at WARN. Security-relevant rejections, auth/permission 4xx and every 5xx or
+      // error, a 404) is the request being answered correctly, not a server failure: it is logged
+      // at WARN. Security-relevant rejections, auth/permission/rate-limit 4xx and every 5xx or
       // unclassified error keep ERROR.
       const expectedClientRejection = isExpectedClientRejection(error, isKnownSafeClientError, classifiedError.statusCode);
 
@@ -876,7 +843,7 @@ export function withCanonicalEnforcement(
         classification: classifiedError.classification,
         statusCode: classifiedError.statusCode,
         errorName: safErrorName,
-        errorMessage: describeThrown(error),
+        errorMessage: error instanceof Error ? error.message : String(error),
         operation: operationName,
       };
       if (expectedClientRejection) {
@@ -887,12 +854,8 @@ export function withCanonicalEnforcement(
       } else {
         // The error goes in the error slot (the context was previously passed there and logged
         // as "[object Object]").
-        logger.error("[WRAPPER_FAILED]", scrubbedErrorForLog(error), wrapperLogContext);
+        logger.error("[WRAPPER_FAILED]", error, wrapperLogContext);
       }
-
-      const clientFacingMessage = isKnownSafeClientError
-        ? classifiedError.message
-        : "Something went wrong on our side. Nothing was saved. Please try again.";
 
       const responseBody: Record<string, unknown> = {
         // A known, owner-safe 4xx AppError (e.g. ValidationError) exposes
@@ -915,7 +878,7 @@ export function withCanonicalEnforcement(
         // specific owner-safe message by classifying the response body
         // themselves (see src/lib/operator-error-governance.ts); this is
         // only the last-resort fallback when no more specific message exists.
-        error: clientFacingMessage,
+        error: isKnownSafeClientError ? classifiedError.message : "Something went wrong on our side. Nothing was saved. Please try again.",
         correlationId: finalCorrelationId,
         classification: classifiedError.classification,
         stage: classifiedError.stage,
@@ -976,11 +939,10 @@ export function withCanonicalEnforcement(
         headers: {
           "x-correlation-id": finalCorrelationId,
           "content-type": "application/json",
-          ...retryAfterHeaderFor(error, classifiedError.statusCode),
         },
       });
     }
-  });
+  };
 }
 
 /**
@@ -1091,45 +1053,4 @@ async function enforceCommercialRequirement(
   if (!capability) return;
   const { assertCommercialCapability } = await import("@/services/billing/commercial-policy.service");
   await assertCommercialCapability(workspaceId, capability);
-}
-
-/**
- * Retry-After for a rate-limited (429) error response, when the thrown AppError knows its window
- * (TooManyRequestsError/RateLimitError carry details.retryAfterSeconds). Any other status, or a 429 without a
- * known window, gets no header. Structural check (not instanceof) so it works across module boundaries.
- * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
- */
-function retryAfterHeaderFor(error: unknown, statusCode: number): Record<string, string> {
-  if (statusCode !== 429 || !error || typeof error !== "object") return {};
-  const details = (error as { details?: unknown }).details;
-  const seconds = details && typeof details === "object" ? (details as { retryAfterSeconds?: unknown }).retryAfterSeconds : undefined;
-  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) return {};
-  return { "retry-after": String(Math.ceil(seconds)) };
-}
-
-/**
- * The request handed to handlers: identical to `req`, except that `json()` maps a body-parse failure (malformed or
- * empty JSON — the platform parser's SyntaxError) to the canonical ValidationError (400) with a generic message,
- * the same one parseRequestBody uses. Many handlers read `ctx.request.json()` directly; without this a client's
- * malformed body surfaced as an unknown 500. Only a SyntaxError from the parser is mapped — every other failure
- * (e.g. a body read twice) propagates unchanged — and no parser detail reaches the client.
- * (Kept at the end of the file so existing line-keyed governance baseline entries do not move.)
- */
-function withClientSafeJsonBody(req: NextRequest): NextRequest {
-  if (!req || typeof req.json !== "function") return req;
-  const parseJson = req.json.bind(req);
-  Object.defineProperty(req, "json", {
-    configurable: true,
-    writable: true,
-    value: async () => {
-      try {
-        return await parseJson();
-      } catch (error) {
-        if (!(error instanceof SyntaxError)) throw error;
-        const { ValidationError } = await import("@/infra/errors");
-        throw new ValidationError("Invalid JSON in request body");
-      }
-    },
-  });
-  return req;
 }

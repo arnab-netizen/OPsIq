@@ -6,15 +6,12 @@ import { assertEngagementAccess } from "@/lib/visibility";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { z } from "zod/v4";
-import { ACTION_STATUSES } from "@/domain/constants/statuses";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// Status vocabulary is the domain's ACTION_STATUSES (the service validates against it and its
-// transition map); "open"/"deferred" were never valid Action statuses and always failed with 422.
 const updateActionSchema = z.object({
-  status: z.enum(ACTION_STATUSES).optional(),
+  status: z.enum(["open", "in_progress", "completed", "blocked", "deferred"]).optional(),
   blockageReason: z.string().optional(),
   version: z.number().int(),
 });

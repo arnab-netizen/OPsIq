@@ -44,21 +44,6 @@ function getExecutionStack(): ExecutionContext[] {
 }
 
 /**
- * Run `fn` with its own execution stack. The lazy `enterWith` in getExecutionStack() does NOT isolate concurrent
- * requests that share an async ancestor (it can install one array for every sibling continuation), so two in-flight
- * wrapper calls pushed/popped the same stack and the later pop threw EXECUTION STACK MISMATCH after the handler had
- * already committed. A fresh `run([])` scope per wrapper call isolates them. A call made while a wrapper is already
- * active in this scope (non-empty stack) keeps that stack: nesting with the same correlation id is still refused
- * (RECURSIVE_WRAPPER); nesting with a different correlation id is classified safe and runs, as before. Two wrapped
- * calls started in parallel from inside one active wrapper share that outer stack (no production code does this).
- */
-export function runInExecutionScope<T>(fn: () => Promise<T>): Promise<T> {
-  const current = executionStackALS.getStore();
-  if (current && current.length > 0) return fn();
-  return executionStackALS.run([], fn);
-}
-
-/**
  * Classify execution attempt
  */
 export function classifyExecution(input: {

@@ -304,12 +304,9 @@ export async function withIdempotency<T>(
   operationName: string,
   operation: () => Promise<T>,
   payload?: unknown,
-  caller?: string | { actorId?: string; workspaceId?: string },
+  actorId?: string,
   ttlHours: number = 24
 ): Promise<IdempotencyResult<T>> {
-  // The cached outcome is bound to the verified caller (services/idempotency.ts): the actor, and the
-  // workspace when the caller passes it ({ actorId, workspaceId }); a bare string is the actor only.
-  const { actorId, workspaceId } = typeof caller === "string" ? { actorId: caller, workspaceId: undefined } : caller ?? {};
   const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
     "@/services/idempotency"
   );
@@ -323,7 +320,6 @@ export async function withIdempotency<T>(
     idempotencyKey,
     operationName,
     actorId,
-    workspaceId,
     payload: normalizedPayload,
     expirationMinutes: ttlHours * 60,
   });

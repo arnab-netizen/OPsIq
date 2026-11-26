@@ -1,5 +1,4 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { parseOrThrow } from "@/lib/validation";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { OfferEngine } from "@/services/growth/offer-engine";
 import { ValidationError } from "@/infra/errors";
@@ -27,7 +26,7 @@ export const POST = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
 
     const body = ctx.request ? await ctx.request.json() : {};
-    const validated = parseOrThrow(createOfferSchema, body);
+    const validated = createOfferSchema.parse(body);
 
     const result = OfferEngine.createOffer(workspaceId, validated);
 
@@ -48,7 +47,7 @@ export async function calculateEffectivePriceHandler(
   workspaceId: string,
   basePrice: number,
   discountPercent: number
-) {
+): Promise<any> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -68,7 +67,7 @@ export async function recordPerformanceHandler(
   baselineConversions: number,
   baselineRevenue: number,
   productionCost: number
-) {
+): Promise<any> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -90,8 +89,8 @@ export async function recordPerformanceHandler(
  */
 export async function compareOffersHandler(
   workspaceId: string,
-  offers: Parameters<typeof OfferEngine.compareOffers>[1]
-) {
+  offers: any[]
+): Promise<any> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }

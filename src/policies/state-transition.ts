@@ -179,22 +179,7 @@ export function validateFindingTransition(from: FindingStatus, to: FindingStatus
   validateTransitionGeneric("Finding", FINDING_TRANSITIONS, FINDING_STATUSES, from, to);
 }
 
-/**
- * "pending" is the Recommendation.status column default and the status createRecommendation
- * writes, so it is the real stored initial state. It is treated as equivalent to "proposed":
- * exactly proposed's outgoing transitions, and nothing transitions INTO it.
- */
-export const RECOMMENDATION_STORED_INITIAL_STATUS = "pending" as const;
-export type RecommendationStoredStatus = RecommendationStatus | typeof RECOMMENDATION_STORED_INITIAL_STATUS;
-
-export function validateRecommendationTransition(from: RecommendationStoredStatus, to: RecommendationStatus): void {
-  if (from === RECOMMENDATION_STORED_INITIAL_STATUS) {
-    const allowed = RECOMMENDATION_TRANSITIONS.proposed ?? [];
-    if (!RECOMMENDATION_STATUSES.includes(to) || !allowed.includes(to)) {
-      throw new InvalidStateTransitionError("Recommendation", from, to);
-    }
-    return;
-  }
+export function validateRecommendationTransition(from: RecommendationStatus, to: RecommendationStatus): void {
   validateTransitionGeneric("Recommendation", RECOMMENDATION_TRANSITIONS, RECOMMENDATION_STATUSES, from, to);
 }
 

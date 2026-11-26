@@ -1,7 +1,6 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
-import { NotFoundError } from "@/infra/errors";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -233,7 +232,7 @@ export async function markAlertAsRead(
     });
 
     if (!existingAlert) {
-      throw new NotFoundError("Alert", alertId);
+      throw new Error("Alert not found");
     }
 
     const alert = await db.alert.update({
@@ -582,7 +581,7 @@ export async function resolveAlert(
     });
 
     if (!existingAlert) {
-      throw new NotFoundError("Alert", alertId);
+      throw new Error("Alert not found");
     }
 
     const alert = await db.alert.update({

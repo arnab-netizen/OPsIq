@@ -33,9 +33,7 @@ export class EventReplayEngine {
     upToEventNumber?: number
   ): Promise<ReplayedAggregate> {
     let usedSnapshot = false;
-    // Highest eventNumber already folded into initialState (0 = nothing folded).
-    // A snapshot at eventNumber S covers events 1..S, so replay resumes at S + 1.
-    let snapshotEventNumber = 0;
+    let startEventNumber = 0;
     let initialState: Record<string, unknown> = {
       aggregateId,
       aggregateType,
@@ -49,15 +47,9 @@ export class EventReplayEngine {
       workspaceId
     );
 
-    // A snapshot taken after the requested bound already contains events past
-    // upToEventNumber, so it cannot produce the as-of state: replay from event 1.
-    const snapshotWithinBound =
-      validSnapshot !== null &&
-      (upToEventNumber === undefined || validSnapshot.lastEventNumber <= upToEventNumber);
-
-    if (validSnapshot && snapshotWithinBound) {
+    if (validSnapshot) {
       usedSnapshot = true;
-      snapshotEventNumber = validSnapshot.lastEventNumber;
+      startEventNumber = validSnapshot.lastEventNumber + 1;
       initialState = {
         ...validSnapshot.state,
         events: (validSnapshot.state.events as Array<unknown>) || [],
@@ -65,22 +57,18 @@ export class EventReplayEngine {
 
       logger.info("EventReplayEngine: Using snapshot for optimization", {
         aggregateId,
-        startEventNumber: snapshotEventNumber + 1,
+        startEventNumber,
       });
     }
 
-    // Phase 2: Fetch remaining events (or all if no snapshot), bounded on both
-    // sides in a single eventNumber filter: (snapshotEventNumber, upToEventNumber].
-    const eventNumberFilter = {
-      ...(snapshotEventNumber > 0 && { gt: snapshotEventNumber }),
-      ...(upToEventNumber !== undefined && { lte: upToEventNumber }),
-    };
+    // Phase 2: Fetch remaining events (or all if no snapshot)
     const query = {
       where: {
         aggregateId,
         aggregateType,
         workspaceId,
-        ...(Object.keys(eventNumberFilter).length > 0 && { eventNumber: eventNumberFilter }),
+        eventNumber: startEventNumber > 0 ? { gt: startEventNumber } : undefined,
+        ...(upToEventNumber && { eventNumber: { lte: upToEventNumber } }),
       },
       orderBy: { eventNumber: "asc" as const },
     };
@@ -128,17 +116,16 @@ export class EventReplayEngine {
     const result: ReplayedAggregate = {
       aggregateId,
       aggregateType,
-      version: snapshotEventNumber + events.length,
+      version: events.length + (usedSnapshot ? startEventNumber : 0),
       eventCount: events.length,
       state,
-      lastEventNumber: lastEvent?.eventNumber ?? snapshotEventNumber,
+      lastEventNumber: lastEvent?.eventNumber || startEventNumber,
       lastEventTimestamp: lastEvent?.recordedAt || new Date(),
       usedSnapshot,
     };
 
-    // Step 4: Create/update snapshot for optimization if replay yielded new events. A bounded (as-of) replay is a
-    // read-only query: it must not move the single stored snapshot to an older event number.
-    if (upToEventNumber === undefined && events.length > 0 && lastEvent) {
+    // Step 4: Create/update snapshot for optimization if replay yielded new events
+    if (events.length > 0 && lastEvent) {
       try {
         // Create snapshot without events array (only derived state)
         const snapshotState = { ...state };

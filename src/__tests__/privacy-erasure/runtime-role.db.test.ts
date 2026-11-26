@@ -179,33 +179,6 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS || !ON_DEDICATED_DB)("[db] opsiq_app runtim
     }
   });
 
-  it("ORIGINAL DEFECT (search_console_metrics): a real migrated table the runtime was never granted is DETECTED as a grant gap, blocks via the verifier, and one reconcile repairs it idempotently", async () => {
-    // Reproduces, on this disposable database only, the state production was in after migration #678 added
-    // search_console_metrics while opsiq_app's grants predated it: the table exists (real migration chain) but has no runtime ACL.
-    expect(readModeledTables()).toContain("search_console_metrics");
-    await admin.query(`REVOKE ALL ON TABLE public.search_console_metrics FROM ${RUNTIME}`);
-    const rt = await asRuntime();
-    try {
-      expect(await attempt(rt, `SELECT 1 FROM public.search_console_metrics LIMIT 1`)).toMatch(/permission denied/);
-      const before = await verifyRoleTopology(admin, NAMES);
-      expect(before.result).toBe("FAIL");
-      expect(before.facts.grant_gap_tables).toEqual(["search_console_metrics"]); // exactly the defective table, nothing else
-      // reconcile repairs it with no unrelated privilege: a second apply changes no ACL
-      expect((await applyAndVerifyRoleTopology(admin, NAMES)).committed).toBe(true);
-      const afterFirst = await aclSnapshot();
-      expect((await applyAndVerifyRoleTopology(admin, NAMES)).committed).toBe(true);
-      expect(await aclSnapshot()).toEqual(afterFirst);
-      expect(await attempt(rt, `SELECT 1 FROM public.search_console_metrics LIMIT 1`)).toBe("OK");
-      // least privilege is preserved: still no DDL and still no access to the denied erasure ledger
-      expect(await attempt(rt, `CREATE TABLE public.zz_rt_ddl (id int)`)).toMatch(/permission denied/);
-      expect(await attempt(rt, `SELECT 1 FROM public.privacy_erasure_requests`)).toMatch(/permission denied/);
-      expect((await verifyRoleTopology(admin, NAMES)).result).toBe("PASS");
-    } finally {
-      await rt.end();
-      await applyAndVerifyRoleTopology(admin, NAMES);
-    }
-  });
-
   it("PUBLIC schema hardening: no CREATE for PUBLIC or the runtime, whatever the server default was", async () => {
     await admin.query(`GRANT CREATE ON SCHEMA public TO PUBLIC`); // what PostgreSQL <= 14 did by default
     await applyAndVerifyRoleTopology(admin, NAMES);

@@ -23,7 +23,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const valueMocks = vi.hoisted(() => ({
   getItems: vi.fn(),
   calculateValue: vi.fn(),
-  deriveServerRole: vi.fn(),
+  resolveServerRole: vi.fn(),
   canView: vi.fn(),
   emitAuditEvent: vi.fn(),
   classifyOperatorError: vi.fn(),
@@ -31,7 +31,7 @@ const valueMocks = vi.hoisted(() => ({
 
 vi.mock("@/services/operator/store", () => ({ getItems: valueMocks.getItems }));
 vi.mock("@/services/value/tracker", () => ({ calculateValue: valueMocks.calculateValue }));
-vi.mock("@/services/auth/server-role", () => ({ deriveServerRole: valueMocks.deriveServerRole }));
+vi.mock("@/services/auth/server-role", () => ({ resolveServerRole: valueMocks.resolveServerRole }));
 vi.mock("@/services/auth/access", () => ({ canView: valueMocks.canView, resolveApprovalGrant: vi.fn().mockReturnValue(null) }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: valueMocks.emitAuditEvent }));
 vi.mock("@/lib/operator-error-governance", () => ({
@@ -47,7 +47,7 @@ import { GET as valueGET } from "@/app/api/value/route";
 
 const scenarioMocks = vi.hoisted(() => ({
   runScenario: vi.fn(),
-  deriveServerRole: vi.fn(),
+  resolveServerRole: vi.fn(),
   emitAuditEvent: vi.fn(),
   classifyOperatorError: vi.fn(),
 }));
@@ -73,7 +73,7 @@ const SAMPLE_METRICS = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  valueMocks.deriveServerRole.mockReturnValue("ADMIN");
+  valueMocks.resolveServerRole.mockResolvedValue("ADMIN");
   valueMocks.canView.mockReturnValue(true);
   valueMocks.getItems.mockResolvedValue([]);
   valueMocks.calculateValue.mockReturnValue(SAMPLE_METRICS);
