@@ -260,6 +260,13 @@ describe("retainer pricing", () => {
       expect(r.proposed).toMatchObject({ state: "hours_not_limited_by_cost", maxSustainableHours: null, plannedHoursMeetTarget: true });
     });
 
+    it("other costs exactly equal the budget AND hourly cost is explicitly 0: cost does not limit hours, margin is exactly the target, never 'zero hours' or 'unlimited'", () => {
+      // Fee 600, 50% target: budget 300 = other 300; hours cost 0, so delivery cost is exactly 300 and the margin is exactly 50%.
+      const { result: r } = ok(calculateRetainerPricing({ ...base, costPerHour: 0, proposedFee: 600 }));
+      expect(r.proposed).toMatchObject({ costBudget: 300, laborBudget: 0, state: "hours_not_limited_by_cost", maxSustainableHours: null, plannedHoursMeetTarget: true, deliveryMargin: 0.5 });
+      expect(r.proposed?.maxSustainableHours).not.toBe(0);
+    });
+
     it("zero hourly cost does not hide other costs that exceed the budget", () => {
       const { result: r } = ok(calculateRetainerPricing({ ...base, costPerHour: 0, proposedFee: 500 }));
       expect(r.proposed?.state).toBe("other_costs_exceed_budget");
@@ -468,6 +475,19 @@ describe("capacity planning", () => {
       expect(r.plannedAssessment).toBe("withheld_workload_missing_or_zero");
       expect(r.fteShortWithPlanned).toBeNull();
       expect(r.additionalClientsSupportable).toBeNull();
+    });
+
+    it("an extremely small positive workload is rejected, never Infinity, NaN or an absurd client count", () => {
+      for (const w of [1e-12, 1e-9, 0.001, 0.009]) {
+        const r = calculateCapacity({ ...base, hoursPerNewClient: w });
+        expect(r.ok).toBe(false);
+      }
+      // The shared minimum itself is valid and every number stays finite.
+      const { result: r } = ok(calculateCapacity({ ...base, hoursPerNewClient: 0.01 }));
+      expect(Number.isFinite(r.additionalClientsSupportable as number)).toBe(true);
+      expect(Number.isSafeInteger(r.additionalClientsSupportable as number)).toBe(true);
+      expect(Number.isFinite(r.plannedHoursOverTarget as number)).toBe(true);
+      expect(Number.isFinite(r.fteShortWithPlanned as number)).toBe(true);
     });
 
     it("rejects a negative workload", () => {

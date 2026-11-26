@@ -219,7 +219,8 @@ const retainerPricing: CalcConfig = {
       } else if (p.state === "hours_limited_by_cost") {
         interpretation.push(`At ${f.money(p.fee)} per month and a ${target} target margin, ${f.money(p.laborBudget)} of the cost budget is left for delivery after other direct costs, which supports about ${hrs(p.maxSustainableHours ?? 0)} at ${f.money(v.costPerHour)} per hour. Your planned ${hrs(v.monthlyHours)} ${p.plannedHoursMeetTarget ? "fit within that, so the target margin is met" : "are more than that, so the target margin is missed"}.`);
       } else {
-        interpretation.push(`Your loaded cost per hour is 0, so cost does not limit the delivery hours at ${f.money(p.fee)} per month. Your team's real capacity still does: this does not mean unlimited hours are available.`);
+        const useAll = p.laborBudget < 0.005 ? ` Your other direct costs use the whole ${f.money(p.costBudget)} cost budget, so the margin is exactly the target and any hour that costs money would push it below.` : "";
+        interpretation.push(`Your loaded cost per hour is 0, so cost does not limit the delivery hours at ${f.money(p.fee)} per month.${useAll} Your team's real capacity still does: this does not mean unlimited hours are available.`);
       }
       proposedRows = [
         { label: "Cost budget at your target margin (fee × (1 − margin))", value: f.money(p.costBudget) },
