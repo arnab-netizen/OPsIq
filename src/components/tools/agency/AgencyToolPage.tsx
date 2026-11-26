@@ -61,8 +61,8 @@ export function AgencyToolPage({ id }: { id: AgencyToolId }) {
       <PublicSiteHeader />
       <div className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 break-words">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
-          <PublicLink href="/" className="hover:underline">OpsIQ</PublicLink> /{" "}
-          <PublicLink href={TOOLS_HUB_PATH} className="hover:underline">Calculators</PublicLink> / <span aria-current="page">{tool.h1}</span>
+          <PublicLink href="/" className="hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">OpsIQ</PublicLink> /{" "}
+          <PublicLink href={TOOLS_HUB_PATH} className="hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">Calculators</PublicLink> / <span aria-current="page">{tool.h1}</span>
         </nav>
         <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{tool.h1}</h1>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">{content.intro}</p>
@@ -79,7 +79,7 @@ export function AgencyToolPage({ id }: { id: AgencyToolId }) {
           <h2 className="font-display text-xl font-bold tracking-tight">Want to see which number to fix first?</h2>
           <p>
             This calculator looks at one question. The free{" "}
-            <PublicLink href={AGENCY_DIAGNOSTIC_PATH} data-calc-link="agency" className="font-medium text-[var(--primary-text)] underline">
+            <PublicLink href={AGENCY_DIAGNOSTIC_PATH} data-calc-link="agency" className="font-medium text-[var(--primary-text)] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">
               agency decision diagnostic
             </PublicLink>{" "}
             takes ten monthly numbers and returns the one issue most worth fixing first across margin, overhead, cash and utilization.
@@ -145,17 +145,17 @@ export function AgencyToolPage({ id }: { id: AgencyToolId }) {
               const r = getAgencyTool(rid);
               return (
                 <li key={rid}>
-                  <PublicLink href={r.path} data-calc-link="related" className="text-[var(--primary-text)] underline">{r.h1}</PublicLink>
+                  <PublicLink href={r.path} data-calc-link="related" className="text-[var(--primary-text)] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">{r.h1}</PublicLink>
                 </li>
               );
             })}
             {tool.resources.map((slug) => (
               <li key={slug}>
-                <PublicLink href={`/resources/${slug}`} data-calc-link="related" className="text-[var(--primary-text)] underline">{RESOURCE_TITLES[slug]}</PublicLink>
+                <PublicLink href={`/resources/${slug}`} data-calc-link="related" className="text-[var(--primary-text)] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">{RESOURCE_TITLES[slug]}</PublicLink>
               </li>
             ))}
             <li>
-              <PublicLink href={TOOLS_HUB_PATH} data-calc-link="related" className="text-[var(--primary-text)] underline">All calculators</PublicLink>
+              <PublicLink href={TOOLS_HUB_PATH} data-calc-link="related" className="text-[var(--primary-text)] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">All calculators</PublicLink>
             </li>
           </ul>
         </section>

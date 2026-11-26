@@ -78,7 +78,7 @@ export default function ToolsHubPage() {
       <PublicSiteHeader />
       <div className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 break-words">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
-          <PublicLink href="/" className="hover:underline">OpsIQ</PublicLink> / <span aria-current="page">Calculators</span>
+          <PublicLink href="/" className="hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">OpsIQ</PublicLink> / <span aria-current="page">Calculators</span>
         </nav>
         <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Free business and agency calculators</h1>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
@@ -98,7 +98,7 @@ export default function ToolsHubPage() {
                 {cards.map((c) => (
                   <li key={c.path} className="rounded-lg border border-border bg-background p-5">
                     <h3 className="text-lg font-semibold">
-                      <PublicLink href={c.path} data-calc-link="related" className="text-[var(--primary-text)] underline">{c.title}</PublicLink>
+                      <PublicLink href={c.path} data-calc-link="related" className="text-[var(--primary-text)] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">{c.title}</PublicLink>
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{c.text}</p>
                   </li>
@@ -112,7 +112,7 @@ export default function ToolsHubPage() {
           <h2 className="font-display text-xl font-bold tracking-tight">Not sure which number to look at first?</h2>
           <p className="mt-2">
             The free{" "}
-            <PublicLink href={AGENCY_DIAGNOSTIC_PATH} data-calc-link="agency" className="font-medium text-[var(--primary-text)] underline">
+            <PublicLink href={AGENCY_DIAGNOSTIC_PATH} data-calc-link="agency" className="font-medium text-[var(--primary-text)] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]">
               agency decision diagnostic
             </PublicLink>{" "}
             takes ten monthly numbers and returns the one issue most worth fixing first. It needs no signup.
