@@ -8,7 +8,7 @@ Status: **proposed by PR `claude/production-secret-isolation`; nothing in GitHub
 
 | Environment | Secret (name only) | Used by |
 |---|---|---|
-| `production-operator` | `OPERATOR_DATABASE_URL` | migrate-production, production-db-status, provision-administration-operator, provision-acceptance-fixture-operator, scheduled-backup (legacy, disabled) |
+| `production-operator` | `OPERATOR_DATABASE_URL` | migrate-production, production-db-status, provision-administration-operator, provision-acceptance-fixture-operator, provision-gsc-ingestion-credential (see GSC_INGESTION_CREDENTIAL_PROVISIONING.md), scheduled-backup (legacy, disabled) |
 | `production-operator` | `OPERATOR_ACCEPTANCE_EMAIL` | production-owner-acceptance, production-root-probe, provision-acceptance-fixture-operator |
 | `production-operator` | `OPERATOR_ACCEPTANCE_PASSWORD` | production-owner-acceptance, production-root-probe |
 | `production-smoke` | `SMOKE_DIAGNOSTIC_KEY` | smoke-production-dashboard / -diagnosis-dashboard / -signup-dashboard |
