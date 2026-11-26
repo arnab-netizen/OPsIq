@@ -54,9 +54,10 @@ describe("/privacy", () => {
 
   it("discloses the /agency funnel counters and the free tools without altering the existing Vercel sentence", async () => {
     const t = text(await page({}));
-    expect(t).toContain("counts visits to the free profit-margin calculator and the agency diagnostic page");
-    expect(t).toContain("how many visitors start the diagnostic, how many complete it, and which beta-access button on the page was clicked");
-    expect(t).toContain("None of what you type into the diagnostic, and none of its result, is sent.");
+    expect(t).toContain("counts visits to the free calculators and the agency diagnostic page");
+    expect(t).toContain("how many visitors start it, how many complete it, which related calculator or agency diagnostic link was clicked, and which beta-access button on the page was clicked");
+    expect(t).toContain("Each count carries only the name of the calculator");
+    expect(t).toContain("None of what you type into a calculator or the diagnostic, and none of its result, is sent.");
   });
 
   it("offers the 'Analytics preferences' control only where Clarity is configured", async () => {

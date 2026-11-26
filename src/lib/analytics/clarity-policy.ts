@@ -1,3 +1,5 @@
+import { AGENCY_TOOLS } from "@/services/tools/agency/registry";
+
 /**
  * Microsoft Clarity policy for OpsIQ's PUBLIC, logged-out pages only (pure; no DOM, no I/O).
  *
@@ -51,6 +53,13 @@ export function resolveClarityProjectId(env: Record<string, string | undefined> 
 
 /** Exact pages that may run Clarity. */
 const ELIGIBLE_EXACT_PATHS: ReadonlySet<string> = new Set(["/", "/about", "/beta", "/privacy", "/terms", "/resources"]);
+
+/**
+ * Calculator pages that take payroll, margin or client figures. Fail closed: Clarity never runs on them, even though they sit
+ * under the /tools/ prefix. The existing profit-margin calculator is unchanged. Links to these pages are full-document
+ * navigations (isDocumentNavigationRequired), so a Clarity runtime from an eligible page cannot follow a visitor into them.
+ */
+export const CLARITY_EXCLUDED_EXACT_PATHS: ReadonlySet<string> = new Set(AGENCY_TOOLS.map((t) => t.path));
 
 /** Prefixes whose sub-pages may run Clarity (one or more further segments are required). */
 const ELIGIBLE_PREFIXES: readonly string[] = ["/resources/", "/tools/"];
@@ -112,6 +121,7 @@ export function isClarityEligiblePath(pathname: unknown): boolean {
 
   if (CLARITY_FORBIDDEN_PREFIXES.some((p) => startsWithSegment(normalized, p))) return false;
 
+  if (CLARITY_EXCLUDED_EXACT_PATHS.has(normalized)) return false;
   if (ELIGIBLE_EXACT_PATHS.has(normalized)) return true;
   return ELIGIBLE_PREFIXES.some((prefix) => normalized.startsWith(prefix) && normalized.length > prefix.length);
 }
