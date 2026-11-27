@@ -86,8 +86,8 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
   const view = outcome.ok ? outcome.view : null;
 
   return (
-    <section aria-labelledby={`calc-${id}-heading`} className="mt-8 grid gap-6 md:grid-cols-2">
-      <form className="rounded-lg border border-border bg-background p-5" onSubmit={(e) => e.preventDefault()} autoComplete="off" noValidate>
+    <section aria-labelledby={`calc-${id}-heading`} className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+      <form className="min-w-0 rounded-lg border border-border bg-background p-5" onSubmit={(e) => e.preventDefault()} autoComplete="off" noValidate>
         <div className="flex items-center justify-between gap-3">
           <h2 id={`calc-${id}-heading`} className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             {config.basis}
@@ -159,7 +159,7 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
         </div>
       </form>
 
-      <div className="rounded-lg border border-border bg-background p-5" aria-live="polite">
+      <div className="min-w-0 rounded-lg border border-border bg-background p-5" aria-live="polite">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your result</h2>
         {!outcome.ok && (
           <div className="mt-3 rounded-md border-l-4 border-amber-500 bg-muted p-4">
@@ -212,11 +212,11 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
       </div>
 
       {view && (
-        <div className="space-y-6 md:col-span-2">
+        <div className="min-w-0 space-y-6 md:col-span-2">
           {view.compare && (
             <div className="rounded-lg border border-border bg-background p-5">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Current versus target</h2>
-              <div className="mt-3 overflow-x-auto">
+              <div className="mt-3 max-w-full overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]" role="region" aria-label="Current versus target table; scrolls sideways when narrow" tabIndex={0}>
                 <table className="w-full min-w-[28rem] text-left text-sm">
                   <thead>
                     <tr className="border-b border-border text-xs text-muted-foreground">
@@ -243,7 +243,7 @@ export function AgencyCalculator({ id }: { id: AgencyToolId }) {
           {view.table && (
             <div className="rounded-lg border border-border bg-background p-5">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{view.table.title}</h2>
-              <div className="mt-3 overflow-x-auto">
+              <div className="mt-3 max-w-full overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-text)]" role="region" aria-label={`${view.table.title} table; scrolls sideways when narrow`} tabIndex={0}>
                 <table className="w-full min-w-[28rem] text-left text-sm">
                   <thead>
                     <tr className="border-b border-border text-xs text-muted-foreground">
