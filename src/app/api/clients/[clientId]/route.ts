@@ -8,6 +8,7 @@ import {
 } from "@/services/client-account";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { z } from "zod/v4";
 
 const updateClientSchema = z.object({
@@ -32,7 +33,7 @@ export const GET = withCanonicalEnforcement(
     const { clientId } = params;
     parseOrThrow(uuidSchema, clientId);
 
-    const client = await getClientById(clientId, workspaceId);
+    const client = await getClientById(clientId, workspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
     return client;
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.CLIENT_VIEW] }
@@ -47,7 +48,7 @@ export const PATCH = withCanonicalEnforcement(
 
     await updateClient(clientId, body, ctx, ctx.verifiedWorkspaceId);
 
-    const updated = await getClientById(clientId, ctx.verifiedWorkspaceId);
+    const updated = await getClientById(clientId, ctx.verifiedWorkspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
     return updated;
   },
   {

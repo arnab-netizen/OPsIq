@@ -9,10 +9,19 @@
  * real transaction-pooled proxy instead of mocking PgBouncer's behavior.
  *
  * Gated on TEST_WITH_PGBOUNCER=true AND the `pgbouncer` binary actually
- * being resolvable -- CI does not install PgBouncer, so these tests are
- * expected to report SHOULD_RUN_PGBOUNCER_TESTS=false there (honest
- * PGBouncer_REPRODUCTION=BLOCKED, never a faked/mocked substitute for real
- * transaction-pooling evidence -- see the mission's own Phase 4).
+ * being resolvable. ci.yml's db-verify job installs PgBouncer and runs this
+ * proof with an exact-count gate (scripts/ci/check-db-proof-counts.mjs), so a
+ * missing binary there FAILS the job instead of skipping. Where the binary is
+ * genuinely unavailable (a developer machine without it) the proof is
+ * honestly skipped, never replaced by a mocked substitute for real
+ * transaction-pooling evidence -- see the mission's own Phase 4.
+ *
+ * Clients reach the proxy with auth_type=trust (the proxy only listens on
+ * 127.0.0.1), but PgBouncer must still authenticate ITS OWN backend
+ * connection. When the direct Postgres URL carries a password (or PGPASSWORD
+ * is set -- the password-authenticated CI service), it is passed to the
+ * backend in the [databases] entry; a passwordless local trust/peer setup
+ * keeps the previous behaviour (no password emitted).
  */
 import { spawnSync, spawn, type ChildProcess } from "node:child_process";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
@@ -42,6 +51,24 @@ function resolvePgbouncerBinary(): string | null {
 
 export const PGBOUNCER_BINARY = resolvePgbouncerBinary();
 
+/** Quotes a value for a PgBouncer connection-string entry: single-quoted, with embedded single quotes doubled. */
+export function quotePgbouncerValue(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+/** The [databases] entry for one database; `password=` is emitted only when a backend password is known. */
+export function buildDatabaseEntry(opts: {
+  databaseName: string;
+  host: string;
+  port: string;
+  user: string;
+  password: string;
+}): string {
+  const parts = [`host=${opts.host}`, `port=${opts.port}`, `dbname=${opts.databaseName}`, `user=${opts.user}`];
+  if (opts.password) parts.push(`password=${quotePgbouncerValue(opts.password)}`);
+  return `${opts.databaseName} = ${parts.join(" ")}`;
+}
+
 export interface PgBouncerHandle {
   /** Connection string for a real client to use, pointed at the PgBouncer proxy, not Postgres directly. */
   proxyUrl: string;
@@ -61,7 +88,8 @@ export function startPgBouncer(directPostgresUrl: string, databaseName: string):
   const url = new URL(directPostgresUrl);
   const pgHost = url.hostname || "127.0.0.1";
   const pgPort = url.port || "5432";
-  const pgUser = url.username || process.env.USER || "postgres";
+  const pgUser = decodeURIComponent(url.username) || process.env.USER || "postgres";
+  const pgPassword = decodeURIComponent(url.password) || process.env.PGPASSWORD || "";
 
   const dir = mkdtempSync(join(tmpdir(), "pgbouncer-txn-test-"));
   // Port chosen from a wide, uncommon range and randomized per call to avoid
@@ -81,7 +109,7 @@ export function startPgBouncer(directPostgresUrl: string, databaseName: string):
     iniPath,
     [
       "[databases]",
-      `${databaseName} = host=${pgHost} port=${pgPort} dbname=${databaseName} user=${pgUser}`,
+      buildDatabaseEntry({ databaseName, host: pgHost, port: pgPort, user: pgUser, password: pgPassword }),
       "",
       "[pgbouncer]",
       "listen_addr = 127.0.0.1",

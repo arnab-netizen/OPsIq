@@ -151,6 +151,9 @@ export async function getDecisionEvidence(engagementId: string, workspaceId: str
   // Categorize findings
   const criticalFindings = evidenceFindings.filter((f: typeof evidenceFindings[0]) => f.severity === "critical");
   const unresolvedFindings = evidenceFindings.filter((f: typeof evidenceFindings[0]) => f.status !== "resolved" && f.status !== "closed");
+  // Every trigger, risk and recovery figure below is about UNRESOLVED critical findings (as decision-control and
+  // execution-drift treat them); counting a resolved critical finding as live made a closed finding drive the decision.
+  const unresolvedCriticalFindings = unresolvedFindings.filter((f: typeof evidenceFindings[0]) => f.severity === "critical");
 
   // Map recommendations for evidence
   const evidenceRecommendations = recommendations.map((r: typeof recommendations[0]) => ({
@@ -178,14 +181,14 @@ export async function getDecisionEvidence(engagementId: string, workspaceId: str
   if (overdueActions.length > 0) {
     triggers.push(`${overdueActions.length} critical action(s) overdue`);
   }
-  if (blockedActions.length > 0 && criticalFindings.length > 0) {
+  if (blockedActions.length > 0 && unresolvedCriticalFindings.length > 0) {
     triggers.push(`${blockedActions.length} blocked critical action(s) with unresolved findings`);
   }
-  if (decisionConfidence.level === "low" && criticalFindings.length > 0) {
+  if (decisionConfidence.level === "low" && unresolvedCriticalFindings.length > 0) {
     triggers.push("Low decision confidence with unresolved critical findings");
   }
-  if (criticalFindings.length > 0) {
-    triggers.push(`${criticalFindings.length} unresolved critical finding(s)`);
+  if (unresolvedCriticalFindings.length > 0) {
+    triggers.push(`${unresolvedCriticalFindings.length} unresolved critical finding(s)`);
   }
   if (triggers.length === 0 && openRecommendations.length > 0) {
     triggers.push("Open high-priority recommendations awaiting review");
@@ -253,7 +256,7 @@ export async function getDecisionEvidence(engagementId: string, workspaceId: str
   const riskLevel = Math.min(
     100,
     Math.round(
-      (criticalFindings.length * 20 +
+      (unresolvedCriticalFindings.length * 20 +
         blockedActions.length * 15 +
         overdueActions.length * 10 +
         (drift.severity === "critical" ? 25 : drift.severity === "high" ? 15 : 0) +
@@ -282,11 +285,11 @@ export async function getDecisionEvidence(engagementId: string, workspaceId: str
 
   // Recovery probability percentage
   const recoveryProbabilityPct =
-    criticalFindings.length >= 3
+    unresolvedCriticalFindings.length >= 3
       ? 20
       : blockedActions.length >= 3
         ? 30
-        : criticalFindings.length > 0 || blockedActions.length > 0
+        : unresolvedCriticalFindings.length > 0 || blockedActions.length > 0
           ? 50
           : 80;
 
