@@ -9,11 +9,11 @@ import { PublicBetaCta } from "@/components/landing/PublicBetaCta";
  */
 export function PublicSiteHeader({ admissionMode = null }: { admissionMode?: string | null } = {}) {
   return (
-    <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
+    <header className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-y-2 px-6 py-6">
       <PublicLink href="/" className="shrink-0">
         <Image src="/opsiq-logo.png" alt="OpsIQ home" width={1864} height={541} priority className="h-9 w-auto" />
       </PublicLink>
-      <nav aria-label="Primary" className="flex items-center gap-3">
+      <nav aria-label="Primary" className="flex min-w-0 flex-wrap items-center justify-end gap-x-3">
         <PublicLink href="/tools" className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground hover:underline">Calculators</PublicLink>
         <PublicLink href="/login" className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground hover:underline">
           Sign in
