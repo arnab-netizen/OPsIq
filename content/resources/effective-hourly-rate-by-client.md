@@ -1,6 +1,6 @@
 ---
 title: "Same Retainer, Different Clients: Rank Them by Effective Hourly Rate"
-description: "Three clients can pay the same monthly fee and earn very different margins once you divide the invoice by the hours actually logged. A plain method for ranking retainer clients and picking the one to look at first, with an illustrative worked example."
+description: "Three clients can pay the same fee yet earn very different margins once you divide the invoice by hours logged. A plain method to rank retainer clients and pick the first to review, with an example."
 publishedAt: 2026-11-20
 author: OpsIQ
 authorType: organization
