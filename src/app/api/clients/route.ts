@@ -7,6 +7,7 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { UnauthorizedError } from "@/infra/errors";
+import { hasInternalAccess } from "@/policies/capability-check";
 
 const createClientSchema = z.object({
   name: z.string().min(1),
@@ -27,7 +28,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
     const params = parseSearchParams(ctx.request!.url, listClientsSchema);
-    const result = await listClients(workspaceId, params);
+    const result = await listClients(workspaceId, params, ctx.policy ? hasInternalAccess(ctx.policy) : false);
     return result;
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.CLIENT_VIEW] }

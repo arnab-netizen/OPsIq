@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PublicBetaText } from "@/components/landing/PublicBetaCta";
 import { AnalyticsPreferencesButton } from "@/components/analytics/AnalyticsPreferencesButton";
 import { resolveClarityProjectId } from "@/lib/analytics/clarity-policy";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata = {
   title: "Privacy | OpsIQ",
@@ -59,6 +60,17 @@ export default function PrivacyPage() {
             account information, and does not record visits to signed-in pages.
           </p>
           <p className="mt-2">
+            <strong>Free tools and the agency diagnostic.</strong> The same Vercel Web Analytics also
+            counts visits to the free calculators and the agency diagnostic page. On the agency
+            diagnostic page and on each calculator it additionally counts, as plain totals, how many
+            visitors start it, how many complete it, which related calculator or agency diagnostic link
+            was clicked, and which beta-access button on the page was clicked. Each count carries only
+            the name of the calculator and, for beta-access buttons, whether the button was in the header
+            or lower on the page. None of what you type into a calculator or the diagnostic, and none of
+            its result, is sent. These counts use no cookies and do not depend on the Clarity choice
+            described below.
+          </p>
+          <p className="mt-2">
             <strong>Billing.</strong> If you subscribe to a paid plan, Paddle collects your payment details, billing
             name and address, and tax information and handles your payment as Merchant of Record under{" "}
             <a href="https://www.paddle.com/legal/privacy" className="text-[var(--primary-text)] hover:underline">Paddle&rsquo;s privacy policy</a>.
@@ -98,8 +110,8 @@ export default function PrivacyPage() {
             ) : null}
             . Withdrawing stops new recording and reloads the page. To ask about recordings
             already collected, email{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             . This is separate from the Vercel Web Analytics described above, which does not use
             cookies and does not depend on this choice.
@@ -158,8 +170,8 @@ export default function PrivacyPage() {
           <p className="mt-1">
             You can request a copy of your data, a correction, or deletion of your account and
             data at any time by emailing{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             . These requests are currently fulfilled manually by our team, not instantly or
             automatically — we aim to acknowledge every request promptly and will tell you when
@@ -171,8 +183,8 @@ export default function PrivacyPage() {
           <h2 className="font-semibold text-foreground">Privacy contact</h2>
           <p className="mt-1">
             Questions about this notice, or any privacy request:{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             .
           </p>

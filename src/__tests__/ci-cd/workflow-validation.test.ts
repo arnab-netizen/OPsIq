@@ -281,6 +281,63 @@ describe("CI/CD Workflow Validation", () => {
       expect(dbJob.env?.TEST_WITH_DB).toBe("true");
     });
 
+    describe("db-verify runs the GSC ingestion-role and PgBouncer proofs mandatorily (never silently skipped)", () => {
+      const gscName = "GSC ingestion role DB proof (opsiq_gsc_ingestion; non-superuser schema owner; fail-closed on any skip or count mismatch)";
+      const pgbName = "PgBouncer transaction-pooling DB proof (real pgbouncer in front of Postgres; fail-closed on any skip or count mismatch)";
+      const idx = (n: string) => ciWorkflow.jobs["db-verify"].steps.findIndex((x) => x.name === n);
+
+      it("GSC role proof: dedicated owner DB, ADMIN OPTION grant, migrate deploy, JSON report, exact-count check that fails the step", () => {
+        const dbJob = ciWorkflow.jobs["db-verify"];
+        const step = stepNamed(dbJob, gscName);
+        expect(step["continue-on-error"]).toBe(false);
+        expect(step["if"]).toBeUndefined();
+        const run = step.run as string;
+        expect(run).toContain("CREATE DATABASE opsiq_gsc_role_test OWNER opsiq_schema_owner");
+        expect(run).toContain("GRANT opsiq_gsc_ingestion TO opsiq_schema_owner WITH ADMIN OPTION");
+        expect(run).toContain("npx prisma migrate deploy");
+        expect(run).toMatch(/GSC_ROLE_TEST_OWNER_DATABASE_URL="\$DATABASE_URL"/);
+        expect(run).toContain("opsiq_schema_owner:pw@localhost:5432/opsiq_gsc_role_test");
+        expect(run).toContain("TEST_WITH_DB=true");
+        expect(run).toContain("npx vitest run src/__tests__/scripts/gsc-ingestion-role.db.test.ts");
+        expect(run).toContain("--reporter=json");
+        expect(run).toContain("node scripts/ci/check-db-proof-counts.mjs gsc-role");
+        // Both the vitest exit and the count verdict must fail the step.
+        expect(run).toContain("VITEST_EXIT");
+        expect(run).toContain("CHECK_EXIT");
+        expect(run).toMatch(/\[ "\$VITEST_EXIT" -ne 0 \] \|\| \[ "\$CHECK_EXIT" -ne 0 \]/);
+        expect(idx(gscName)).toBeGreaterThan(idx("QBO erasure DB proof (disposable database, non-superuser schema owner)"));
+        expect(idx(gscName)).toBeGreaterThan(idx("Run DB test suite (*.db.test.ts only)"));
+      });
+
+      it("PgBouncer proof: installs pgbouncer, runs with TEST_WITH_PGBOUNCER=true, JSON report, exact-count check that fails the step", () => {
+        const dbJob = ciWorkflow.jobs["db-verify"];
+        const step = stepNamed(dbJob, pgbName);
+        expect(step["continue-on-error"]).toBe(false);
+        expect(step["if"]).toBeUndefined();
+        const run = step.run as string;
+        expect(run).toContain("sudo apt-get install -y --no-install-recommends pgbouncer");
+        expect(run).toContain("TEST_WITH_PGBOUNCER=true");
+        expect(run).toContain("npx vitest run src/__tests__/lib/pgbouncer-transaction-safety-hostile.db.test.ts");
+        expect(run).toContain("--reporter=json");
+        expect(run).toContain("node scripts/ci/check-db-proof-counts.mjs pgbouncer");
+        expect(run).toContain("VITEST_EXIT");
+        expect(run).toContain("CHECK_EXIT");
+        expect(run).toMatch(/\[ "\$VITEST_EXIT" -ne 0 \] \|\| \[ "\$CHECK_EXIT" -ne 0 \]/);
+        // pgbouncer refuses to run as root; the step must fail closed rather than skip if it is.
+        expect(run).toContain('"$(id -u)" = "0"');
+        expect(idx(pgbName)).toBeGreaterThan(idx("Run DB test suite (*.db.test.ts only)"));
+        // The job env supplies the DB gate and a password-bearing DATABASE_URL the harness forwards to the backend connection.
+        expect(dbJob.env?.TEST_WITH_DB).toBe("true");
+        expect(dbJob.env?.DATABASE_URL).toMatch(/^postgresql:\/\/postgres:postgres@localhost:5432\//);
+      });
+
+      it("the count gate's expected counts match the proofs it guards (16 and 8)", () => {
+        const gate = fs.readFileSync(path.join(process.cwd(), "scripts/ci/check-db-proof-counts.mjs"), "utf-8");
+        expect(gate).toMatch(/gsc-ingestion-role\.db\.test\.ts",\s*expectedTests: 16/);
+        expect(gate).toMatch(/pgbouncer-transaction-safety-hostile\.db\.test\.ts",\s*expectedTests: 8/);
+      });
+    });
+
     it("db-verify should run the DB tests with DATABASE_URL (blocking)", () => {
       const dbJob = ciWorkflow.jobs["db-verify"];
       const testStep = stepNamed(dbJob, "Run DB test suite (*.db.test.ts only)");

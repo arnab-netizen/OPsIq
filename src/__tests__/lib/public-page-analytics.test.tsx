@@ -23,7 +23,7 @@ vi.mock("@vercel/analytics/next", () => ({
 import { PublicPageAnalytics } from "@/components/analytics/PublicPageAnalytics";
 
 describe("isPublicAnalyticsPath", () => {
-  it.each(["/", "/about", "/beta", "/privacy", "/terms", "/resources", "/resources/", "/resources/profitable-but-short-on-cash", "/tools/profit-margin-calculator", "/tools/profit-margin-calculator/", "/agency", "/agency/"])(
+  it.each(["/", "/about", "/beta", "/privacy", "/terms", "/resources", "/resources/", "/resources/profitable-but-short-on-cash", "/tools", "/tools/", "/tools/profit-margin-calculator", "/tools/profit-margin-calculator/", "/tools/client-profitability-calculator", "/tools/agency-retainer-pricing-calculator", "/tools/agency-utilization-calculator", "/tools/agency-scope-creep-calculator", "/tools/agency-hourly-rate-calculator", "/tools/agency-capacity-calculator", "/agency", "/agency/"])(
     "counts public page %s",
     (path) => expect(isPublicAnalyticsPath(path)).toBe(true)
   );
@@ -41,8 +41,9 @@ describe("isPublicAnalyticsPath", () => {
     "/api/beta-requests",
     "/resourcesx",
     "/aboutus",
-    "/tools",
     "/tools/other-tool",
+    "/tools/client-profitability-calculatorx",
+    "/tools/agency-capacity-calculator/internal",
     "/tools/profit-margin-calculatorx",
     "/agencyx",
     "/agency/internal",
@@ -91,5 +92,18 @@ describe("PublicPageAnalytics", () => {
   it("mounts Vercel Analytics with the public-page beforeSend filter and no custom configuration", () => {
     render(<PublicPageAnalytics />);
     expect(analyticsProps.last).toEqual({ beforeSend: filterPublicPageView });
+  });
+});
+
+
+describe("beforeSend handles custom-event objects as well as page views", () => {
+  it("passes an allowlisted event through with query parameters stripped", async () => {
+    const { filterPublicPageView } = await import("@/lib/analytics/public-page-analytics");
+    const out = filterPublicPageView({ type: "event", url: "https://opsiq.solutions/tools/agency-capacity-calculator?income=123456&utm_source=li", name: "calculator_start" });
+    expect(out).toEqual({ type: "event", url: "https://opsiq.solutions/tools/agency-capacity-calculator?utm_source=li", name: "calculator_start" });
+  });
+  it("drops an event raised on a private page", async () => {
+    const { filterPublicPageView } = await import("@/lib/analytics/public-page-analytics");
+    expect(filterPublicPageView({ type: "event", url: "https://opsiq.solutions/owner/finance", name: "calculator_start" })).toBeNull();
   });
 });

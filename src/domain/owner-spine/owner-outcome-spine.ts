@@ -51,6 +51,39 @@ export function directionFromCommitment(
   return { direction: commitment.targetDirection, note: null };
 }
 
+/** The persisted owner commitment fields a System A assessment may read (a subset of the decision row). */
+export interface DecisionContractFacts {
+  decisionState: string;
+  verificationMetric: string | null;
+  baselineValue: number | null;
+  baselineProvenance: string | null;
+  targetDirection: string | null;
+  targetValue: number | null;
+}
+
+/**
+ * System A actions (Finance, Cash flow, …) have no baseline / target / direction columns, so a measurement
+ * specification the owner recorded on the decision never reached the assessment. This fills ONLY the facts the System A
+ * source leaves unknown, from the owner's own ACCEPTED/MODIFIED commitment:
+ *   - never overrides a value already present (a verification row's recorded baseline/target/direction wins);
+ *   - never applies when the commitment names a different metric than the action measures;
+ *   - never touches execution status, after-value, verification, or any outcome fact: a commitment is intent, not evidence;
+ *   - a baseline is taken only together with its recorded provenance (otherwise it stays unknown).
+ */
+export function applyDecisionContractToSystemAInput(input: OwnerOutcomeInput, decision: DecisionContractFacts | null): OwnerOutcomeInput {
+  if (!decision || (decision.decisionState !== "ACCEPTED" && decision.decisionState !== "MODIFIED")) return input;
+  if (decision.verificationMetric && input.verificationMetric && decision.verificationMetric !== input.verificationMetric) return input;
+  const next: OwnerOutcomeInput = { ...input };
+  if (next.verificationMetric === null && decision.verificationMetric) next.verificationMetric = decision.verificationMetric;
+  if (next.baselineValue === null && decision.baselineValue !== null && decision.baselineProvenance) {
+    next.baselineValue = decision.baselineValue;
+    next.baselineProvenance = decision.baselineProvenance as OwnerOutcomeInput["baselineProvenance"];
+  }
+  if (next.direction === "unknown" && (decision.targetDirection === "up" || decision.targetDirection === "down")) next.direction = decision.targetDirection;
+  if (next.targetValue === null && decision.targetValue !== null) next.targetValue = decision.targetValue;
+  return next;
+}
+
 export interface OutcomeLinks {
   ownerDecisionId: string | null;
   sourceSystem: OutcomeSourceSystem;
