@@ -49,8 +49,28 @@ Known gaps (honest): action outcomes and learning candidates need a client-accou
 
 Threat model: the runtime database credential (`DATABASE_URL`) is compromised.
 
+**Current status update (2026-10-30, corrected):** current Production runtime identity is
+verified as `opsiq_app` — see the "Current Production status" section at the top of
+`docs/opsiq/product/RUNTIME_ROLE_CUTOVER.md` for the cited evidence (deployment ID, source SHA,
+release-gate build-log lines, GitHub acceptance run, and re-queried 24h observation window). The
+historical `neondb_owner`-runtime finding below therefore no longer describes the current
+runtime login.
+
+However, that evidence is narrower than the full erasure-bypass question. The Vercel build-time
+release gate (`scripts/release/production-migration-gate.mjs`) proves only: the connection
+authenticates as `opsiq_app` (both `current_user` and `session_user`); the role carries none of
+`rolsuper` / `rolcreaterole` / `rolcreatedb` / `rolbypassrls` / `rolreplication`; it holds the
+expected table-level grants; and it can perform one no-op write with a confirmed rollback. It
+does **not** query table/function/schema ownership (`pg_class.relowner` or equivalent), and this
+audit did not separately connect to Neon to check it either (`NEON_RUNTIME_ROLE_METADATA
+=NOT_DIRECTLY_VERIFIED`). Therefore the stronger claim
+`RUNTIME_DB_ROLE_CAN_BYPASS_ERASURE_GUARDS=NO` must not be inferred solely from the release-gate
+result and is corrected to `RUNTIME_DB_ROLE_CAN_BYPASS_ERASURE_GUARDS=NOT_DIRECTLY_VERIFIED`. The
+paragraph below is the original hostile-review finding, preserved as-written for historical
+context; it described the state at the time of PR #637, before the cutover below was executed.
+
 - RUNTIME_DB_ROLE_CAN_BYPASS_ERASURE_GUARDS=YES today. Production runs as `neondb_owner`, which owns every table and function and holds CREATEROLE and BYPASSRLS, so it can drop triggers, rewrite SECURITY DEFINER functions or edit the tombstone. The guards are only as strong as the role split below.
-- Required topology: `neondb_owner` becomes migrator only (CI/operator). A SQL-created `opsiq_app` runtime role owns nothing and has DML only. At least two named operator logins are members of NOLOGIN `opsiq_privacy_eraser`. Roles must be created with SQL, never the Neon console/API (those inherit neon_superuser). Verify on a throwaway Neon project first, then switch the Vercel DATABASE_URL to opsiq_app and rotate the owner credentials. Drop the leftover `qbo_sandbox_601_app`. Not yet run against Production.
+- Required topology: `neondb_owner` becomes migrator only (CI/operator). A SQL-created `opsiq_app` runtime role owns nothing and has DML only. At least two named operator logins are members of NOLOGIN `opsiq_privacy_eraser`. Roles must be created with SQL, never the Neon console/API (those inherit neon_superuser). Verify on a throwaway Neon project first, then switch the Vercel DATABASE_URL to opsiq_app and rotate the owner credentials. Drop the leftover `qbo_sandbox_601_app`. (Historical note: as of PR #637 this had not yet run against Production; it has since been applied — see the status update above.)
 - DB-enforced authorisation: `qbo_erasure_authorized` is SECURITY DEFINER with pinned search_path. It needs session_user in the eraser role, the GUC `opsiq.erasure_request_id`, a request EXECUTING with `executing_xid` equal to the current transaction, an approver and manifest hash, and approver login different from requester login.
 - LEAST_PRIVILEGE_ROLE_TEST=PASS on disposable PG 18 with a non-superuser schema owner.
 

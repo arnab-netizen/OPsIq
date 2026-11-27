@@ -1,5 +1,50 @@
 # Least-privilege runtime role (`opsiq_app`) — design, tooling and cutover
 
+## Current Production status (verified 2026-10-30)
+
+Production's runtime cutover to `opsiq_app` was applied and observed. This section states
+only what independent, durable platform evidence proves; the rest of this document is the
+historical design/tooling/procedure that produced that result and is retained unchanged
+below as operational reference.
+
+- **Deployment:** `dpl_47wGjp5bof8TbVx3GB91EJ6a1wMu` (Vercel project `o-ps-iq`), built from
+  commit `a47b7be8e521677cafd1b869da81479d7b63d101` (PR #646, merged to `main`), `target:
+  production`, aliased to `opsiq.solutions` / `www.opsiq.solutions` / `o-ps-iq.vercel.app`,
+  `readyState: READY` at `2026-10-28T13:33:41Z`, remained the Production alias target with no
+  superseding production deployment through at least `2026-10-29T15:46Z`.
+- **Runtime-role gate:** that exact deployment's Vercel build log contains the sanitized
+  release-gate lines `[release-gate] PASS: runtime role "opsiq_app" verified (least-privilege,
+  all application tables granted).` and `[release-gate] PASS: runtime role "opsiq_app"
+  verified read-write capable (no-op transaction rolled back).` — i.e. the build-time guard in
+  §7 ran against the live Production database and passed.
+- **GitHub Production acceptance:** run
+  [`40700407912`](https://github.com/arnab-netizen/OPsIq/actions/runs/40700407912)
+  (`Production Owner Acceptance (LIVE)`, 2026-10-28, `conclusion: success`) independently
+  confirmed Production's `BASE_URL` served that exact commit, `environment: production`,
+  `/api/health` and `/api/readiness` both passed, and the full live acceptance suite passed.
+- **24-hour observation window** (`2026-10-28T13:33:41Z` → `2026-10-29T13:33:41Z`, matching the
+  deployment's `READY` timestamp): independently re-queried via Vercel runtime logs/errors
+  scoped to this deployment. Zero occurrences of SQLSTATE `42501`, SQLSTATE `25006`,
+  `permission denied`, or `read-only transaction` text; no runtime-role-mismatch or
+  startup-failure error groups. The only two error groups in the window were already-known and
+  unrelated to the role cutover: the Node/`pg` SSL-mode deprecation warning, and the `/` route's
+  300-second runtime timeout — a pre-existing, unrelated issue tracked separately (PRs #648–#652,
+  branch `fix/root-route-300s-timeout` and follow-ons); as of this writing those PRs are open and
+  unmerged, so this timeout is NOT yet fixed in Production.
+- **Not verified by this check:** Neon-side role metadata (no authenticated read-only Neon
+  connector was available) and the separate question below of recovery-credential
+  availability.
+
+**Recovery credential availability:** `OWNER_RUNTIME_RECOVERY_AVAILABLE=UNKNOWN`. Confirming the
+cutover happened and was observed clean does **not** by itself prove the owner-saved
+pre-cutover `neondb_owner` recovery URL (`OLD_RUNTIME_URL`, step 1 below) is still retrievable.
+That is a separate fact, not yet independently verified, and should not be inferred from the
+above.
+
+---
+
+## Historical status (as originally written; superseded by the verified section above)
+
 Status: implemented, NOT applied to Production. Applying it, changing Vercel variables and rotating the owner credential are separate, owner-authorized steps. Production QBO stays disabled.
 
 ## 1. Roles
