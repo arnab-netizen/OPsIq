@@ -179,6 +179,25 @@ export async function getFinanceDashboard(
     ...a,
     measuredBaseline: await financeMeasuredBaseline(a, workspaceId),
   });
+  // The owner's latest DECISION per action (a separate fact from the action's own execution status), workspace + business scoped.
+  // Read-only: it never changes the action's status or implies progress.
+  const decisionStateByAction = new Map<string, string>();
+  {
+    const ids = [
+      ...((latestCycle?.actions ?? []) as Array<{ id: string }>).map((a) => a.id),
+      ...((carriedActions ?? []) as Array<{ id: string }>).map((a) => a.id),
+    ];
+    if (ids.length > 0 && selectedBusinessId) {
+      const rows = await db.ownerDecisionRecord.findMany({
+        where: { workspaceId, businessId: selectedBusinessId, candidateId: { in: ids.map((id) => `domain_action:finance:${id}`) } },
+        orderBy: { sequence: "asc" },
+        select: { candidateId: true, decisionState: true },
+      });
+      for (const r of rows) decisionStateByAction.set(r.candidateId.split(":")[2], r.decisionState); // ascending: the last row is the latest decision
+    }
+  }
+  const withDecision = <T extends { id: string }>(a: T): T & { ownerDecisionState: string | null } => ({ ...a, ownerDecisionState: decisionStateByAction.get(a.id) ?? null });
+
   const latestCycleView = latestCycle
     ? {
         ...latestCycle,
@@ -193,7 +212,7 @@ export async function getFinanceDashboard(
             dashboardContinuityActions<any>(latestCycle, latestCycle.actions, carriedActions, (a) => a.findingCode, (a) => a.cycle?.sequenceNumber).map(withBaseline)
           ),
           latestCycle.findings
-        ),
+        ).map(withDecision),
       }
     : null;
 

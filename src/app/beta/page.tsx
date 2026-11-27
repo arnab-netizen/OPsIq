@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PublicLink } from "@/components/navigation/PublicLink";
 import { PublicBetaText, PublicBetaSwitch } from "@/components/landing/PublicBetaCta";
 import { getPublicAdmissionMode } from "@/services/beta/public-presentation.service";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const dynamic = "force-dynamic";
 
@@ -116,8 +117,8 @@ export default async function BetaNoticePage() {
           <p className="mt-1">
             Use the &ldquo;Send beta feedback / Report a problem&rdquo; link inside the product, or
             email{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             . Beta feedback directly shapes what we build next.
           </p>

@@ -33,7 +33,7 @@ describe("commercial compliance minimum (Paddle domain review content)", () => {
     const t = container.textContent ?? "";
     expect(t).toMatch(/end of the\s+billing period you have already paid for/);
     expect(t).toMatch(/14 days of your most\s+recent charge/);
-    expect(t).toMatch(/support@opsiq\.solutions/);
+    expect(t).toMatch(/contact\.us@opsiq\.solutions/);
     expect(container.querySelector('a[href="https://www.paddle.com/legal/checkout-buyer-terms"]')).not.toBeNull();
   });
   it("terms cover the paid subscription without claiming everything is permanently free", () => {

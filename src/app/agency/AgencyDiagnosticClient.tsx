@@ -9,6 +9,7 @@ import {
   type AgencyDiagnosticResult,
 } from "@/lib/agency-diagnostic/diagnose";
 import { trackAgencyEvent } from "./agency-events";
+import { AgencyResultInvitation } from "./AgencyResultInvitation";
 
 type Draft = Record<keyof AgencyDiagnosticInput, string>;
 
@@ -104,6 +105,7 @@ export function AgencyDiagnosticClient() {
                 </ol>
               </div>
             )}
+            <AgencyResultInvitation />
           </section>
         )}
       </div>

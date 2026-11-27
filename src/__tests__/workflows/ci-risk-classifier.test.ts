@@ -742,6 +742,21 @@ describe("CI risk classifier (scripts/ci-risk-classifier.mjs)", () => {
     });
   });
 
+  describe("standalone real-DB proofs (GSC ingestion role, PgBouncer) require db-verify", () => {
+    it.each([
+      "src/__tests__/scripts/gsc-ingestion-role.db.test.ts",
+      "src/__tests__/lib/pgbouncer-transaction-safety-hostile.db.test.ts",
+      "src/__tests__/test-helpers/pgbouncer-harness.ts",
+      "scripts/ci/check-db-proof-counts.mjs",
+      "scripts/gsc/opsiq-gsc-ingestion-role.sql",
+      "src/__tests__/ci-cd/db-proof-counts.test.ts",
+    ])("%s sets dbRequired at the DB_RUNTIME tier", (file) => {
+      const result = classifyChangeSet([file]);
+      expect(result.tier).toBe(TIERS.DB_RUNTIME);
+      expect(result.dbRequired).toBe(true);
+    });
+  });
+
   // CI-MIN-01: a workflow-only / named-CI-script-only PR (CI_GOVERNANCE
   // tier) must not run the ~28,000-test broad application suite -- it gets
   // its own narrow TARGETED_CI_GOVERNANCE mode instead, the same pattern

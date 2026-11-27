@@ -5,6 +5,7 @@ import { Badge, ErrorState, CardDashboardSkeleton } from "@/ui/primitives";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { formatRole } from "@/domain/constants/role-labels";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 interface MeResponse {
   user: {
@@ -89,8 +90,8 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-foreground">Data and account help</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             To request data or account deletion during beta, contact{" "}
-            <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-              support@opsiq.solutions
+            <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+              {CONTACT_EMAIL}
             </a>
             .
           </p>

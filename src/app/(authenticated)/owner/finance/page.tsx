@@ -34,6 +34,7 @@ import { FinancePeriodEditor } from "@/components/owner/finance/FinancePeriodEdi
 import { FinanceRecordedPeriods, periodTextOf } from "@/components/owner/finance/FinanceRecordedPeriods";
 import { presentSnapshotFormError, type SnapshotFormError } from "@/domain/owner-finance/snapshot-form-errors";
 import { listFinanceSnapshots } from "@/lib/owner-finance-client";
+import { financeActionDecisionNote } from "@/domain/owner-finance/action-decision-note";
 import { ADVANCED_FIELD_NAMES, FINANCE_FIELDS, IMPROVE_GROUPS, QUICK_FIELD_NAMES, financeField } from "@/domain/owner-finance/snapshot-fields";
 import { Disclosure } from "@/ui/primitives";
 import { BankBalanceEntryLink } from "@/components/owner/BankBalanceEntryLink";
@@ -1148,6 +1149,9 @@ function FinanceCycleView({
                   </div>
                   <Badge variant="muted-accessible">Recommendation status: <span>{ACTION_STATUS_LABEL[a.status] ?? a.status}</span></Badge>
                 </div>
+                {financeActionDecisionNote(a.ownerDecisionState, a.status) && (
+                  <p className="text-xs text-foreground mt-1" data-testid="finance-action-decision-note">{financeActionDecisionNote(a.ownerDecisionState, a.status)}</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">{presentBankBalanceActionText(a.recommendationCode ?? a.findingCode, a.description)}</p>
                 <p className="text-xs text-muted-foreground">
                   Verify <strong>{humanizeMetricKey(a.verificationMetric)}</strong> — {humanizeEvidenceLine(a.verificationMethod ?? "")}

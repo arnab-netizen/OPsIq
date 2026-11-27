@@ -24,6 +24,7 @@ import {
 } from "@/domain/owner-spine/owner-decision-record";
 import {
   OWNER_OUTCOME_POLICY_VERSION,
+  applyDecisionContractToSystemAInput,
   assessmentFingerprint,
   chainKeyForCandidate,
   chainKeyForLegacyProcessTask,
@@ -152,7 +153,9 @@ async function buildSnapshot(ws: string, biz: string, t: ChainTarget, deps: Asse
     const action = await loadSystemAAction(c as never, ws, biz, t.parsed.domain as SystemADomain, t.parsed.sourceId);
     if (!action) throw notFound("OwnerDecisionCandidate", t.parsed.candidateId);
     const a = await loadSystemAInput(c as never, ws, biz, t.parsed.domain as SystemADomain, action, now);
-    built = { input: a.input, links: { ...base, ...a.links, sourceSystem: "SYSTEM_A" }, system: "SYSTEM_A", sourceLinkState: "LINKED" };
+    // The owner's recorded measurement specification fills only what the System A source leaves unknown (never overrides).
+    const input = applyDecisionContractToSystemAInput(a.input, t.decision);
+    built = { input, links: { ...base, ...a.links, sourceSystem: "SYSTEM_A" }, system: "SYSTEM_A", sourceLinkState: "LINKED" };
   } else if (t.taskRow) {
     const b = await loadSystemBInput(c as never, ws, biz, t.taskRow, t.decision && (t.decision.decisionState === "ACCEPTED" || t.decision.decisionState === "MODIFIED") ? t.decision : null, t.domain as OwnerOutcomeDomain, now);
     built = { input: b.input, links: { ...base, ...b.links, sourceSystem: "SYSTEM_B" }, system: "SYSTEM_B", sourceLinkState: "LINKED" };

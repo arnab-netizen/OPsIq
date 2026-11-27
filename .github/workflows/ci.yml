@@ -755,6 +755,61 @@ jobs:
             if (bad.length || dbRan !== 3) { console.log("::error::runtime-role gate proof incomplete: every test must pass and none may be skipped"); process.exit(1); }
           '
 
+      # MANDATORY GSC ingestion-role proof. gsc-ingestion-role.db.test.ts (16 tests) is skipIf-gated on
+      # GSC_ROLE_TEST_OWNER_DATABASE_URL naming a database called opsiq_gsc_role_test, and no CI step provided it, so
+      # the least-privilege opsiq_gsc_ingestion role (scripts/gsc/opsiq-gsc-ingestion-role.sql) was never proven in CI: the whole file
+      # reported "skipped" under a green job. Same shape as the runtime-role proof above (non-superuser CREATEROLE schema owner owns the
+      # database and holds ADMIN OPTION over the pre-existing cluster-wide role). The checker FAILS unless exactly 16 tests ran and all 16
+      # passed (0 skipped/pending/todo/failed), so a future skip, rename or deleted test cannot pass silently.
+      - name: GSC ingestion role DB proof (opsiq_gsc_ingestion; non-superuser schema owner; fail-closed on any skip or count mismatch)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -uo pipefail
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE opsiq_gsc_role_test OWNER opsiq_schema_owner" || exit 1
+          # Roles are cluster-wide: the earlier migrate step (run by the superuser) may already have created opsiq_gsc_ingestion, so the schema owner needs admin over it.
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'opsiq_gsc_ingestion') THEN GRANT opsiq_gsc_ingestion TO opsiq_schema_owner WITH ADMIN OPTION; END IF; END \$\$" || exit 1
+          export DATABASE_URL='postgresql://opsiq_schema_owner:pw@localhost:5432/opsiq_gsc_role_test'
+          npx prisma migrate deploy || exit 1
+          export GSC_ROLE_TEST_OWNER_DATABASE_URL="$DATABASE_URL"
+          VITEST_EXIT=0
+          TEST_WITH_DB=true OPSIQ_DB_TARGET=local npx vitest run src/__tests__/scripts/gsc-ingestion-role.db.test.ts --reporter=json --outputFile="$RUNNER_TEMP/gsc-role-proof.json" || VITEST_EXIT=$?
+          CHECK_EXIT=0
+          node scripts/ci/check-db-proof-counts.mjs gsc-role "$RUNNER_TEMP/gsc-role-proof.json" || CHECK_EXIT=$?
+          if [ "$VITEST_EXIT" -ne 0 ] || [ "$CHECK_EXIT" -ne 0 ]; then
+            echo "::error::GSC ingestion role proof failed (vitest exit $VITEST_EXIT, count check exit $CHECK_EXIT)"
+            exit 1
+          fi
+        continue-on-error: false
+
+      # MANDATORY PgBouncer transaction-pooling proof. pgbouncer-transaction-safety-hostile.db.test.ts (8 tests) proves
+      # withRawStatementTimeout() cannot leak session state under pool_mode=transaction, the topology of production's Neon pooled
+      # DATABASE_URL (migrations use a direct URL, so the pooled path is the runtime path). It was skipIf-gated on TEST_WITH_PGBOUNCER and a
+      # pgbouncer binary that CI never provided. This step installs the distro pgbouncer (never as root: pgbouncer refuses to run as root and
+      # the runner user is not root), runs the proof through a real proxy in front of the CI Postgres service (the harness passes the
+      # service password to the backend connection), and FAILS unless exactly 8 tests ran and all 8 passed.
+      - name: PgBouncer transaction-pooling DB proof (real pgbouncer in front of Postgres; fail-closed on any skip or count mismatch)
+        run: |
+          set -uo pipefail
+          if [ "$(id -u)" = "0" ]; then echo "::error::runner is root; pgbouncer refuses to run as root"; exit 1; fi
+          sudo apt-get update
+          if ! sudo apt-get install -y --no-install-recommends pgbouncer > "$RUNNER_TEMP/apt-pgbouncer.log" 2>&1; then
+            echo "::error title=pgbouncer-install-failed::$(tail -5 "$RUNNER_TEMP/apt-pgbouncer.log" | tr '\n' ' ' | cut -c1-700)"
+            exit 1
+          fi
+          PGB_V="$(/usr/sbin/pgbouncer --version | head -n 1)"
+          echo "::notice title=pgbouncer-version::$PGB_V"
+          case "$PGB_V" in *PgBouncer*) ;; *) echo "::error::pgbouncer binary did not report a version: $PGB_V"; exit 1 ;; esac
+          VITEST_EXIT=0
+          TEST_WITH_PGBOUNCER=true npx vitest run src/__tests__/lib/pgbouncer-transaction-safety-hostile.db.test.ts --reporter=json --outputFile="$RUNNER_TEMP/pgbouncer-proof.json" || VITEST_EXIT=$?
+          CHECK_EXIT=0
+          node scripts/ci/check-db-proof-counts.mjs pgbouncer "$RUNNER_TEMP/pgbouncer-proof.json" || CHECK_EXIT=$?
+          if [ "$VITEST_EXIT" -ne 0 ] || [ "$CHECK_EXIT" -ne 0 ]; then
+            echo "::error::PgBouncer transaction-pooling proof failed (vitest exit $VITEST_EXIT, count check exit $CHECK_EXIT)"
+            exit 1
+          fi
+        continue-on-error: false
+
   # Root cause: PR #332 merged a workflow file with a YAML syntax error (a
   # single-line `run:` value containing an unquoted colon) that no existing
   # check caught -- governance tests in this repo assert string content via

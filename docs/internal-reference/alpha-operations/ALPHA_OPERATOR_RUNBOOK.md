@@ -21,7 +21,7 @@
 **If you don't get an email:**
 - Wait 2 minutes (email can be slow)
 - Check spam folder
-- Contact support@opsiq: "I didn't receive sign-in email"
+- Contact contact.us@opsiq.solutions: "I didn't receive sign-in email"
 
 **If the link doesn't work:**
 - Try again from step 1 (may have expired)
@@ -207,7 +207,7 @@ After you submit an action:
 **Then**: If still stuck:
 - Take a screenshot of the error
 - Write down what you were trying to do
-- Contact support@opsiq with screenshot
+- Contact contact.us@opsiq.solutions with screenshot
 - Support will respond within 30 minutes (business hours)
 
 ---
@@ -337,7 +337,7 @@ A **workspace** is a separate business or client. Each workspace has:
 - Include screenshot if there's an error
 - Response time: 30 minutes
 
-**Alternative**: Email support@opsiq
+**Alternative**: Email contact.us@opsiq.solutions
 - Subject: "OpsIQ Alpha Support - [issue type]"
 - Include: What you were doing, error message, workspace name
 - Response time: 1 hour

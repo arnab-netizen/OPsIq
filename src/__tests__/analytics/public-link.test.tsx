@@ -32,7 +32,12 @@ describe("PublicLink", () => {
     expect(screen.getByRole("link").getAttribute("data-soft-nav")).toBeNull();
   });
 
-  it.each(["/about", "/resources", "/resources/x", "/tools/profit-margin-calculator", "/privacy", "/terms", "/beta"])(
+  it.each(["/tools/profit-margin-calculator", "/tools/client-profitability-calculator", "/agency"])("%s is a full-document navigation (financial inputs are never recorded)", (href) => {
+    render(<PublicLink href={href}>x</PublicLink>);
+    expect(screen.getByRole("link").getAttribute("data-soft-nav")).toBeNull();
+  });
+
+  it.each(["/about", "/resources", "/resources/x", "/privacy", "/terms", "/beta"])(
     "%s between public pages stays a client-side Link",
     (href) => {
       render(<PublicLink href={href}>go</PublicLink>);
@@ -60,7 +65,10 @@ describe("public → login boundary on the real header", () => {
     expect(signIn.getAttribute("data-soft-nav")).toBeNull();
     // the logo link back home is a full-document load too (the homepage redirects signed-in visitors into the app)
     expect(screen.getByRole("link", { name: /opsiq home/i }).getAttribute("data-soft-nav")).toBeNull();
-    // while public-to-public navigation stays client-side
-    expect(screen.getByRole("link", { name: /calculators/i }).getAttribute("data-soft-nav")).toBe("true");
+    // the calculator hub is deliberately NOT Clarity-eligible (its calculators take payroll and client figures), so the
+    // header link into it is a full-document navigation too; public-to-public navigation into eligible pages stays client-side
+    const calculators = screen.getByRole("link", { name: /calculators/i });
+    expect(calculators.getAttribute("href")).toBe("/tools");
+    expect(calculators.getAttribute("data-soft-nav")).toBeNull();
   });
 });

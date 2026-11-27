@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { captureError } from "@/infra/observability";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 /**
  * App Router route-level error boundary.
@@ -46,8 +47,8 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         </div>
         <p className="text-xs text-muted-foreground">
           Contact beta support:{" "}
-          <a href="mailto:support@opsiq.solutions" className="text-[var(--primary-text)] hover:underline">
-            support@opsiq.solutions
+          <a href={CONTACT_MAILTO} className="text-[var(--primary-text)] hover:underline">
+            {CONTACT_EMAIL}
           </a>
         </p>
       </div>
