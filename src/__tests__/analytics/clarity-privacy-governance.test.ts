@@ -5,6 +5,7 @@
  *  - references clarity.ms from anywhere but the sanctioned files;
  *  - mounts the Clarity component outside the root layout, or touches the Vercel Web Analytics wiring.
  */
+import { PROFIT_MARGIN_TOOL_PATH } from "@/services/tools/agency/registry";
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, relative } from "path";
@@ -59,7 +60,7 @@ const PUBLIC_SURFACE = [
  * clarity-policy.ts, and does not make the route Clarity-eligible. Adding an entry here requires the
  * verification test immediately below to keep passing for it.
  */
-const PUBLIC_NON_CLARITY_ROUTES: ReadonlySet<string> = new Set(["/agency"]);
+const PUBLIC_NON_CLARITY_ROUTES: ReadonlySet<string> = new Set(["/agency", PROFIT_MARGIN_TOOL_PATH]);
 
 describe("verified exception: public, non-Clarity-eligible routes content may still link to", () => {
   it("every entry is a genuinely public page, not Clarity-eligible, not forbidden, and still forces full-document navigation", () => {

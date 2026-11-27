@@ -158,7 +158,7 @@ export function ProfitCashCalculator() {
           <h2 id="calc-heading" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Your last month ({currency})
           </h2>
-          <span className="rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+          <span className="rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground">
             {isSample ? "Sample numbers" : "Your numbers"}
           </span>
         </div>
@@ -216,7 +216,7 @@ export function ProfitCashCalculator() {
         )}
         <div className="mt-3 rounded-md border-l-4 border-[var(--primary-text)] bg-muted p-4">
           <strong className="block text-base">{result.isBlank ? "Enter your numbers" : verdict.head}</strong>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-[var(--muted-foreground-accessible)]">
             {result.isBlank ? "Fill in the boxes to see how profit and cash compare." : verdict.body(result.liquidity, result.operatingProfit, money)}
           </span>
         </div>
