@@ -93,7 +93,7 @@
     "jsdom": "^29.0.2",
     "libsodium-wrappers": "0.7.15",
     "playwright": "^1.60.0",
-    "prisma": "^7.7.0",
+    "prisma": "^7.10.1",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.9",
     "tsx": "^4.22.3",
