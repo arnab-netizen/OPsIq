@@ -109,7 +109,7 @@ jobs:
             if(!ok){console.error("Corpus audit totals mismatch:",JSON.stringify(d));process.exit(1);}
             console.log("Corpus audit OK: 1465 counted / 1480 proven / 50 sims / 427 events / 0 unsafe / 0 live");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: corpus-final-audit-ledger
