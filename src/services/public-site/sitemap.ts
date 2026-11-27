@@ -3,6 +3,7 @@ import { absoluteUrl } from "@/lib/site";
 import { resourceLastModified } from "@/services/resources/resource-repository";
 import { RESOURCES_INDEX_PATH, resourcePath } from "@/services/resources/resource-seo";
 import type { ResourceDocument } from "@/domain/resources/resource-content";
+import { AGENCY_TOOLS, PROFIT_MARGIN_TOOL_PATH, TOOLS_HUB_PATH } from "@/services/tools/agency/registry";
 
 /**
  * Public, indexable URLs only — never an authenticated, owner, admin, or API
@@ -17,7 +18,9 @@ export function buildSitemap(resources: ResourceDocument[]): MetadataRoute.Sitem
   const staticPages: MetadataRoute.Sitemap = [
     { url: absoluteUrl("/"), changeFrequency: "weekly", priority: 1.0 },
     { url: absoluteUrl("/about"), changeFrequency: "monthly", priority: 0.5 },
-    { url: absoluteUrl("/tools/profit-margin-calculator"), changeFrequency: "monthly", priority: 0.8 },
+    { url: absoluteUrl(TOOLS_HUB_PATH), changeFrequency: "monthly", priority: 0.8 },
+    { url: absoluteUrl(PROFIT_MARGIN_TOOL_PATH), changeFrequency: "monthly", priority: 0.8 },
+    ...AGENCY_TOOLS.map((t) => ({ url: absoluteUrl(t.path), changeFrequency: "monthly" as const, priority: 0.8 })),
     { url: absoluteUrl("/agency"), changeFrequency: "monthly", priority: 0.8 },
     { url: absoluteUrl("/privacy"), changeFrequency: "monthly", priority: 0.3 },
     { url: absoluteUrl("/terms"), changeFrequency: "monthly", priority: 0.3 },

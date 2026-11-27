@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PublicLink } from "@/components/navigation/PublicLink";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata = {
   title: "Refund and cancellation policy | OpsIQ",
@@ -45,7 +46,7 @@ export default function RefundPolicyPage() {
           <h2 className="font-semibold text-foreground">Refunds</h2>
           <p className="mt-1">
             If you were charged and want a refund, email{" "}
-            <a href="mailto:support@opsiq.solutions" className={LINK}>support@opsiq.solutions</a> from the account
+            <a href={CONTACT_MAILTO} className={LINK}>{CONTACT_EMAIL}</a> from the account
             email, or contact Paddle through the link in your receipt. Requests made within 14 days of your most
             recent charge are handled under Paddle&rsquo;s standard refund terms. We do not offer pro-rata refunds
             for unused time in a period after that, except where the law requires it.

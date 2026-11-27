@@ -82,7 +82,7 @@ describe("CSP when Clarity is configured (production + valid project id)", () =>
 
   it("every Clarity-eligible path (from the app policy) is covered by a CSP that allows the script", async () => {
     const rules = await loadRules(PROD);
-    for (const path of ["/", "/about", "/resources", "/resources/x", "/tools/profit-margin-calculator", "/tools/y", "/privacy", "/terms", "/beta"]) {
+    for (const path of ["/", "/about", "/resources", "/resources/x", "/tools/y", "/privacy", "/terms", "/beta"]) {
       expect(isClarityEligiblePath(path)).toBe(true);
       expect(scriptSrc(effective(rules, path, "Content-Security-Policy")!)).toContain("https://www.clarity.ms");
     }

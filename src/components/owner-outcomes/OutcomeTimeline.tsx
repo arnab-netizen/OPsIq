@@ -13,7 +13,7 @@ import { Badge, Button, Disclosure } from "@/ui/primitives";
 import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 import { ownerDomainLabel } from "@/domain/owner-spine/owner-decision";
 import {
-  DECISION_LABELS, assessmentDecisionSequence, assessmentHistory, buildTimelineStages, canCheckOutcome, chainFreshness, contractFormFromDecision, contractLines, currentCommitmentAssessment,
+  DECISION_LABELS, assessmentDecisionSequence, assessmentHistory, buildTimelineStages, canCheckOutcome, chainFreshness, contractFormFromDecision, contractGuidance, contractLines, earlyCheckExplanation, currentCommitmentAssessment,
   decisionCommits, decisionHistory, measurementView, originalRecommendation, verificationSummary,
   type OwnerOutcomeChainDto, type StageState, type StatusTone,
 } from "@/domain/owner-spine/owner-outcome-presentation";
@@ -115,6 +115,16 @@ export function OutcomeTimeline({ chain, canManage, onChanged }: { chain: OwnerO
           <div><Button type="button" variant="outline" onClick={check} isLoading={checking} disabled={checking} aria-busy={checking}>Check outcome</Button></div>
           {checkMsg && <p role={checkMsg.kind === "error" ? "alert" : "status"} className={`m-0 text-sm ${checkMsg.kind === "error" ? "text-destructive" : "text-foreground"}`}>{checkMsg.text}</p>}
         </div>
+      )}
+
+      {d && earlyCheckExplanation(d, a) && !fresh.stagesNotApplicable && (
+        <p data-testid="outcome-early-check-explanation" className="m-0 rounded-md border border-border bg-muted/40 p-3 text-sm text-foreground">{earlyCheckExplanation(d, a)}</p>
+      )}
+
+      {d && contractGuidance(d).length > 0 && (
+        <ul data-testid="outcome-contract-guidance" className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm text-foreground">
+          {contractGuidance(d).map((g) => <li key={g}>{g}</li>)}
+        </ul>
       )}
 
       {d && decisionCommits(d.decisionState) && (

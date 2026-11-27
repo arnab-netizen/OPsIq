@@ -186,13 +186,25 @@ describe("Clients Routes — non-DB mock tests", () => {
     it("passes workspaceId WS_A to listClients", async () => {
       mockListClients.mockResolvedValueOnce(EMPTY_RESULT);
       await clientsGet(makeCtx({ verifiedWorkspaceId: WS_A }));
-      expect(mockListClients).toHaveBeenCalledWith(WS_A, expect.anything());
+      expect(mockListClients).toHaveBeenCalledWith(WS_A, expect.anything(), false);
     });
 
     it("passes workspaceId WS_B to listClients", async () => {
       mockListClients.mockResolvedValueOnce(EMPTY_RESULT);
       await clientsGet(makeCtx({ verifiedWorkspaceId: WS_B }));
-      expect(mockListClients).toHaveBeenCalledWith(WS_B, expect.anything());
+      expect(mockListClients).toHaveBeenCalledWith(WS_B, expect.anything(), false);
+    });
+
+    it("passes the internal-access flag true for a caller holding an internal role", async () => {
+      mockListClients.mockResolvedValueOnce(EMPTY_RESULT);
+      await clientsGet(makeCtx({ policy: { roles: [{ role: "admin_or_portfolio_manager" }] } }));
+      expect(mockListClients).toHaveBeenCalledWith(WS_A, expect.anything(), true);
+    });
+
+    it("passes the internal-access flag false for a client-role-only caller", async () => {
+      mockListClients.mockResolvedValueOnce(EMPTY_RESULT);
+      await clientsGet(makeCtx({ policy: { roles: [{ role: "client_owner" }] } }));
+      expect(mockListClients).toHaveBeenCalledWith(WS_A, expect.anything(), false);
     });
 
     it("returns empty result when no clients exist", async () => {
@@ -217,8 +229,8 @@ describe("Clients Routes — non-DB mock tests", () => {
       mockListClients.mockResolvedValue(EMPTY_RESULT);
       await clientsGet(makeCtx({ verifiedWorkspaceId: WS_A }));
       await clientsGet(makeCtx({ verifiedWorkspaceId: WS_B }));
-      expect(mockListClients).toHaveBeenNthCalledWith(1, WS_A, expect.anything());
-      expect(mockListClients).toHaveBeenNthCalledWith(2, WS_B, expect.anything());
+      expect(mockListClients).toHaveBeenNthCalledWith(1, WS_A, expect.anything(), false);
+      expect(mockListClients).toHaveBeenNthCalledWith(2, WS_B, expect.anything(), false);
     });
   });
 

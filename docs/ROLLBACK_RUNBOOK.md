@@ -71,7 +71,7 @@ Before rollback, notify:
 https://status.yourdomain.com/
 
 # 3. Customer support: Let them know we're fixing
-Email support@opsiq.solutions
+Email contact.us@opsiq.solutions
 
 # 4. On-call rotation: Page on-call engineer if not already
 PagerDuty incident #12345
